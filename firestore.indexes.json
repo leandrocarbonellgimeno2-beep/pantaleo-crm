@@ -1,0 +1,55 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "GestioneCommerciale.InVendita", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "GestioneCommerciale.InAffitto", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "GestioneCommerciale.Sospeso", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "GestioneCommerciale.InVendita", "order": "ASCENDING" },
+        { "fieldPath": "GestioneCommerciale.Sospeso", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "GestioneCommerciale.InAffitto", "order": "ASCENDING" },
+        { "fieldPath": "GestioneCommerciale.Sospeso", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "immobili",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "DatiBase.Tipologia", "order": "ASCENDING" },
+        { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,0 +1,203 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Owner {
+  id                    String    @id
+  acquisto              Boolean?  @default(false)
+  affitto               Boolean?  @default(false)
+  cap                   String?
+  cellulare             String?
+  codiceCliente         String?
+  codiceFiscale         String?
+  cognome               String?
+  createdAt             DateTime? @default(now())
+  email                 String?
+  iban                  String?
+  indirizzo             String?
+  info                  String?
+  localita              String?
+  nazione               String?
+  nome                  String?
+  note                  String?
+  numCivico             String?
+  provincia             String?
+  referente             String?
+  stato                 String?
+  telefono              String?
+  telefono2             String?
+  updatedAt             DateTime? @updatedAt
+  attoImmobile          String?
+  firmaData             String?
+  firmaDigitale         Boolean?  @default(false)
+  inEsclusiva           Boolean?  @default(false)
+  locazione             Boolean?  @default(false)
+  planimetria           Boolean?  @default(false)
+  privacyAccepted       Boolean?  @default(false)
+  privacyAcceptedDate   String?
+  statoChiavi           String?
+  vendita               Boolean?  @default(false)
+  idealistaContactCreatedAt String?
+  idealistaContactId    String?
+
+  properties            Property[]
+}
+
+model Property {
+  id                      String    @id
+  affittato               Boolean?  @default(false)
+  amministratore          String?
+  ariaCondizionata        Boolean?  @default(false)
+  arredato                Boolean?  @default(false)
+  ascensore               Boolean?  @default(false)
+  attoImmobile            String?
+  bagni                   Int?
+  balcone                 Boolean?  @default(false)
+  camere                  Int?
+  canoneMensile           Float?
+  canoneMin               Float?
+  cantina                 Boolean?  @default(false)
+  cap                     String?
+  categoria               String?
+  citta                   String?
+  classe                  String?
+  classeEnergetica        String?
+  codiceCliente           String?
+  codiceImmobile          String?
+  codiceProprietario      String?
+  createdAt               DateTime? @default(now())
+  cucinalAbitabile        Boolean?  @default(false)
+  dataCreazione           DateTime?
+  dataEntrata             DateTime?
+  descrizione             String?
+  dimensioni              Int?
+  disponibile             Boolean?  @default(true)
+  distanzaMare            String?
+  esposizione             String?
+  foglio                  String?
+  fotoGrande              String?
+  garage                  Boolean?  @default(false)
+  giardino                Boolean?  @default(false)
+  googleMapsUrl           String?
+  idProprieta             String?
+  imagenPrincipal         String?
+  img2                    String?
+  img3                    String?
+  immagini                String? // Store as JSON string or comma-separated
+  inAffitto               Boolean?  @default(false)
+  inVendita               Boolean?  @default(false)
+  indirizzo               String?
+  latitudine              Float?
+  locali                  Int?
+  longitudine             Float?
+  mansarda                Boolean?  @default(false)
+  mappale                 String?
+  metriCommerciali        Int?
+  mqScoperti              Int?
+  note                    String?
+  noteRiservate           String?
+  numAttrib               String?
+  numeroBagni             Int?
+  numeroCamereDaLetto      Int?
+  numeroVani              Int?
+  piano                   String?
+  planimetria             String?
+  posizionePiano          String?
+  postoAuto               Boolean?  @default(false)
+  postoAutoCoperto        Boolean?  @default(false)
+  postoAutoScoperto       Boolean?  @default(false)
+  posto_auto              String?
+  presenzaCartello        Boolean?  @default(false)
+  prezzo                  Float?
+  prezzoAcquisto          Float?
+  prezzoMinimo            Float?
+  proprietarioId          String?
+  provincia               String?
+  rendita                 Float?
+  riscaldamento           String?
+  riscaldamentoAutonomo   Boolean?  @default(false)
+  speseCondominio         Float?
+  stato                   String?
+  statoArredamento        String?
+  statoChiavi             String?
+  statoFiniture           String?
+  subparticella           String?
+  terrazza                Boolean?  @default(false)
+  terrazzaMq              Int?
+  terrazzo                Boolean?  @default(false)
+  terreno                 Boolean?  @default(false)
+  terrenoMq               Int?
+  tipo                    String?
+  tipoEdificio            String?
+  tipologia               String?
+  updatedAt               DateTime? @updatedAt
+  vani                    Int?
+  vistaMare               Boolean?  @default(false)
+  zona                    String?
+  zonaMare                String?
+  publications            String? // Store as JSON string
+
+  owner                   Owner?    @relation(fields: [proprietarioId], references: [id])
+}
+
+model Client {
+  id                    String    @id
+  cap                   String?
+  categoria             String?
+  cell1                 String?
+  cell2                 String?
+  citta                 String?
+  codiceFiscale         String?
+  cognome               String?
+  createdAt             DateTime? @default(now())
+  dataAcquisizione      DateTime?
+  dataNascita           DateTime?
+  descrizione           String?
+  domicilio             String?
+  email                 String?
+  estadoCliente         String?
+  firmaCliente          String?
+  firmaData             String?
+  firmaLocation         String?
+  immobiliProposti      String?
+  luogoNascita          String?
+  nome                  String?
+  note                  String?
+  noteInterne           String?
+  pianoPreferito        String?
+  prezzoMax             Float?
+  professione           String?
+  storicoVisite         String?
+  superficieMin         Int?
+  telCasa               String?
+  tipoIncarico          String?
+  tipoOperazione        String?
+  updatedAt             DateTime? @updatedAt
+  zona                  String?
+  prezzoMin             Float?
+  richiedeGiardino      Boolean?  @default(false)
+  affittoMax            Float?
+  camereMin             Int?
+  statoArredamento      String?
+  bagniMin              Int?
+  vani                  Int?
+  richiedePostoAutoCoperto Boolean? @default(false)
+  richiedePostoAutoScoperto Boolean? @default(false)
+  richiedeArredato      Boolean?  @default(false)
+  richiedeAscensore     Boolean?  @default(false)
+  camereMax             Int?
+  richiedeGarage        Boolean?  @default(false)
+  richiedeVistaMare      Boolean?  @default(false)
+  affittoMin            Float?
+  reddito               Float?
+  superficieMax         Int?
+  richiedeBalcone       Boolean?  @default(false)
+  richiedeTerrazzo      Boolean?  @default(false)
+}

@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "**/Revisione_Foto": true,
+    "**/Revisione_Foto_Optimizada": true
+  },
+  "files.watcherExclude": {
+    "**/Revisione_Foto/**": true,
+    "**/Revisione_Foto_Optimizada/**": true
+  }
+}

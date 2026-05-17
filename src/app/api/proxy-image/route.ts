@@ -1,0 +1,80 @@
+/**
+ * /api/proxy-image — Proxy server-side para immagini Firebase Storage
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Perché esiste:
+ *   Firebase Storage blocca le richieste fetch() client-side da domini esterni
+ *   (CORS policy). Il server di Vercel NON è soggetto a CORS — può scaricare
+ *   qualsiasi URL e restituirla al client come buffer binario.
+ *
+ * Sicurezza:
+ *   - Whitelist dei domini accettati (solo Firebase/GCS)
+ *   - Nessun SSRF possibile su IP locali o domini arbitrari
+ *   - Cache pubblica 1h per ridurre le richieste ripetute
+ *
+ * Uso:
+ *   GET /api/proxy-image?url=https%3A%2F%2Ffirebasestorage.googleapis.com%2F...
+ *   → restituisce il buffer dell'immagine con Content-Type corretto
+ */
+
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
+const ALLOWED_HOSTS = [
+  'firebasestorage.googleapis.com',
+  'storage.googleapis.com',
+  'lh3.googleusercontent.com',
+];
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const rawUrl = searchParams.get('url');
+
+    if (!rawUrl) {
+      return NextResponse.json({ error: 'Missing url parameter' }, { status: 400 });
+    }
+
+    // ── Validazione anti-SSRF ────────────────────────────────────────────────
+    let parsed: URL;
+    try {
+      parsed = new URL(rawUrl);
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+    }
+
+    const isAllowed = ALLOWED_HOSTS.some(h => parsed.hostname === h || parsed.hostname.endsWith('.' + h));
+    if (!isAllowed) {
+      return NextResponse.json({ error: `Host not allowed: ${parsed.hostname}` }, { status: 403 });
+    }
+
+    // ── Fetch server-side (nessun limite CORS) ───────────────────────────────
+    const upstream = await fetch(rawUrl, {
+      headers: { 'User-Agent': 'Pantaleo-CRM-PDF-Generator/1.0' },
+      signal: AbortSignal.timeout(15_000), // 15s timeout
+    });
+
+    if (!upstream.ok) {
+      return NextResponse.json(
+        { error: `Upstream error: ${upstream.status} ${upstream.statusText}` },
+        { status: 502 },
+      );
+    }
+
+    const buffer      = await upstream.arrayBuffer();
+    const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: {
+        'Content-Type':  contentType,
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Content-Length': String(buffer.byteLength),
+      },
+    });
+
+  } catch (err: any) {
+    console.error('[proxy-image] Error:', err?.message);
+    return NextResponse.json({ error: err?.message || 'Internal error' }, { status: 500 });
+  }
+}

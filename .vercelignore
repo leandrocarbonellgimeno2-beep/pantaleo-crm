@@ -1,0 +1,10 @@
+Revisione_Foto
+.firebase
+*.zip
+*.gz
+scripts
+docs
+prisma
+.next
+deploy-godmode.ps1
+deploy.bat
