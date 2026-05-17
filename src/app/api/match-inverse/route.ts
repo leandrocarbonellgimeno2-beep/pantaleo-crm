@@ -30,6 +30,8 @@ export async function POST(request: Request) {
 
     for (const cliente of allClients) {
       if (!cliente.Richiesta) continue; // Skip clients without search preferences
+      if (cliente._status === 'pendente_cancellazione') continue;
+      if (cliente.status === 'Sospeso' || cliente.status === 'Concluso') continue;
 
       const result = calculateMatch(cliente.Richiesta, immobile);
       if (!result || result.matchPercentage < MIN_SCORE) continue;
@@ -49,8 +51,9 @@ export async function POST(request: Request) {
 
       const isRecent = createdAt > recencyThreshold;
 
-      // Recency boost: add bonus points to recent clients
-      const boostedScore = Math.min(100, result.matchPercentage + (isRecent ? RECENCY_BOOST : 0));
+      // Recency boost + urgency boost (Alta = +5)
+      const urgenzaBoost = cliente.Richiesta?.Urgenza === 'Alta' ? 5 : 0;
+      const boostedScore = Math.min(100, result.matchPercentage + (isRecent ? RECENCY_BOOST : 0) + urgenzaBoost);
 
       scoredClients.push({
         clienteId: cliente.id,

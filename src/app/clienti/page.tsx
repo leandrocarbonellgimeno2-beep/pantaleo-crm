@@ -11,7 +11,6 @@ import {
 import { cn } from "@/lib/utils";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_FINITURE, PIANI_PREFERENZA, ARREDAMENTO_OPZIONI, CARATTERISTICHE_LABELS } from "@/types/cliente";
-import { generateSchedaIncarico } from "@/lib/generatePDF";
 import { useClienti } from "@/hooks/useClienti";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -367,7 +366,11 @@ export default function ClientiPage() {
   };
 
   // ═══ PDF ═══
-  const handlePrintPDF = () => { if (selectedCliente) generateSchedaIncarico(selectedCliente); };
+  const handlePrintPDF = async () => {
+    if (!selectedCliente) return;
+    const { generateSchedaIncarico } = await import('@/lib/generatePDF');
+    generateSchedaIncarico(selectedCliente);
+  };
 
   const handleOpenModal = (cliente?: Cliente) => {
     setSelectedCliente(cliente ? { ...cliente } : generateEmptyCliente());

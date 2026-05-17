@@ -50,7 +50,16 @@ export async function GET(request: Request) {
     }
     if (limitCount > 0) query = query.limit(limitCount);
 
-    const snapshot = await query.get();
+    // Projection: omits large binary fields (firmaDigitale, etc.) not needed in the list.
+    // Single-ID fetches (above) still return the full document.
+    const snapshot = await query
+      .select(
+        'DatiPersonali', 'Richiesta', 'Matching', 'Caratteristiche',
+        'status', '_status', 'createdAt', 'updatedAt', 'dataCreazione',
+        'note', 'note_riservate',
+        'nome', 'cognome', 'cell1', // legacy top-level fields
+      )
+      .get();
     let data = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
       .map((doc: any) => ({ id: doc.id, ...doc.data() }));

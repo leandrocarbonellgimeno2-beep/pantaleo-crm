@@ -152,6 +152,14 @@ const TIPOLOGIA_SYNONYMS: Record<string, string> = {
   'box/garage':           'garage',
   'garage':               'garage',
   'box':                  'garage',
+  // Garage / Posto auto
+  'garage o posto auto':  'garage',
+  // Commerciale specifico
+  'cessione di attivita': 'negozi',
+  // Singole unità
+  'stanza':               'stanza',
+  'cantina':              'cantina',
+  'edificio':             'struttura',
   // Terreni
   'terreni 010':          'terreno',
   'terreni b3':           'terreno',
@@ -172,7 +180,12 @@ const TIPOLOGIA_SYNONYMS: Record<string, string> = {
   'da scegliere':         '__sconosciuta__',
 };
 
-const FAMILIA_RESIDENZIALE = new Set(['casa', 'villa', 'appartament', 'rustico']);
+// Strict group pairs: only casa ↔ villa are interchangeable (both map from "Casa/Villa").
+// Appartamento and Rustico are strict — they do NOT cross-match each other.
+const TIPOLOGIA_GROUPS = new Map<string, Set<string>>([
+  ['casa',  new Set(['casa', 'villa'])],
+  ['villa', new Set(['villa', 'casa'])],
+]);
 
 function italianStem(tipologia: string): string {
   const normalized = tipologia.toLowerCase().trim();
@@ -206,10 +219,11 @@ function tipologiaScore(clienteTipologie: string[], immobileTipologia: string): 
     }
   }
 
-  // Stessa famiglia residenziale: match parziale
-  if (FAMILIA_RESIDENZIALE.has(immobileStem)) {
+  // Strict group pairs only (casa ↔ villa): partial match
+  const immobileGroup = TIPOLOGIA_GROUPS.get(immobileStem);
+  if (immobileGroup) {
     for (const ct of clienteTipologie) {
-      if (FAMILIA_RESIDENZIALE.has(italianStem(ct))) return 0.5;
+      if (immobileGroup.has(italianStem(ct))) return 0.5;
     }
   }
 
@@ -250,7 +264,7 @@ function fuzzyBudgetScore(
   // Sopra il massimo: 15% di tolleranza
   if (hi < Infinity && value > hi) {
     const overflow = (value - hi) / hi;
-    return Math.max(0, 1 - overflow / 0.15);
+    return Math.max(0, 1 - overflow / 0.05);
   }
 
   return 1.0;

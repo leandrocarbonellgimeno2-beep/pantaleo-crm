@@ -8,7 +8,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DocumentoTemplate } from "@/types/documento";
-import { compileSmartDocument } from "@/lib/pdfUtils";
 
 // Lazy load form components
 const formLoader = () => <div className="fixed inset-0 z-50 bg-slate-100 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>;
@@ -176,6 +175,7 @@ export default function DocumentiPage() {
     if (!docToCompile) return;
     setIsCompiling(true);
     try {
+      const { compileSmartDocument } = await import('@/lib/pdfUtils');
       const pdfBytes = await compileSmartDocument(docToCompile.url, selectedCliente, selectedImmobile);
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);

@@ -41,6 +41,12 @@ export async function GET(request: Request) {
       `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
     const bucket = admin.storage().bucket(bucketName);
 
+    // Hoist clienti fetch once before the loop — avoids N full collection scans.
+    const clientiSnap = await db.collection('clienti').get();
+
+    // Collect affected proprietario IDs for a single batch recount after the loop.
+    const affectedProprietariIds = new Set<string>();
+
     for (const doc of expired) {
       const data = doc.data();
 
@@ -66,9 +72,8 @@ export async function GET(request: Request) {
         })
       );
 
-      // Clean orphan refs in clienti.Matching
+      // Clean orphan refs in clienti.Matching — uses the hoisted snapshot.
       try {
-        const clientiSnap = await db.collection('clienti').get();
         const matchingUpdates: Promise<any>[] = [];
         for (const c of clientiSnap.docs) {
           const m = c.data().Matching ?? {};
@@ -97,25 +102,25 @@ export async function GET(request: Request) {
       // Delete Firestore doc
       await doc.ref.delete();
 
-      // Recount proprietario
-      if (data.proprietarioId) {
-        try {
-          const remainingSnap = await db.collection('immobili')
-            .where('proprietarioId', '==', data.proprietarioId)
-            .get();
-          const activeCount = remainingSnap.docs.filter(
-            (d: any) => d.data()._status !== 'pendente_cancellazione'
-          ).length;
-          await db.collection('proprietari').doc(data.proprietarioId).update({
-            numero_immobili: activeCount,
-          });
-        } catch (e: any) {
-          errors.push(`Proprietario recount ${data.proprietarioId}: ${e.message}`);
-        }
-      }
-
+      if (data.proprietarioId) affectedProprietariIds.add(data.proprietarioId);
       purged.immobili++;
     }
+
+    // Batch recount all affected proprietari in parallel (one query per owner, not per immobile).
+    await Promise.all([...affectedProprietariIds].map(async (pid) => {
+      try {
+        const remainingSnap = await db.collection('immobili')
+          .where('proprietarioId', '==', pid)
+          .select('_status')
+          .get();
+        const activeCount = remainingSnap.docs.filter(
+          (d: any) => d.data()._status !== 'pendente_cancellazione'
+        ).length;
+        await db.collection('proprietari').doc(pid).update({ numero_immobili: activeCount });
+      } catch (e: any) {
+        errors.push(`Proprietario recount ${pid}: ${e.message}`);
+      }
+    }));
   } catch (e: any) {
     errors.push(`immobili query: ${e.message}`);
   }

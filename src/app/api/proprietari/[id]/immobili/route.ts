@@ -56,34 +56,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     }
 
     const propertiesRef = db.collection('immobili');
-    
-    // Attempt to find by ID, codiceImmobile, or rif
-    let foundPropertyDoc = null;
 
-    // Check by ID first
-    const byIdDoc = await propertiesRef.doc(codice).get();
-    if (byIdDoc.exists) foundPropertyDoc = byIdDoc;
-    
-    if (!foundPropertyDoc) {
-      const qsRif = await propertiesRef.where('rif', '==', codice).get();
-      if (!qsRif.empty) foundPropertyDoc = qsRif.docs[0];
-    }
-    
-    if (!foundPropertyDoc) {
-      const qsCodice = await propertiesRef.where('codiceImmobile', '==', codice).get();
-      if (!qsCodice.empty) foundPropertyDoc = qsCodice.docs[0];
-    }
-    
-    if (!foundPropertyDoc) {
-      // In old schema, it might be nested
-      const qsDatiBaseRif = await propertiesRef.where('DatiBase.Riferimento', '==', codice).get();
-      if (!qsDatiBaseRif.empty) foundPropertyDoc = qsDatiBaseRif.docs[0];
-    }
-    if (!foundPropertyDoc) {
-      // Very loose match - note: DatiBase.Codice is also common
-      const qsDatiBaseCod = await propertiesRef.where('DatiBase.Codice', '==', codice).get();
-      if (!qsDatiBaseCod.empty) foundPropertyDoc = qsDatiBaseCod.docs[0];
-    }
+    // Run all 5 lookup strategies in parallel — reduces worst-case from ~500ms to ~100ms.
+    const [byId, byRif, byCodiceImmobile, byRiferimento, byCodice] = await Promise.all([
+      propertiesRef.doc(codice).get(),
+      propertiesRef.where('rif', '==', codice).limit(1).get(),
+      propertiesRef.where('codiceImmobile', '==', codice).limit(1).get(),
+      propertiesRef.where('DatiBase.Riferimento', '==', codice).limit(1).get(),
+      propertiesRef.where('DatiBase.Codice', '==', codice).limit(1).get(),
+    ]);
+
+    const foundPropertyDoc =
+      (byId.exists ? byId : null) ??
+      (byRif.docs[0] ?? null) ??
+      (byCodiceImmobile.docs[0] ?? null) ??
+      (byRiferimento.docs[0] ?? null) ??
+      (byCodice.docs[0] ?? null);
 
     if (!foundPropertyDoc) {
       return NextResponse.json({ error: 'Immobile non trovato con questo codice.' }, { status: 404 });

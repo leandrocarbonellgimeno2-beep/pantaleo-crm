@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "deploy:indexes": "npx firebase deploy --only firestore:indexes"
+    "deploy:indexes": "npx firebase deploy --only firestore:indexes",
+    "analyze": "ANALYZE=true next build --webpack"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
@@ -36,6 +37,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.6",
     "@tailwindcss/postcss": "^4",
     "@types/fslightbox-react": "^2.0.2",
     "@types/node": "^20",

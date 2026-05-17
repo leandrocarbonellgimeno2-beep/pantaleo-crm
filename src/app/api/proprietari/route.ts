@@ -21,7 +21,9 @@ export async function GET(request: Request) {
     // Fetch immobili in parallel to compute the real per-owner count.
     const [snapshot, immobiliSnap] = await Promise.all([
       db.collection('proprietari').get(),
-      db.collection('immobili').get(),
+      // Projection: only the 2 fields needed to compute the live count.
+      // This avoids transferring ~4.5 MB of full immobili documents on every owner list load.
+      db.collection('immobili').select('proprietarioId', '_status').get(),
     ]);
 
     // Build a real-time count map: proprietarioId → number of immobili

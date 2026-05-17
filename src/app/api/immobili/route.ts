@@ -83,8 +83,20 @@ export async function GET(request: Request) {
 
     let query = baseQuery.orderBy('DatiBase.Codice', 'desc');
 
-    // 5. Firestore-level filters reduce actual docs returned, so 1500 cap is safe
-    const snapshot = await query.limit(1500).get();
+    // 5. Projection: only fields used by the list UI — reduces Lambda↔Browser payload ~80%.
+    //    Single-ID fetches (above) still return the full document.
+    const snapshot = await query
+      .select(
+        'DatiBase.Codice', 'DatiBase.Indirizzo', 'DatiBase.Citta', 'DatiBase.Zona',
+        'DatiBase.Tipologia', 'DatiBase.Riferimento', 'DatiBase.SortKey',
+        'GestioneCommerciale.PrezzoVendita', 'GestioneCommerciale.PrezzoAffitto',
+        'GestioneCommerciale.InVendita', 'GestioneCommerciale.InAffitto', 'GestioneCommerciale.Sospeso',
+        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto',
+        'images', '_status', 'proprietarioId', 'createdAt',
+        'Idealista.idealistaStatus',
+      )
+      .limit(1500)
+      .get();
     const docs = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
       .map((doc: any) => stripToThumbnail({ id: doc.id, ...doc.data() }));

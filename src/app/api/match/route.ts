@@ -35,6 +35,9 @@ export async function POST(request: Request) {
       // Skip blacklisted/proposed
       if (excludeIds.has(doc.id)) continue;
 
+      // Skip soft-deleted properties
+      if ((immobile as any)._status === 'pendente_cancellazione') continue;
+
       const result = calculateMatch(richiesta, immobile);
 
       // Only include results at or above the minimum quality threshold.
