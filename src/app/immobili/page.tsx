@@ -114,6 +114,8 @@ const compressImage = (file: File): Promise<Blob> => {
 export default function ImmobiliPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -683,7 +685,9 @@ export default function ImmobiliPage() {
     setOwnerData(null);
     setOwnerProperties([]);
     setShowOwnerPropsModal(false);
-    
+    setIsLoadingDetail(true);
+    setDetailError(null);
+
     // Lazy-load full property data (including all images) + owner details
     const fetches: Promise<any>[] = [
       // Always fetch full property by ID to get complete images array
@@ -710,6 +714,9 @@ export default function ImmobiliPage() {
       const fullProperty = results[0];
       if (fullProperty && !fullProperty.error) {
         setSelectedProperty((prev: any) => ({ ...prev, ...fullProperty }));
+      } else if (fullProperty?.error) {
+        console.error('[Detail fetch] API returned error for id', property.id, '→', fullProperty.error);
+        setDetailError(fullProperty.error);
       }
 
       // Owner data
@@ -733,8 +740,11 @@ export default function ImmobiliPage() {
         const otherProps = (Array.isArray(allOwnerProps) ? allOwnerProps : []).filter((p: any) => p.id !== property.id);
         setOwnerProperties(otherProps);
       }
-    } catch (error) {
-      console.error("Error fetching property/owner details:", error);
+    } catch (error: any) {
+      console.error('[Detail fetch] Network/parse error for id', property.id, '→', error);
+      setDetailError('Errore di rete durante il caricamento dei dettagli.');
+    } finally {
+      setIsLoadingDetail(false);
     }
   };
 
@@ -1869,7 +1879,18 @@ export default function ImmobiliPage() {
                    </div>
 
                    {/* Clean Carousel Gallery */}
-                   {selectedProperty.images && selectedProperty.images.length > 0 ? (
+                   {isLoadingDetail ? (
+                     <div className="w-full h-48 bg-slate-100 rounded-3xl flex flex-col items-center justify-center gap-3 text-slate-400">
+                       <div className="h-8 w-8 rounded-full border-4 border-slate-200 border-t-indigo-500 animate-spin" />
+                       <span className="text-xs font-semibold uppercase tracking-widest">Caricamento foto...</span>
+                     </div>
+                   ) : detailError ? (
+                     <div className="w-full h-48 bg-red-50 rounded-3xl flex flex-col items-center justify-center gap-2 text-red-400">
+                       <ImageIcon className="h-8 w-8 opacity-50" />
+                       <span className="text-sm font-bold uppercase tracking-widest">Errore caricamento dettagli</span>
+                       <span className="text-xs text-red-300">{detailError}</span>
+                     </div>
+                   ) : selectedProperty.images && selectedProperty.images.length > 0 ? (
                      <div className="relative w-full h-[300px] md:h-[500px] bg-slate-100 rounded-3xl overflow-hidden shadow-sm group">
                         <NextImage 
                           src={selectedProperty.images[currentSlide]} 
