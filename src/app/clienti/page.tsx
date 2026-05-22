@@ -269,7 +269,7 @@ export default function ClientiPage() {
     if (!selectedCliente) return;
     const snapshot = selectedCliente;
     const item = { immobileId: property.id, codice: property.DatiBase?.Codice||'', dataProposta: new Date().toISOString().split('T')[0], esito: 'In Attesa' as const, note: '' };
-    const newP = [...(snapshot.Matching?.Proposti || []), item];
+    const newP = [...(snapshot.Matching?.Proposti || []), item].slice(-50);
     const updated = { ...snapshot, Matching: { ...snapshot.Matching, Proposti: newP } };
     setSelectedCliente(updated);
     setMatchResults(prev => prev.filter(p => p.id !== property.id));
