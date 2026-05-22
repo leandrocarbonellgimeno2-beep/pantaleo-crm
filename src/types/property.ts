@@ -7,8 +7,6 @@
  * reale potrebbe averne solo una parte.
  */
 
-import type { FirebaseFirestore } from 'firebase-admin/firestore';
-
 // ── Sotto-strutture ──────────────────────────────────────────────────────────
 
 export interface PropertyDatiBase {
