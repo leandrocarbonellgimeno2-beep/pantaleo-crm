@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { admin } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
+import { sanitizeStoragePath } from "@/lib/sanitize";
 
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -9,10 +10,18 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    let path = formData.get("path") as string;
+    const rawPath = formData.get("path") as string;
 
-    if (!file || !path) {
+    if (!file || !rawPath) {
       return NextResponse.json({ error: "File or path missing" }, { status: 400 });
+    }
+
+    let path: string;
+    try {
+      path = sanitizeStoragePath(rawPath);
+    } catch (e: any) {
+      console.warn('[upload] path rejected:', rawPath, '→', e.message);
+      return NextResponse.json({ error: e.message }, { status: 400 });
     }
 
     // Validate MIME type before reading into memory
@@ -84,10 +93,19 @@ export async function DELETE(req: NextRequest) {
     const match = pathname.match(/\/o\/(.+)$/);
     if (!match) return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
 
-    const filePath = decodeURIComponent(match[1]);
+    const rawFilePath = decodeURIComponent(match[1]).split('?')[0];
+
+    let filePath: string;
+    try {
+      filePath = sanitizeStoragePath(rawFilePath);
+    } catch (e: any) {
+      console.warn('[upload DELETE] path rejected:', rawFilePath, '→', e.message);
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+
     const storageBucket = process.env.FIREBASE_STORAGE_BUCKET || `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
     const bucket = admin.storage().bucket(storageBucket);
-    
+
     await bucket.file(filePath).delete();
     
     return NextResponse.json({ success: true });

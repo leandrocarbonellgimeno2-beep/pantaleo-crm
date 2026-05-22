@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
 import { requireAuth, AuthError } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
@@ -28,11 +29,25 @@ async function fetchAllPaginated(collectionName: string): Promise<any[]> {
 }
 
 export async function GET(request: Request) {
+  let session: any;
   try {
-    await requireAuth(request.headers.get('cookie'));
+    session = await requireAuth(request.headers.get('cookie'));
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Throttle: massimo 3 backup ogni 10 minuti per utente. Un backup completo
+  // scarica ~2000 docs Firestore — preserva la quota free-tier in caso di
+  // click ripetuti o di un client buggato che ri-richiede in loop.
+  const userKey = session?.email || getClientIp(request);
+  const rl = rateLimit({ key: `backup:${userKey}`, max: 3, windowMs: 10 * 60_000 });
+  if (!rl.allowed) {
+    console.warn(`[backup-db] rate-limited for ${userKey}, retry in ${rl.retryAfterSec}s`);
+    return NextResponse.json(
+      { error: `Troppi backup ravvicinati. Riprova tra ${Math.ceil(rl.retryAfterSec / 60)} minuti.` },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+    );
   }
 
   const startTime = Date.now();

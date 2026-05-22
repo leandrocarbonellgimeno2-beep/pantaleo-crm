@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { signSession } from '@/lib/auth';
+import { rateLimit, getClientIp } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,18 @@ async function safeCompare(a: string, b: string): Promise<boolean> {
 
 export async function POST(request: Request) {
   try {
+    // Rate limit per-IP: 7 tentativi ogni 15 minuti. Previene brute-force
+    // su singolo IP senza penalizzare i typo legittimi dell'utente.
+    const ip = getClientIp(request);
+    const rl = rateLimit({ key: `login:${ip}`, max: 7, windowMs: 15 * 60_000 });
+    if (!rl.allowed) {
+      console.warn(`[Auth] rate-limited login from ${ip}, retry in ${rl.retryAfterSec}s`);
+      return NextResponse.json(
+        { error: `Troppi tentativi di accesso. Riprova tra ${Math.ceil(rl.retryAfterSec / 60)} minuti.` },
+        { status: 429, headers: { 'Retry-After': String(rl.retryAfterSec) } },
+      );
+    }
+
     const { email, password } = await request.json();
 
     if (!email || !password) {
