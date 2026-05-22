@@ -95,7 +95,7 @@ export async function GET(request: Request) {
         'images', '_status', 'proprietarioId', 'createdAt',
         'Idealista.idealistaStatus',
       )
-      .limit(1500)
+      .limit(1000)
       .get();
     const docs = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')

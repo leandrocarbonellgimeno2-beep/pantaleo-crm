@@ -18,8 +18,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing immobile data' }, { status: 400 });
     }
 
-    // 1. Fetch all active clients
-    const snapshot = await db.collection('clienti').get();
+    // 1. Fetch clients excluding soft-deleted ones (Firestore-level filter)
+    const snapshot = await db
+      .collection('clienti')
+      .where('_status', '!=', 'pendente_cancellazione')
+      .get();
     const allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 
     const now = Date.now();

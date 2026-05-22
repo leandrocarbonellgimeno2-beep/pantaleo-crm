@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     const snapshot = await db
       .collection('immobili')
       .where('GestioneCommerciale.Sospeso', '==', false)
+      .limit(1000)
       .get();
 
     const docsScanned = snapshot.size;

@@ -41,8 +41,11 @@ export async function GET(request: Request) {
       `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
     const bucket = admin.storage().bucket(bucketName);
 
-    // Hoist clienti fetch once before the loop — avoids N full collection scans.
-    const clientiSnap = await db.collection('clienti').get();
+    // Hoist clienti fetch once before the loop — only if there's something to purge.
+    // Avoids downloading 453 client docs on nights when nothing is pending.
+    const clientiSnap = expired.length > 0
+      ? await db.collection('clienti').get()
+      : { docs: [] as any[] };
 
     // Collect affected proprietario IDs for a single batch recount after the loop.
     const affectedProprietariIds = new Set<string>();

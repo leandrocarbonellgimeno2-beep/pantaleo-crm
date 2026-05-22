@@ -60,24 +60,31 @@ export async function POST(request: Request) {
       pageToken = res.data.nextPageToken;
     } while (pageToken);
 
+    // Preload all existing appointments from Firestore in ONE query.
+    // Builds a Map<googleEventId, DocumentReference> so each upsert check
+    // is an O(1) in-memory lookup instead of an individual Firestore query.
+    const existingSnap = await db.collection('appointments')
+      .where('googleEventId', '!=', '')
+      .select('googleEventId')
+      .get();
+    const existingByGoogleId = new Map<string, FirebaseFirestore.DocumentReference>();
+    for (const doc of existingSnap.docs) {
+      const gid = doc.data().googleEventId;
+      if (gid) existingByGoogleId.set(gid, doc.ref);
+    }
+
     // Upsert into Firestore
     let created = 0;
     let updated = 0;
     let skipped = 0;
 
-    // Process in batches of 400
+    // Process in batches of 400 (Firestore batch write limit)
     for (let i = 0; i < allEvents.length; i += 400) {
       const chunk = allEvents.slice(i, i + 400);
       const batch = db.batch();
 
       for (const event of chunk) {
         if (!event.id) { skipped++; continue; }
-
-        // Check if event already exists by googleEventId
-        const existing = await db.collection('appointments')
-          .where('googleEventId', '==', event.id)
-          .limit(1)
-          .get();
 
         const startDt = event.start?.dateTime || event.start?.date || '';
         const endDt = event.end?.dateTime || event.end?.date || '';
@@ -102,9 +109,10 @@ export async function POST(request: Request) {
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         };
 
-        if (!existing.empty) {
-          // Update existing
-          batch.update(existing.docs[0].ref, appointmentData);
+        const existingRef = existingByGoogleId.get(event.id);
+        if (existingRef) {
+          // Update existing — ref already known from preloaded map
+          batch.update(existingRef, appointmentData);
           updated++;
         } else {
           // Create new

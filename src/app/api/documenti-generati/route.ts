@@ -11,7 +11,7 @@ const COLLECTION = 'documenti_generati';
 
 export async function GET() {
   try {
-    const snapshot = await db.collection(COLLECTION).orderBy('dataCreazione', 'desc').get();
+    const snapshot = await db.collection(COLLECTION).orderBy('dataCreazione', 'desc').limit(200).get();
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return NextResponse.json(data);
   } catch (error: any) {
