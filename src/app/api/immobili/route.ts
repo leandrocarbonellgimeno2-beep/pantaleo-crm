@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
+import { markForSoftDelete } from '@/lib/services/soft-delete';
+import { recountProprietario } from '@/lib/services/proprietari-counter';
+import { extractImageUrls } from '@/lib/imageUtils';
+import type { Property } from '@/types/property';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,24 +34,11 @@ export async function GET(request: Request) {
       const data: any = { id: doc.id, ...doc.data() };
       if (data._status === 'pendente_cancellazione') return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-      // ── Normalizzazione immagini legacy ───────────────────────────────────────
-      // I documenti storici possono avere le URL delle foto in campi diversi.
-      // Cerchiamo in ordine di priorità e assegniamo al campo canonico `images`.
+      // Image legacy normalization — fonte unica in lib/imageUtils.
       if (!Array.isArray(data.images) || data.images.length === 0) {
-        const candidates: string[] =
-          (Array.isArray(data.Media?.Immagini)    ? data.Media.Immagini    : [])
-          .concat(Array.isArray(data.Immagini)     ? data.Immagini          : [])
-          .concat(Array.isArray(data.DatiBase?.Foto) ? data.DatiBase.Foto   : [])
-          .concat(Array.isArray(data.Media?.Urls)  ? data.Media.Urls        : [])
-          .concat(typeof data.thumbnail === 'string' && data.thumbnail ? [data.thumbnail] : []);
-
-        // Filtra vuoti, null, duplicati e normalizza
-        const uniqueUrls = [...new Set(
-          candidates.filter((u: any) => typeof u === 'string' && u.startsWith('http'))
-        )];
+        const uniqueUrls = extractImageUrls(data);
         if (uniqueUrls.length > 0) data.images = uniqueUrls;
       }
-      // ─────────────────────────────────────────────────────────────────────────
 
       return NextResponse.json(data);
     }
@@ -229,26 +220,10 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
 
-    const data = doc.data() as any;
+    const data = doc.data() as Property;
 
-    // Soft-delete: mark as pending; cron physically purges images + doc at midnight
-    await docRef.update({
-      _status: 'pendente_cancellazione',
-      _deletedAt: Date.now(),
-    });
-
-    // Recount active immobili for proprietario (exclude soft-deleted)
-    if (data.proprietarioId) {
-      const remainingSnap = await db.collection('immobili')
-        .where('proprietarioId', '==', data.proprietarioId)
-        .get();
-      const activeCount = remainingSnap.docs.filter(
-        (d: any) => d.data()._status !== 'pendente_cancellazione'
-      ).length;
-      await db.collection('proprietari').doc(data.proprietarioId).update({
-        numero_immobili: activeCount,
-      }).catch(() => {});
-    }
+    await markForSoftDelete('immobili', id);
+    if (data.proprietarioId) await recountProprietario(data.proprietarioId);
 
     return NextResponse.json({ success: true, message: 'Property marked for deletion.' });
   } catch (error: any) {

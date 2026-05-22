@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, PROPRIETARI_ALLOWED } from '@/lib/sanitize';
+import { markForSoftDelete } from '@/lib/services/soft-delete';
 
 export async function GET(request: Request) {
   try {
@@ -131,11 +132,7 @@ export async function DELETE(request: Request) {
       }, { status: 409 });
     }
 
-    // Soft-delete: cron purges physically at midnight
-    await db.collection('proprietari').doc(id).update({
-      _status: 'pendente_cancellazione',
-      _deletedAt: Date.now(),
-    });
+    await markForSoftDelete('proprietari', id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[proprietari DELETE]', error);

@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useImmobili } from "@/hooks/useImmobili";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
+import { extractImageUrls } from "@/lib/imageUtils";
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { 
@@ -15,10 +16,14 @@ import {
   Sunrise, Trees, CheckCircle2, Map, UploadCloud, Printer, Eye,
   Zap, MessageCircle, ChevronDown, ChevronUp, BarChart3, SlidersHorizontal, RotateCcw, ExternalLink, FileText
 } from "lucide-react";
-import FsLightbox from "fslightbox-react";
+// FsLightbox lazy-loaded: ~50KB chunk caricato solo al primo apertura della galleria
+// invece che nel bundle iniziale della pagina immobili.
 import { cn } from "@/lib/utils";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
+
+// FsLightbox: caricato dinamicamente — riduce ~50KB dal bundle iniziale.
+const FsLightbox = dynamic(() => import("fslightbox-react"), { ssr: false });
 
 // Importazione dinamica del componente mappa (Leaflet non supporta SSR)
 const PropertyMap = dynamic(() => import("@/components/PropertyMap"), {
@@ -49,25 +54,9 @@ const amenityIcons: Record<string, any> = {
   Terreno: <Trees className="h-4 w-4 text-green-500" />
 };
 
-/**
- * Estrae le immagini da un documento immobile qualsiasi,
- * cercando in tutti i campi noti (campo canonico + fallback legacy).
- * Garantisce backward compatibility con documenti di tutte le epoche.
- */
-function extractImages(property: any): string[] {
-  if (!property) return [];
-  // Campo canonico (documenti nuovi)
-  if (Array.isArray(property.images) && property.images.length > 0)
-    return property.images.filter((u: any) => typeof u === 'string' && u.startsWith('http'));
-  // Fallback legacy — cerca in tutti i percorsi noti
-  const candidates: string[] = ([] as string[])
-    .concat(Array.isArray(property.Media?.Immagini)     ? property.Media.Immagini     : [])
-    .concat(Array.isArray(property.Immagini)             ? property.Immagini            : [])
-    .concat(Array.isArray(property.DatiBase?.Foto)       ? property.DatiBase.Foto       : [])
-    .concat(Array.isArray(property.Media?.Urls)          ? property.Media.Urls          : [])
-    .concat(typeof property.thumbnail === 'string' && property.thumbnail ? [property.thumbnail] : []);
-  return [...new Set(candidates.filter((u: any) => typeof u === 'string' && u.startsWith('http')))];
-}
+// extractImages è ora centralizzato in @/lib/imageUtils — alias locale per
+// non rompere i call sites esistenti.
+const extractImages = extractImageUrls;
 
 const PhotoViewer = ({ images, toggler, sourceIndex }: { images: string[], toggler: boolean, sourceIndex: number }) => {
   if (!images || images.length === 0) return null;

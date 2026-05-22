@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, CLIENTI_ALLOWED } from '@/lib/sanitize';
+import { markForSoftDelete } from '@/lib/services/soft-delete';
 
 export const dynamic = 'force-dynamic';
 
@@ -129,11 +130,7 @@ export async function DELETE(request: Request) {
       }, { status: 409 });
     }
 
-    // Soft-delete: cron purges physically at midnight
-    await db.collection('clienti').doc(id).update({
-      _status: 'pendente_cancellazione',
-      _deletedAt: Date.now(),
-    });
+    await markForSoftDelete('clienti', id);
     return NextResponse.json({ success: true, message: 'Client marked for deletion.' });
   } catch (error: any) {
     console.error('[clienti DELETE]', error);

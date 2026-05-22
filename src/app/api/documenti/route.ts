@@ -6,7 +6,10 @@ const COLLECTION_NAME = 'documenti_template';
 export async function GET(request: Request) {
   try {
     const snapshot = await db.collection(COLLECTION_NAME).orderBy('dataCreazione', 'desc').limit(200).get();
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Esclude i soft-deleted per coerenza con immobili/clienti/proprietari.
+    const data = snapshot.docs
+      .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
+      .map(doc => ({ id: doc.id, ...doc.data() }));
     return NextResponse.json(data);
   } catch (error: any) {
     console.error('[documenti]', error);

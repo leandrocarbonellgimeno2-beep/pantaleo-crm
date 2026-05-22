@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { recountManyProprietari } from '@/lib/services/proprietari-counter';
+import { extractImageUrls } from '@/lib/imageUtils';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,18 +55,11 @@ export async function GET(request: Request) {
     for (const doc of expired) {
       const data = doc.data();
 
-      // Delete Storage images
-      const allUrls: string[] = [
-        ...(Array.isArray(data.images)          ? data.images          : []),
-        ...(Array.isArray(data.Media?.Immagini)  ? data.Media.Immagini  : []),
-        ...(Array.isArray(data.Media?.Urls)      ? data.Media.Urls      : []),
-        ...(Array.isArray(data.Immagini)         ? data.Immagini        : []),
-        ...(Array.isArray(data.DatiBase?.Foto)   ? data.DatiBase.Foto   : []),
-        ...(typeof data.thumbnail === 'string' && data.thumbnail ? [data.thumbnail] : []),
-      ].filter((u): u is string => typeof u === 'string' && u.startsWith('http'));
+      // Delete Storage images — fonte unica in lib/imageUtils.
+      const allUrls = extractImageUrls(data);
 
       await Promise.allSettled(
-        [...new Set(allUrls)].map(async (url) => {
+        allUrls.map(async (url) => {
           const path = extractStoragePath(url, bucketName);
           if (!path) return;
           try { await bucket.file(path).delete(); } catch (e: any) {
@@ -109,21 +104,8 @@ export async function GET(request: Request) {
       purged.immobili++;
     }
 
-    // Batch recount all affected proprietari in parallel (one query per owner, not per immobile).
-    await Promise.all([...affectedProprietariIds].map(async (pid) => {
-      try {
-        const remainingSnap = await db.collection('immobili')
-          .where('proprietarioId', '==', pid)
-          .select('_status')
-          .get();
-        const activeCount = remainingSnap.docs.filter(
-          (d: any) => d.data()._status !== 'pendente_cancellazione'
-        ).length;
-        await db.collection('proprietari').doc(pid).update({ numero_immobili: activeCount });
-      } catch (e: any) {
-        errors.push(`Proprietario recount ${pid}: ${e.message}`);
-      }
-    }));
+    // Batch recount tramite il service condiviso (fonte unica).
+    await recountManyProprietari(affectedProprietariIds);
   } catch (e: any) {
     errors.push(`immobili query: ${e.message}`);
   }
@@ -152,6 +134,8 @@ export async function GET(request: Request) {
     errors.push(`clienti query: ${e.message}`);
   }
 
-  console.log('[cron/purge-deleted]', purged, errors.length ? errors : 'no errors');
+  if (errors.length > 0) {
+    console.warn('[cron/purge-deleted] errors:', errors);
+  }
   return NextResponse.json({ purged, errors: errors.length ? errors : [] });
 }
