@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { sanitizeBody, CLIENTI_ALLOWED } from '@/lib/sanitize';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,9 +85,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...rest } = body;
+    const { id } = body;
+    const rest = sanitizeBody(body, CLIENTI_ALLOWED, id ? 'clienti.UPDATE' : 'clienti.CREATE');
 
-    const clientData = {
+    const clientData: any = {
       ...rest,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     };

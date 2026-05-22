@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,9 +122,11 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id } = body;
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
-    
+
+    const updates = sanitizeBody(body, IMMOBILI_ALLOWED, 'immobili.PATCH');
+
     await db.collection('immobili').doc(id).update({
       ...updates,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -138,7 +141,8 @@ export async function PATCH(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const body: any = sanitizeBody(rawBody, IMMOBILI_ALLOWED, 'immobili.POST');
     const now = Date.now().toString();
 
     // ── Auto-increment Codice — atomic via Firestore counter document ────────

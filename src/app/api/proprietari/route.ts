@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { sanitizeBody, PROPRIETARI_ALLOWED } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
   try {
@@ -72,9 +73,11 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
+    const { id } = body;
 
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const updates = sanitizeBody(body, PROPRIETARI_ALLOWED, 'proprietari.PATCH');
 
     await db.collection('proprietari').doc(id).update({
       ...updates,
@@ -91,7 +94,7 @@ export async function PATCH(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, ...data } = body; // remove id if it was sent empty
+    const data = sanitizeBody(body, PROPRIETARI_ALLOWED, 'proprietari.POST');
 
     const docRef = await db.collection('proprietari').add({
       ...data,
