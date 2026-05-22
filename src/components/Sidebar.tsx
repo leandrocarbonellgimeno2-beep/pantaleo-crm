@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Home, 
-  UserSquare2, 
-  FileText, 
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  LayoutDashboard,
+  Users,
+  Home,
+  UserSquare2,
+  FileText,
   LogOut,
   ChevronRight,
   Loader2,
@@ -16,6 +16,7 @@ import {
   Mail
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -30,38 +31,70 @@ const navigation = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
   const [loggingOut, setLoggingOut] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [canViewMessages, setCanViewMessages] = useState(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
 
-  useEffect(() => {
-    try {
-      fetch('/api/auth/session')
-        .then(res => res.json())
-        .then(data => {
-          if (data?.nome) {
-            const nomeL = data.nome.toLowerCase();
-            if (nomeL.includes('leandro') || nomeL.includes('francesco') || nomeL.includes('segretaria') || nomeL.includes('secretaria')) {
-              setCanViewMessages(true);
-            }
-          }
-        })
-        .catch(() => {});
-    } catch (e) {}
-  }, []);
+  // Derived dal context: nessun fetch separato qui dentro.
+  const canViewMessages = useMemo(() => {
+    const nomeL = (user?.nome || "").toLowerCase();
+    return (
+      nomeL.includes("leandro") ||
+      nomeL.includes("francesco") ||
+      nomeL.includes("segretaria") ||
+      nomeL.includes("secretaria")
+    );
+  }, [user?.nome]);
 
+  // EventSource con reconnessione automatica (exponential backoff).
+  // EventSource del browser ritenta da solo, ma chiude su .onerror dopo certi
+  // status. Qui costruiamo la connessione, e se viene chiusa la riapriamo
+  // manualmente con backoff progressivo. Massimo 5 tentativi prima di mollare.
+  const reconnectAttempts = useRef(0);
   useEffect(() => {
     if (!canViewMessages) return;
-    const sse = new EventSource("/api/messaggi-web/stream");
-    sse.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const unread = data.filter((m: any) => !m.letto).length;
-        setUnreadMsgCount(unread);
-      } catch (err) {}
+    let sse: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let closed = false;
+
+    const connect = () => {
+      if (closed) return;
+      sse = new EventSource("/api/messaggi-web/stream");
+
+      sse.onopen = () => {
+        reconnectAttempts.current = 0; // reset su connessione riuscita
+      };
+
+      sse.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const unread = data.filter((m: any) => !m.letto).length;
+          setUnreadMsgCount(unread);
+        } catch {}
+      };
+
+      sse.onerror = () => {
+        if (closed) return;
+        sse?.close();
+        sse = null;
+        const attempt = ++reconnectAttempts.current;
+        if (attempt > 5) {
+          console.warn("[Sidebar SSE] giving up after 5 reconnect attempts");
+          return;
+        }
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30_000);
+        console.warn(`[Sidebar SSE] disconnected — reconnect ${attempt}/5 in ${delay}ms`);
+        reconnectTimer = setTimeout(connect, delay);
+      };
     };
-    return () => sse.close();
+
+    connect();
+    return () => {
+      closed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      sse?.close();
+    };
   }, [canViewMessages]);
 
   const handleLogout = async () => {

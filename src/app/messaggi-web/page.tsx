@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Mail, Trash2, Calendar, Phone, MessageCircle, AlertCircle, Inbox, MailOpen, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/contexts/ConfirmDialog";
 
 interface Messaggio {
   id: string;
@@ -18,6 +19,7 @@ interface Messaggio {
 }
 
 export default function MessaggiWebPage() {
+  const confirm = useConfirm();
   const [messaggi, setMessaggi] = useState<Messaggio[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMsg, setSelectedMsg] = useState<Messaggio | null>(null);
@@ -102,7 +104,12 @@ export default function MessaggiWebPage() {
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm("Sei sicuro di voler eliminare questo messaggio? L'azione non può essere annullata.")) return;
+    const ok = await confirm({
+      title: 'Eliminare il messaggio?',
+      message: "Il messaggio sarà rimosso definitivamente. L'azione non può essere annullata.",
+      danger: true,
+    });
+    if (!ok) return;
     
     try {
       const res = await fetch(`/api/messaggi-web/${id}`, { method: "DELETE" });

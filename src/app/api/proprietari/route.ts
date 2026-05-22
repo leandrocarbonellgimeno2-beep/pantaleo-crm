@@ -20,11 +20,13 @@ export async function GET(request: Request) {
     // orderBy as an implicit "field exists" filter). Migrated records without
     // createdAt would disappear from the list entirely.
     // Fetch immobili in parallel to compute the real per-owner count.
+    // Safety cap: 677 proprietari attivi → 2000 lascia margine 3x.
+    // 806 immobili → 1500 idem.
     const [snapshot, immobiliSnap] = await Promise.all([
-      db.collection('proprietari').get(),
+      db.collection('proprietari').limit(2000).get(),
       // Projection: only the 2 fields needed to compute the live count.
       // This avoids transferring ~4.5 MB of full immobili documents on every owner list load.
-      db.collection('immobili').select('proprietarioId', '_status').get(),
+      db.collection('immobili').select('proprietarioId', '_status').limit(1500).get(),
     ]);
 
     // Build a real-time count map: proprietarioId → number of immobili

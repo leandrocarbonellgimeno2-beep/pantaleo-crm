@@ -63,9 +63,26 @@ export async function getIdealistaToken(): Promise<string> {
 }
 
 /**
- * Makes an authenticated request to the Idealista API.
- * Automatically handles token retrieval and feedKey header.
+ * Makes an authenticated request to the Idealista API with exponential backoff.
+ *
+ * Retry policy:
+ *  - Retry su errori di rete (fetch throw) e su 5xx (errori server transienti)
+ *  - NON ritentare su 4xx (errori client permanenti)
+ *  - Max 3 tentativi totali con backoff 500ms → 1500ms → 4500ms
+ *  - Su 429 (rate limit) usa Retry-After se presente, altrimenti backoff standard
  */
+const MAX_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 500;
+
+function shouldRetry(status: number): boolean {
+  if (status === 429) return true;
+  return status >= 500 && status < 600;
+}
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function idealistaFetch(
   path: string,
   options: RequestInit = {},
@@ -85,10 +102,37 @@ export async function idealistaFetch(
     headers['Content-Type'] = 'application/json';
   }
 
-  return fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers,
-  });
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { ...options, headers });
+
+      if (res.ok || !shouldRetry(res.status)) return res;
+
+      // Server error o rate limit → retry
+      if (attempt < MAX_ATTEMPTS) {
+        const retryAfter = res.headers.get('Retry-After');
+        const backoff = retryAfter
+          ? Math.min(parseInt(retryAfter, 10) * 1000, 10_000)
+          : BASE_BACKOFF_MS * Math.pow(3, attempt - 1);
+        console.warn(`[Idealista] ${path} → HTTP ${res.status}, retry ${attempt}/${MAX_ATTEMPTS - 1} in ${backoff}ms`);
+        await sleep(backoff);
+        continue;
+      }
+      return res; // ultimo tentativo: ritorna la response anche se fallita
+    } catch (err: any) {
+      lastError = err;
+      if (attempt < MAX_ATTEMPTS) {
+        const backoff = BASE_BACKOFF_MS * Math.pow(3, attempt - 1);
+        console.warn(`[Idealista] ${path} → network error "${err.message}", retry ${attempt}/${MAX_ATTEMPTS - 1} in ${backoff}ms`);
+        await sleep(backoff);
+        continue;
+      }
+      throw err;
+    }
+  }
+  // Unreachable in practice — il loop ritorna o lancia in ogni branch
+  throw lastError || new Error('Idealista fetch failed after retries');
 }
 
 /**

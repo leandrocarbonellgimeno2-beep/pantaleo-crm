@@ -49,7 +49,9 @@ export async function GET(request: Request) {
     } else {
       query = query.orderBy('createdAt', 'desc');
     }
-    if (limitCount > 0) query = query.limit(limitCount);
+    // Hard safety cap: anche senza ?limit= esplicito, mai oltre 1500 docs.
+    // Oggi ci sono 453 clienti attivi → 1500 lascia 3x di margine.
+    query = query.limit(limitCount > 0 ? Math.min(limitCount, 1500) : 1500);
 
     // Projection: omits large binary fields (firmaDigitale, etc.) not needed in the list.
     // Single-ID fetches (above) still return the full document.

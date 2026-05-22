@@ -19,9 +19,13 @@ export async function POST(request: Request) {
     }
 
     // 1. Fetch clients excluding soft-deleted ones (Firestore-level filter)
+    // Hard cap: 453 active clients oggi, 2000 lascia margine 4x prima di toccare
+    // questo limite. Se viene superato significa che bisogna migrare a una query
+    // pre-filtrata (es. solo clienti con Richiesta non vuota).
     const snapshot = await db
       .collection('clienti')
       .where('_status', '!=', 'pendente_cancellazione')
+      .limit(2000)
       .get();
     const allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
 

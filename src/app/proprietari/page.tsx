@@ -8,8 +8,10 @@ import SignaturePad from "@/components/ui/SignaturePad";
 import { Proprietario } from "@/types/proprietario";
 import { useProprietari } from "@/hooks/useProprietari";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useConfirm } from "@/contexts/ConfirmDialog";
 
 export default function ProprietariPage() {
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState("");
   const { proprietari: allProprietari, loading, refresh } = useProprietari();
 
@@ -173,7 +175,14 @@ export default function ProprietariPage() {
   };
 
   const handleUnassignProperty = async (propertyId: string) => {
-    if (!selectedProprietario?.id || !confirm("Sei sicuro di voler scollegare questo immobile?")) return;
+    if (!selectedProprietario?.id) return;
+    const ok = await confirm({
+      title: 'Scollegare l\'immobile?',
+      message: 'L\'immobile verrà disassociato dal proprietario. Potrai ricollegarlo successivamente.',
+      confirmLabel: 'Scollega',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/proprietari/${selectedProprietario.id}/immobili`, {
          method: 'DELETE',
@@ -328,7 +337,12 @@ export default function ProprietariPage() {
   };
 
   const handleDeleteFile = async (fieldName: string, url: string) => {
-     if (!confirm("Sei sicuro di voler eliminare questo documento?")) return;
+     const ok = await confirm({
+       title: 'Eliminare il documento?',
+       message: 'Il file verrà rimosso definitivamente dal proprietario.',
+       danger: true,
+     });
+     if (!ok) return;
      try {
        await fetch('/api/upload', {
          method: 'DELETE',
@@ -933,7 +947,7 @@ export default function ProprietariPage() {
                                 <div key={imm.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-4 items-center hover:border-blue-200 transition-colors group">
                                    <div className="w-20 h-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 relative">
                                       {foto ? (
-                                        <NextImage src={foto} alt={tipologia} fill className="object-cover" sizes="80px" loading="lazy" />
+                                        <NextImage src={foto} alt={tipologia} fill className="object-cover" sizes="80px" loading="lazy" unoptimized />
                                       ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-300">
                                           <Building2 className="w-6 h-6" />

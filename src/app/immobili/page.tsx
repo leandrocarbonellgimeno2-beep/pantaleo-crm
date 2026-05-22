@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useImmobili } from "@/hooks/useImmobili";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { 
@@ -112,6 +113,7 @@ const compressImage = (file: File): Promise<Blob> => {
 };
 
 export default function ImmobiliPage() {
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -336,7 +338,13 @@ export default function ImmobiliPage() {
 
   const handleIdealistaDeactivate = async () => {
     if (!selectedProperty?.id) return;
-    if (!confirm('Sei sicuro di voler rimuovere questo immobile da Idealista?')) return;
+    const ok = await confirm({
+      title: 'Disattivare da Idealista?',
+      message: 'L\'immobile verrà rimosso dal portale pubblico. Potrai ripubblicarlo successivamente.',
+      confirmLabel: 'Disattiva',
+      danger: true,
+    });
+    if (!ok) return;
     setIdealistaLoading(true);
     setIdealistaAction('deactivate');
     try {
@@ -1004,7 +1012,12 @@ export default function ImmobiliPage() {
 
   const handleDeletePhoto = async (e: React.MouseEvent, indexToDelete: number) => {
     e.stopPropagation();
-    if (!confirm('Vuoi eliminare questa foto?')) return;
+    const ok = await confirm({
+      title: 'Eliminare la foto?',
+      message: 'La foto verrà rimossa definitivamente dall\'immobile.',
+      danger: true,
+    });
+    if (!ok) return;
     
     const imageToDelete = selectedProperty.images[indexToDelete];
     const newImages = [...selectedProperty.images];
@@ -1250,6 +1263,7 @@ export default function ImmobiliPage() {
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     loading={idx < 6 ? undefined : "lazy"}
                     priority={idx < 6}
+                    unoptimized
                   />
                 ) : (
                   <div className="flex flex-col items-center gap-2">

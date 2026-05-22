@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DocumentoTemplate } from "@/types/documento";
+import { useConfirm } from "@/contexts/ConfirmDialog";
 
 // Lazy load form components
 const formLoader = () => <div className="fixed inset-0 z-50 bg-slate-100 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-indigo-600" /></div>;
@@ -44,6 +45,7 @@ const DOC_TEMPLATES: Record<string, Record<string, DocTemplate[]>> = {
 };
 
 export default function DocumentiPage() {
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState("");
   const [showCreator, setShowCreator] = useState(false);
   const [documents, setDocuments] = useState<DocumentoTemplate[]>([]);
@@ -258,7 +260,12 @@ export default function DocumentiPage() {
   };
 
   const handleDelete = async (doc: DocumentoTemplate) => {
-    if (!confirm("Sei sicuro di voler eliminare questo documento definitivamente? Verrà rimosso l'accesso pubblico a questo Link.")) return;
+    const ok = await confirm({
+      title: 'Eliminare il documento?',
+      message: 'Il documento sarà rimosso definitivamente. L\'accesso pubblico al link non sarà più disponibile.',
+      danger: true,
+    });
+    if (!ok) return;
     
     try {
       const resDb = await fetch(`/api/documenti?id=${doc.id}`, { method: 'DELETE' });
@@ -487,7 +494,12 @@ export default function DocumentiPage() {
                             </button>
                           )}
                           <button onClick={async () => {
-                            if (!confirm('Sei sicuro di voler eliminare questo documento?')) return;
+                            const ok = await confirm({
+                              title: 'Eliminare il documento?',
+                              message: 'Il documento generato sarà rimosso definitivamente.',
+                              danger: true,
+                            });
+                            if (!ok) return;
                             try {
                               await fetch(`/api/documenti-generati?id=${doc.id}`, { method: 'DELETE' });
                               await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: doc.urlDownload }) });

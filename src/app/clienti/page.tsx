@@ -13,8 +13,10 @@ import SignaturePad from "@/components/ui/SignaturePad";
 import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_FINITURE, PIANI_PREFERENZA, ARREDAMENTO_OPZIONI, CARATTERISTICHE_LABELS } from "@/types/cliente";
 import { useClienti } from "@/hooks/useClienti";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useConfirm } from "@/contexts/ConfirmDialog";
 
 export default function ClientiPage() {
+  const confirm = useConfirm();
   const [isClient, setIsClient] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterVendita, setFilterVendita] = useState(false);
@@ -137,7 +139,12 @@ export default function ClientiPage() {
 
   const handleDeleteCliente = async () => {
     if (!selectedCliente?.id) return;
-    if (!confirm('\u26a0\ufe0f Eliminare definitivamente questo cliente?')) return;
+    const ok = await confirm({
+      title: 'Eliminare il cliente?',
+      message: 'Il cliente verr\u00e0 eliminato definitivamente dal CRM. L\'azione non pu\u00f2 essere annullata.',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/clienti?id=${selectedCliente.id}`, { method: 'DELETE' });
       const result = await safeJson(res);
@@ -355,7 +362,13 @@ export default function ClientiPage() {
   };
 
   const handleDocDelete = async (url: string) => {
-    if (!selectedCliente?.id || !confirm('Eliminare questo documento?')) return;
+    if (!selectedCliente?.id) return;
+    const ok = await confirm({
+      title: 'Eliminare il documento?',
+      message: 'Il file verrà rimosso definitivamente.',
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
       const allDocs = (selectedCliente.Documentazione?.AltriDocumenti || []).filter((u: string) => u !== url);
@@ -985,7 +998,7 @@ export default function ClientiPage() {
                                   {/* Photo */}
                                   <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 relative">
                                     {match.snippet?.mainImage ? (
-                                      <NextImage src={match.snippet.mainImage} alt="" fill className="object-cover" sizes="64px" loading="lazy" />
+                                      <NextImage src={match.snippet.mainImage} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized />
                                     ) : (
                                       <Home className="w-8 h-8 text-slate-300 m-auto mt-4" />
                                     )}

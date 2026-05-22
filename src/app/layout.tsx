@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import AuthenticatedLayout from "@/components/AuthenticatedLayout";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ConfirmProvider } from "@/contexts/ConfirmDialog";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -19,9 +21,13 @@ export default function RootLayout({
   return (
     <html lang="it" className="h-full">
       <body className={`${inter.className} h-full antialiased bg-background`}>
-        <AuthenticatedLayout>
-          {children}
-        </AuthenticatedLayout>
+        <AuthProvider>
+          <ConfirmProvider>
+            <AuthenticatedLayout>
+              {children}
+            </AuthenticatedLayout>
+          </ConfirmProvider>
+        </AuthProvider>
         <Toaster
           position="bottom-right"
           richColors
