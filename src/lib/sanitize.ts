@@ -72,7 +72,8 @@ export const CLIENTI_ALLOWED = [
  * (es. radice del bucket, /.well-known, ecc).
  */
 const STORAGE_PREFIX_ALLOWLIST = [
-  'inmuebles/',
+  'immobili/',          // path attuale per foto/planimetrie immobili
+  'inmuebles/',         // legacy (nome spagnolo)
   'propiedades/',       // legacy
   'proprietari_docs/',
   'clienti/',
