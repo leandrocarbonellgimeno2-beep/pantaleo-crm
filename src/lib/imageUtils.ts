@@ -13,6 +13,7 @@
 import type { Property } from '@/types/property';
 
 export function extractImageUrls(doc: Partial<Property> & Record<string, any>): string[] {
+  if (!doc || typeof doc !== 'object') return [];
   const candidates: string[] = [
     ...(Array.isArray(doc.images) ? doc.images : []),
     ...(Array.isArray(doc.Media?.Immagini) ? doc.Media!.Immagini! : []),

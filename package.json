@@ -8,10 +8,14 @@
     "start": "next start",
     "lint": "eslint",
     "deploy:indexes": "npx firebase deploy --only firestore:indexes",
-    "analyze": "ANALYZE=true next build --webpack"
+    "analyze": "ANALYZE=true next build --webpack",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
+    "@sentry/nextjs": "^10.53.1",
     "@types/leaflet": "^1.9.21",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -43,10 +47,13 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-signature-canvas": "^1.0.7",
+    "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.1.1",
+    "vitest": "^4.1.7"
   },
   "optionalDependencies": {
     "@next/swc-win32-x64-msvc": "^16.1.6",
