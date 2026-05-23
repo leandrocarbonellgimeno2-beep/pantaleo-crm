@@ -355,6 +355,13 @@ export default function DashboardPage() {
           </div>
 
         </div>
+
+        {/* Version tag — CI/CD verification marker */}
+        <div className="flex justify-end">
+          <span className="text-[11px] font-bold text-slate-300 tracking-widest uppercase">
+            v1.1 · {new Date().toLocaleDateString('it-IT')}
+          </span>
+        </div>
     </div>
   );
 }
