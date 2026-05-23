@@ -33,13 +33,11 @@ export default withSentryConfig(baseConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
 
-  // No bloquea el build si Sentry falla — CRM primero
-  errorHandler(err) {
-    console.warn('[Sentry build] non-fatal:', (err as Error).message);
+  // Sin sourcemap upload si no hay auth token (evita fallos de build sin cuenta Sentry)
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
   },
 
-  // Evita añadir el SDK de Sentry al bundle si el DSN no está configurado.
-  // Esto garantiza zero overhead en desarrollo local sin cuenta Sentry.
-  disableClientWebpackPlugin: !process.env.NEXT_PUBLIC_SENTRY_DSN,
-  disableServerWebpackPlugin: !process.env.SENTRY_DSN,
+  // Sin telemetría de Sentry durante el build
+  telemetry: false,
 });
