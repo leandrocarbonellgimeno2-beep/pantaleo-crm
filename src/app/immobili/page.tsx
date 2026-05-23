@@ -822,7 +822,7 @@ export default function ImmobiliPage() {
         refresh();
         setIsModalOpen(false); // Close detail modal
         setDeleteModalOpen(false); // Close delete modal
-        setLocalToast({ message: "Immobile eliminato correttamente", type: 'success' });
+        toast.success("Immobile eliminato correttamente");
       } else {
         const errorData = await res.json();
         alert(`Errore durante l'eliminazione: ${errorData.error}`);
