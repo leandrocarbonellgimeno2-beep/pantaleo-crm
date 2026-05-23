@@ -5,6 +5,7 @@ import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Proprietario } from "@/types/proprietario";
 import { useProprietari } from "@/hooks/useProprietari";
@@ -372,40 +373,22 @@ export default function ProprietariPage() {
       
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-slate-200 px-8 py-6 z-10 flex-shrink-0">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-800 flex items-center gap-3">
-                <User className="w-8 h-8 text-primary" />
-                Gestione Proprietari
-              </h1>
-              <p className="text-sm font-bold tracking-widest text-slate-400 uppercase mt-1">
-                Registro Proprietari
-              </p>
-            </div>
-            
-            <button 
-              onClick={() => openSlideOver()}
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-black text-white transition-all hover:opacity-90 shadow-lg shadow-primary/25">
-              <Plus className="mr-2 h-5 w-5" />
-              Nuovo Proprietario
-            </button>
-          </div>
-        </header>
-
-        {/* Barra di Ricerca */}
-        <div className="bg-white border-b border-slate-200 px-8 py-4 flex-shrink-0">
+        <div className="bg-white border-b border-slate-200 px-8 py-6 z-10 flex-shrink-0">
           <div className="max-w-7xl mx-auto w-full">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Cerca per nome, cognome, telefono, o email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-slate-100 bg-slate-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all font-medium text-slate-700 placeholder:text-slate-400"
-              />
-            </div>
+            <PageHeader
+              title="Gestione Proprietari"
+              subtitle="Registro Proprietari"
+              action={
+                <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => openSlideOver()}>
+                  Nuovo Proprietario
+                </Button>
+              }
+              search={{
+                value: searchTerm,
+                onChange: setSearchTerm,
+                placeholder: "Cerca per nome, cognome, telefono, o email...",
+              }}
+            />
           </div>
         </div>
 

@@ -20,6 +20,7 @@ import {
 // invece che nel bundle iniziale della pagina immobili.
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
 
@@ -164,6 +165,11 @@ export default function ImmobiliPage() {
     filterType,
     codice: advFilters.codice.trim(),
   });
+
+  // True when a filter/search changed and SWR is fetching new data while still
+  // serving stale results from the previous key. We use this to hide the old
+  // list immediately instead of letting the user see wrong data.
+  const isFilterTransitioning = isValidating && !loading;
 
   // Visual pagination — render 15 at a time, no network on "load more"
   const PAGE_SIZE = 15;
@@ -1103,40 +1109,21 @@ export default function ImmobiliPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black tracking-tight text-foreground">Immobili</h2>
-          <p className="text-muted-foreground mt-1 text-base font-medium">
-            {displayedCount} di {filteredImmobili.length}{activeFilterCount > 0 ? ` (${totalCount} totali)` : ''} immobili
-          </p>
-        </div>
-        <button 
-          onClick={() => handleCreateNew()}
-          className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 shadow-lg shadow-primary/25"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Aggiungi Immobile
-        </button>
-      </div>
-
-      {/* Search + Pills + Filter Button */}
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-col lg:flex-row gap-3">
-          <div className="relative flex-1 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
-              type="text"
-              placeholder="Cerca per Codice, titolo o indirizzo..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {loading && (
-               <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-               </div>
-            )}
-          </div>
+      <PageHeader
+        title="Immobili"
+        subtitle={`${displayedCount} di ${filteredImmobili.length}${activeFilterCount > 0 ? ` (${totalCount} totali)` : ''} immobili`}
+        action={
+          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => handleCreateNew()}>
+            Aggiungi Immobile
+          </Button>
+        }
+        search={{
+          value: searchTerm,
+          onChange: setSearchTerm,
+          placeholder: "Cerca per Codice, titolo o indirizzo...",
+          loading: loading || isFilterTransitioning,
+        }}
+        searchExtra={
           <button
             onClick={() => setIsFilterOpen(true)}
             className={cn(
@@ -1154,28 +1141,45 @@ export default function ImmobiliPage() {
               </span>
             )}
           </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {(["Tutti", "Vendita", "Affitto"] as const).map(t => (
-            <button key={t}
-              onClick={() => setFilterType(t)}
-              className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm", filterType === t ? "bg-primary text-white border-primary" : "bg-card border-border hover:bg-accent")}
-            >{t}</button>
+        }
+      >
+        {(["Tutti", "Vendita", "Affitto"] as const).map(t => (
+          <button key={t}
+            onClick={() => setFilterType(t)}
+            className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm", filterType === t ? "bg-primary text-white border-primary" : "bg-card border-border hover:bg-accent")}
+          >{t}</button>
+        ))}
+        <div className="w-px h-8 bg-slate-200 self-center mx-1" />
+        <button onClick={() => setFilterStato("Attivi")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm gap-1.5 inline-flex items-center", filterStato === "Attivi" ? "bg-emerald-600 text-white border-emerald-600" : "bg-card border-border hover:bg-accent")}>
+          <span className={cn("w-2 h-2 rounded-full", filterStato === "Attivi" ? "bg-white" : "bg-emerald-500")} /> Attivi
+        </button>
+        <button onClick={() => setFilterStato("Sospesi")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm gap-1.5 inline-flex items-center", filterStato === "Sospesi" ? "bg-rose-600 text-white border-rose-600" : "bg-card border-border hover:bg-accent")}>
+          <span className={cn("w-2 h-2 rounded-full", filterStato === "Sospesi" ? "bg-white" : "bg-rose-500")} /> Sospesi
+        </button>
+        <button onClick={() => setFilterStato("Tutti")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm inline-flex items-center", filterStato === "Tutti" ? "bg-slate-700 text-white border-slate-700" : "bg-card border-border hover:bg-accent")}>
+          Tutti gli stati
+        </button>
+      </PageHeader>
+
+      {/* ═══ SKELETON — visible while first load or filter transition ═══ */}
+      {(loading || isFilterTransitioning) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
+              <div className="h-52 bg-slate-100" />
+              <div className="p-4 space-y-3">
+                <div className="h-3 bg-slate-100 rounded-full w-1/4" />
+                <div className="h-5 bg-slate-100 rounded-full w-2/3" />
+                <div className="h-3 bg-slate-100 rounded-full w-1/2" />
+                <div className="mt-2 h-12 bg-slate-50 rounded-xl" />
+              </div>
+            </div>
           ))}
-          <div className="w-px h-8 bg-slate-200 self-center mx-1" />
-          <button onClick={() => setFilterStato("Attivi")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm gap-1.5 inline-flex items-center", filterStato === "Attivi" ? "bg-emerald-600 text-white border-emerald-600" : "bg-card border-border hover:bg-accent")}>
-            <span className={cn("w-2 h-2 rounded-full", filterStato === "Attivi" ? "bg-white" : "bg-emerald-500")} /> Attivi
-          </button>
-          <button onClick={() => setFilterStato("Sospesi")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm gap-1.5 inline-flex items-center", filterStato === "Sospesi" ? "bg-rose-600 text-white border-rose-600" : "bg-card border-border hover:bg-accent")}>
-            <span className={cn("w-2 h-2 rounded-full", filterStato === "Sospesi" ? "bg-white" : "bg-rose-500")} /> Sospesi
-          </button>
-          <button onClick={() => setFilterStato("Tutti")} className={cn("px-4 py-2 rounded-xl text-sm font-bold border transition-all shadow-sm inline-flex items-center", filterStato === "Tutti" ? "bg-slate-700 text-white border-slate-700" : "bg-card border-border hover:bg-accent")}>
-            Tutti gli stati
-          </button>
         </div>
-      </div>
+      )}
 
       {/* ═══ GRID — Premium Property Cards ═══ */}
+      {!loading && !isFilterTransitioning && (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
         {filteredImmobili.slice(0, visibleCount).map((item: any, idx: number) => {
           const photoCount = item.imageCount || item.images?.length || 0;
@@ -1327,9 +1331,10 @@ export default function ImmobiliPage() {
           );
         })}
       </div>
+      )}
 
       {/* Load More — visual only, no network */}
-      {visibleCount < filteredImmobili.length && (
+      {visibleCount < filteredImmobili.length && !loading && !isFilterTransitioning && (
         <div className="flex justify-center mt-6 mb-4">
           <button 
             onClick={handleLoadMore}
@@ -1344,7 +1349,7 @@ export default function ImmobiliPage() {
         </div>
       )}
 
-      {filteredImmobili.length === 0 && !loading && (
+      {filteredImmobili.length === 0 && !loading && !isFilterTransitioning && (
         <div className="py-24 text-center">
           <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 text-slate-200 mb-4">
             <Home className="h-10 w-10" />

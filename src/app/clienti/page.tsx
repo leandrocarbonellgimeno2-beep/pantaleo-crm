@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_FINITURE, PIANI_PREFERENZA, ARREDAMENTO_OPZIONI, CARATTERISTICHE_LABELS } from "@/types/cliente";
 import { useClienti } from "@/hooks/useClienti";
@@ -401,61 +402,41 @@ export default function ClientiPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Gestione Clienti</h2>
-          <p className="text-muted-foreground mt-1 text-lg">
-            Motore di Matching e Anagrafica Intelligente
-          </p>
-        </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 shadow-lg shadow-primary/25"
+      <PageHeader
+        title="Gestione Clienti"
+        subtitle="Motore di Matching e Anagrafica Intelligente"
+        action={
+          <Button variant="primary" icon={<Plus className="h-4 w-4" />} onClick={() => handleOpenModal()}>
+            Nuovo Lead
+          </Button>
+        }
+        search={{
+          value: searchTerm,
+          onChange: (v) => { setSearchTerm(v); setVisibleCount(50); },
+          placeholder: "Cerca cliente per nome, email o telefono...",
+        }}
+      >
+        <button
+          onClick={() => { setFilterVendita(!filterVendita); setVisibleCount(50); }}
+          className={cn(
+            "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
+            filterVendita ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
+          )}
         >
-          <Plus className="mr-2 h-4 w-4" />
-          Nuovo Lead
+          <div className={cn("w-2 h-2 rounded-full", filterVendita ? "bg-white" : "bg-indigo-400")} />
+          Cerca Acquisto (Vendita)
         </button>
-      </div>
-
-      {/* Action Bar & Filters */}
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col md:flex-row gap-4 items-center">
-          <div className="relative flex-1 w-full group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <input
-              type="text"
-              placeholder="Cerca cliente per nome, email o telefono..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setVisibleCount(50); }}
-            />
-          </div>
-        </div>
-
-        {/* Operation Filters */}
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => { setFilterVendita(!filterVendita); setVisibleCount(50); }}
-            className={cn(
-              "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
-              filterVendita ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
-            )}
-          >
-            <div className={cn("w-2 h-2 rounded-full", filterVendita ? "bg-white" : "bg-indigo-400")} />
-            Cerca Acquisto (Vendita)
-          </button>
-          <button
-            onClick={() => { setFilterAffitto(!filterAffitto); setVisibleCount(50); }}
-            className={cn(
-              "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
-              filterAffitto ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
-            )}
-          >
-            <div className={cn("w-2 h-2 rounded-full", filterAffitto ? "bg-white" : "bg-emerald-400")} />
-            Cerca Affitto
-          </button>
-        </div>
-      </div>
+        <button
+          onClick={() => { setFilterAffitto(!filterAffitto); setVisibleCount(50); }}
+          className={cn(
+            "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
+            filterAffitto ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
+          )}
+        >
+          <div className={cn("w-2 h-2 rounded-full", filterAffitto ? "bg-white" : "bg-emerald-400")} />
+          Cerca Affitto
+        </button>
+      </PageHeader>
 
       {/* List / Table View */}
       <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
