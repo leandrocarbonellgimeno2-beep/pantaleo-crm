@@ -118,7 +118,7 @@ export default function ImmobiliPage() {
 
   // Quick action dropdown & toast
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const [localToast, setLocalToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
 
   // Advanced Filter Drawer
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -223,7 +223,7 @@ export default function ImmobiliPage() {
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
   const [deleteTimer, setDeleteTimer] = useState(2);
   const deleteIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const localToastTimerRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // Clear the countdown interval whenever the delete modal closes
   useEffect(() => {
@@ -636,14 +636,12 @@ export default function ImmobiliPage() {
         body: JSON.stringify({ id: item.id, GestioneCommerciale: updatedGC }),
       });
       if (!res.ok) throw new Error('Errore di rete');
-      setLocalToast({ message: `Immobile ${item.DatiBase?.Codice || ''} → ${newSospeso ? '🔴 Sospeso' : '🟢 Attivo'}`, type: 'success' });
+      toast.success(`Immobile ${item.DatiBase?.Codice || ''} → ${newSospeso ? 'Sospeso' : 'Attivo'}`);
     } catch {
       // Revert on error
       refresh();
-      setLocalToast({ message: 'Errore durante il cambio stato', type: 'error' });
+      toast.error('Errore durante il cambio stato');
     }
-    if (localToastTimerRef.current) clearTimeout(localToastTimerRef.current);
-    localToastTimerRef.current = setTimeout(() => setLocalToast(null), 3000);
   };
 
   // Auto-open logic from URL parameters
@@ -1103,25 +1101,6 @@ export default function ImmobiliPage() {
 
   return (
     <div className="space-y-6">
-      {/* QUICK TOAST NOTIFICATION */}
-      {localToast && (
-        <div className="fixed bottom-6 right-6 z-[60] bg-white border border-slate-200 shadow-xl rounded-2xl p-4 flex items-center gap-3 animate-in slide-in-from-bottom-5">
-          {localToast.type === 'success' ? (
-            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            </div>
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center">
-              <X className="h-5 w-5 text-red-500" />
-            </div>
-          )}
-          <span className="font-bold text-slate-700">{localToast.message}</span>
-          <button onClick={() => setLocalToast(null)} className="ml-4 p-1 rounded-full hover:bg-slate-100 text-slate-400">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
