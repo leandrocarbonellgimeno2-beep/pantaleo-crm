@@ -77,6 +77,8 @@ const STORAGE_PREFIX_ALLOWLIST = [
   'proprietari_docs/',
   'clienti/',
   'documenti/',
+  'documenti_generati/',
+  'templates/',
   'temp/',
 ] as const;
 
