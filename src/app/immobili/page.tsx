@@ -19,6 +19,7 @@ import {
 // FsLightbox lazy-loaded: ~50KB chunk caricato solo al primo apertura della galleria
 // invece che nel bundle iniziale della pagina immobili.
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
 
@@ -2900,17 +2901,17 @@ export default function ImmobiliPage() {
                   {selectedProperty.id ? "Elimina Immobile" : "Cancella Creazione"}
                 </button>
                 <div className="flex gap-3">
-                  <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 rounded-xl border border-border bg-white text-sm font-bold hover:bg-slate-100 transition-colors shadow-sm">
+                  <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
                     Chiudi
-                  </button>
-                  <button 
+                  </Button>
+                  <Button
+                    variant="primary"
                     onClick={handleSaveProperty}
-                    disabled={isSaving}
-                    className="px-8 py-2.5 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/25 hover:opacity-90 flex items-center gap-2 transition-all"
+                    loading={isSaving}
+                    icon={<Save className="h-4 w-4" />}
                   >
-                    {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                     Salva Informazioni
-                  </button>
+                  </Button>
                 </div>
              </div>
              )}

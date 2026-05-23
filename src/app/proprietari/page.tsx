@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Proprietario } from "@/types/proprietario";
 import { useProprietari } from "@/hooks/useProprietari";
@@ -995,13 +996,16 @@ export default function ProprietariPage() {
 
               {/* Slide-over Footer (Actions) */}
               <div className="bg-white px-8 py-6 border-t border-slate-200 flex justify-end gap-4 flex-shrink-0">
-                 <button onClick={closeSlideOver} disabled={isSaving} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-50">
+                 <Button variant="secondary" onClick={closeSlideOver} disabled={isSaving}>
                    Annulla
-                 </button>
-                 <button onClick={handleSaveProprietario} disabled={isSaving} className="px-8 py-3 rounded-xl bg-primary text-white font-black hover:opacity-90 shadow-lg shadow-primary/25 transition-all focus:ring-4 focus:ring-primary/20 disabled:opacity-50 flex items-center gap-2">
-                   {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                 </Button>
+                 <Button
+                   variant="primary"
+                   onClick={handleSaveProprietario}
+                   loading={isSaving}
+                 >
                    Salva Proprietario
-                 </button>
+                 </Button>
               </div>
 
             </div>

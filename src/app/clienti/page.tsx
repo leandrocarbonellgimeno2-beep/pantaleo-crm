@@ -9,6 +9,7 @@ import {
   ChevronDown, ChevronUp, MessageCircle, ExternalLink, BarChart3
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_FINITURE, PIANI_PREFERENZA, ARREDAMENTO_OPZIONI, CARATTERISTICHE_LABELS } from "@/types/cliente";
 import { useClienti } from "@/hooks/useClienti";
@@ -1229,11 +1230,15 @@ export default function ClientiPage() {
                  {selectedCliente.id && <><Trash2 className="h-4 w-4 mr-1.5" /><span className="hidden xs:inline">Elimina Cliente</span></>}
                </button>
                <div className="flex gap-2 sm:gap-3">
-                 <button onClick={handleCloseModal} className="px-4 sm:px-6 py-2.5 rounded-xl border border-border bg-white text-sm font-bold hover:bg-slate-100 transition-colors shadow-sm">Chiudi</button>
-                 <button onClick={handleSaveCliente} disabled={saving} className="px-5 sm:px-8 py-2.5 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/25 hover:opacity-90 flex items-center gap-2 transition-all disabled:opacity-50">
-                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                   <span>{saving ? 'Salvando...' : 'Salva'}</span>
-                 </button>
+                 <Button variant="secondary" onClick={handleCloseModal}>Chiudi</Button>
+                 <Button
+                   variant="primary"
+                   onClick={handleSaveCliente}
+                   loading={saving}
+                   icon={<Save className="h-4 w-4" />}
+                 >
+                   {saving ? 'Salvando...' : 'Salva'}
+                 </Button>
                </div>
             </div>
 
