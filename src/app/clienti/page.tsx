@@ -439,135 +439,118 @@ export default function ClientiPage() {
         </button>
       </PageHeader>
 
-      {/* ═══ GRID CARDS — 2 colonne ═══ */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ═══ GRID CARDS — responsive: 1 → 2 → 3 → 4 col ═══ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
         {filteredClienti.slice(0, visibleCount).map((cliente) => {
           const nome = cliente.DatiPersonali?.Nome || (cliente as any).nome || '';
           const cognome = cliente.DatiPersonali?.Cognome || (cliente as any).cognome || '';
           const iniziale = (nome[0] || cognome[0] || '?').toUpperCase();
           const telefono = cliente.DatiPersonali?.Telefono || (cliente as any).cell1 || '';
-          const email = cliente.DatiPersonali?.Email || (cliente as any).email || '';
 
-          // Gradient dinamico basato sulla lettera iniziale
           const avatarGradients: Record<string, string> = {
-            A: 'from-indigo-500 to-blue-600', B: 'from-emerald-500 to-teal-600',
-            C: 'from-violet-500 to-purple-600', D: 'from-rose-500 to-pink-600',
-            E: 'from-amber-500 to-orange-500', F: 'from-cyan-500 to-sky-600',
-            G: 'from-lime-500 to-green-600', H: 'from-fuchsia-500 to-pink-600',
-            I: 'from-blue-500 to-indigo-600', J: 'from-teal-500 to-emerald-600',
-            K: 'from-purple-500 to-violet-600', L: 'from-red-500 to-rose-600',
-            M: 'from-orange-500 to-amber-600', N: 'from-sky-500 to-cyan-600',
-            O: 'from-green-500 to-lime-600', P: 'from-pink-500 to-fuchsia-600',
-            Q: 'from-indigo-400 to-blue-500', R: 'from-emerald-400 to-teal-500',
-            S: 'from-violet-400 to-purple-500', T: 'from-rose-400 to-pink-500',
-            U: 'from-amber-400 to-orange-400', V: 'from-cyan-400 to-sky-500',
-            W: 'from-lime-400 to-green-500', X: 'from-fuchsia-400 to-pink-500',
-            Y: 'from-blue-400 to-indigo-500', Z: 'from-teal-400 to-emerald-500',
+            A: 'from-indigo-500 to-blue-600',   B: 'from-emerald-500 to-teal-600',
+            C: 'from-violet-500 to-purple-600',  D: 'from-rose-500 to-pink-600',
+            E: 'from-amber-500 to-orange-500',   F: 'from-cyan-500 to-sky-600',
+            G: 'from-lime-500 to-green-600',     H: 'from-fuchsia-500 to-pink-600',
+            I: 'from-blue-500 to-indigo-600',    J: 'from-teal-500 to-emerald-600',
+            K: 'from-purple-500 to-violet-600',  L: 'from-red-500 to-rose-600',
+            M: 'from-orange-500 to-amber-600',   N: 'from-sky-500 to-cyan-600',
+            O: 'from-green-500 to-lime-600',     P: 'from-pink-500 to-fuchsia-600',
+            Q: 'from-indigo-400 to-blue-500',    R: 'from-emerald-400 to-teal-500',
+            S: 'from-violet-400 to-purple-500',  T: 'from-rose-400 to-pink-500',
+            U: 'from-amber-400 to-orange-400',   V: 'from-cyan-400 to-sky-500',
+            W: 'from-lime-400 to-green-500',     X: 'from-fuchsia-400 to-pink-500',
+            Y: 'from-blue-400 to-indigo-500',    Z: 'from-teal-400 to-emerald-500',
           };
           const gradient = avatarGradients[iniziale] || 'from-slate-400 to-slate-500';
+
+          const budgetLabel = (() => {
+            if (cliente.Richiesta?.Operazione?.Vendita) {
+              const max = cliente.Richiesta.BudgetAcquistoMax;
+              const min = cliente.Richiesta.BudgetAcquistoMin;
+              return {
+                label: 'VENDITA',
+                price: max ? `€${Number(max).toLocaleString('it-IT')}` : min ? `Da €${Number(min).toLocaleString('it-IT')}` : 'Da valutare',
+                cls: 'bg-indigo-600 text-white',
+              };
+            }
+            if (cliente.Richiesta?.Operazione?.Affitto) {
+              const max = cliente.Richiesta.BudgetAffittoMax;
+              return {
+                label: 'AFFITTO',
+                price: max ? `€${Number(max).toLocaleString('it-IT')}/m` : 'Da valutare',
+                cls: 'bg-emerald-600 text-white',
+              };
+            }
+            return { label: 'N/D', price: '', cls: 'bg-slate-200 text-slate-500' };
+          })();
 
           return (
             <div
               key={cliente.id}
               onClick={() => handleOpenModal(cliente)}
-              className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
-              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 160px' }}
+              className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col"
+              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 148px' }}
             >
-              {/* Card top: avatar + identity + eye icon */}
-              <div className="p-5 flex items-start gap-4">
-                <div className={`h-14 w-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-black text-xl shadow-md`}>
+              {/* Top: avatar + name + phone */}
+              <div className="p-4 flex items-center gap-3">
+                <div className={`h-11 w-11 flex-shrink-0 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-black text-base shadow-sm`}>
                   {iniziale}{cognome[0]?.toUpperCase() || ''}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className="font-black text-base text-slate-900 truncate">
-                      {[nome, cognome].filter(Boolean).join(' ') || 'Senza nome'}
-                    </h4>
-                    {cliente.status === 'Attivo' && (
-                      <span className="flex-shrink-0 h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-50" />
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    {telefono && (
-                      <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                        <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                        {telefono}
-                      </span>
-                    )}
-                    {email && (
-                      <span className="flex items-center gap-1.5 text-xs text-slate-400 truncate">
-                        <Mail className="h-3.5 w-3.5 text-slate-300 flex-shrink-0" />
-                        {email}
-                      </span>
-                    )}
-                  </div>
+                  <h4 className="font-black text-sm text-slate-900 truncate leading-tight">
+                    {[nome, cognome].filter(Boolean).join(' ') || 'Senza nome'}
+                  </h4>
+                  <span className="text-xs text-slate-400 font-medium">
+                    {telefono || 'Nessun telefono'}
+                  </span>
                 </div>
-                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
+                <Eye className="h-3.5 w-3.5 text-slate-200 group-hover:text-primary transition-colors flex-shrink-0" />
               </div>
 
-              {/* Card divider */}
-              <div className="mx-5 border-t border-slate-100" />
+              {/* Middle: requisiti in una riga compatta */}
+              <div className="px-4 pb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 font-medium">
+                {cliente.Richiesta?.Zone?.length ? (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    {cliente.Richiesta.Zone[0]}
+                  </span>
+                ) : null}
+                {cliente.Richiesta?.Tipologie?.length ? (
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    {cliente.Richiesta.Tipologie[0]}
+                  </span>
+                ) : null}
+                {cliente.Richiesta?.SuperficieMin ? (
+                  <span className="flex items-center gap-1">
+                    <Maximize2 className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    Min {cliente.Richiesta.SuperficieMin} m²
+                  </span>
+                ) : null}
+                {cliente.Richiesta?.CamereLettoMin ? (
+                  <span className="flex items-center gap-1">
+                    <BedDouble className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                    {cliente.Richiesta.CamereLettoMin} camere
+                  </span>
+                ) : null}
+                {!cliente.Richiesta?.Zone?.length && !cliente.Richiesta?.Tipologie?.length &&
+                 !cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && (
+                  <span className="text-slate-300 italic">Requisiti da definire</span>
+                )}
+              </div>
 
-              {/* Card bottom: requisiti + budget */}
-              <div className="px-5 py-3.5 flex items-center justify-between gap-3">
-                {/* Requisiti immobile */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium min-w-0">
-                  {cliente.Richiesta?.Tipologie?.length ? (
-                    <span className="flex items-center gap-1 truncate">
-                      <Tag className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.Richiesta.Tipologie[0]}
-                    </span>
-                  ) : null}
-                  {cliente.Richiesta?.Zone?.length ? (
-                    <span className="flex items-center gap-1 truncate">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.Richiesta.Zone[0]}
-                    </span>
-                  ) : null}
-                  {cliente.Richiesta?.SuperficieMin ? (
-                    <span className="flex items-center gap-1">
-                      <Maximize2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.Richiesta.SuperficieMin}+ m²
-                    </span>
-                  ) : null}
-                  {cliente.Richiesta?.CamereLettoMin ? (
-                    <span className="flex items-center gap-1">
-                      <BedDouble className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.Richiesta.CamereLettoMin}+
-                    </span>
-                  ) : null}
-                  {!cliente.Richiesta?.Tipologie?.length && !cliente.Richiesta?.Zone?.length &&
-                   !cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && (
-                    <span className="text-slate-300 italic">Requisiti da definire</span>
+              {/* Bottom: budget badge + eye */}
+              <div className="mt-auto border-t border-slate-100 px-4 py-2.5 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${budgetLabel.cls}`}>
+                    {budgetLabel.label}
+                  </span>
+                  {budgetLabel.price && (
+                    <span className="text-sm font-black text-slate-800">{budgetLabel.price}</span>
                   )}
                 </div>
-
-                {/* Budget badge */}
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  {cliente.Richiesta?.Operazione?.Vendita && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black whitespace-nowrap">
-                      <Euro className="h-3 w-3" />
-                      {cliente.Richiesta.BudgetAcquistoMax
-                        ? Number(cliente.Richiesta.BudgetAcquistoMax).toLocaleString('it-IT')
-                        : cliente.Richiesta.BudgetAcquistoMin
-                          ? `Da ${Number(cliente.Richiesta.BudgetAcquistoMin).toLocaleString('it-IT')}`
-                          : 'Da valutare'}
-                    </span>
-                  )}
-                  {cliente.Richiesta?.Operazione?.Affitto && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-black whitespace-nowrap">
-                      <Euro className="h-3 w-3" />
-                      {cliente.Richiesta.BudgetAffittoMax
-                        ? `${Number(cliente.Richiesta.BudgetAffittoMax).toLocaleString('it-IT')}/m`
-                        : 'Da valutare'}
-                    </span>
-                  )}
-                  {!cliente.Richiesta?.Operazione?.Vendita && !cliente.Richiesta?.Operazione?.Affitto && (
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
-                      N/D
-                    </span>
-                  )}
-                </div>
+                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0" />
               </div>
             </div>
           );
