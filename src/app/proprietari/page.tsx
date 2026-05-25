@@ -436,144 +436,121 @@ export default function ProprietariPage() {
               </div>
             ) : (
               <>
-               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[700px]">
-                  <thead>
-                     <tr className="border-b border-slate-200 bg-slate-50/50">
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-500 whitespace-nowrap w-[25%]">Contatto</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-500 whitespace-nowrap w-[20%]">Telefono</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-500 whitespace-nowrap w-[30%]">Email / Indirizzo</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-500 text-center whitespace-nowrap w-[10%]">Immobili</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-500 text-right whitespace-nowrap w-[15%]">Azioni</th>
-                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {filteredProprietari.slice(0, visibleCount).map((prop) => (
-                      <tr key={prop.id} className="hover:bg-slate-50/80 transition-colors group">
-                        {/* 1. Nome e Cognome */}
-                        <td className="py-4 px-6">
-                           <div className="flex items-center gap-3">
-                              {(() => {
-                                 const finalNome = (prop.nome || prop.Nome || "").trim();
-                                 const finalCognome = (prop.cognome || prop.Cognome || "").trim();
-                                 const fullName = `${finalNome} ${finalCognome}`.trim() || "Cliente Senza Nome";
-                                 const initial1 = finalNome ? finalNome[0] : "";
-                                 const initial2 = finalCognome ? finalCognome[0] : (fullName === "Cliente Senza Nome" ? "C" : "");
-                                 const initials = (initial1 + initial2).toUpperCase();
-                                                                  return (
-                                    <>
-                                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-lg flex-shrink-0">
-                                         {initials || <User className="w-5 h-5" />}
-                                      </div>
-                                      <div>
-                                         <div className="font-bold text-slate-800 text-base">{fullName}</div>
-                                         <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">ID: {prop.id?.substring(0,8)}...</div>
-                                      </div>
-                                    </>
-                                  );
-                               })()}
-                            </div>
-                         </td>
-                         
-                         {/* 2. Telefono */}
-                         <td className="py-4 px-6">
-                            <div className="flex flex-col gap-1">
-                               <div className="flex items-center gap-2 text-slate-700 font-medium">
-                                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                  <span>{prop.cellulare || prop.telefono || prop.cell1 || prop.Cellulare || prop.telefono_fisso || prop.tel1 || "-"}</span>
-                               </div>
-                               {(prop.cellulare2 || prop.telefono2) && (
-                                 <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                                    <span className="w-4 flex items-center justify-center">+</span>
-                                    <span>{prop.cellulare2 || prop.telefono2}</span>
-                                 </div>
-                               )}
-                            </div>
-                         </td>
-                        
-                        {/* 3. Email & Indirizzo */}
-                        <td className="py-4 px-6">
-                           <div className="flex flex-col gap-1.5">
-                              {prop.email ? (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                  <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                  <a href={`mailto:${prop.email}`} className="hover:text-primary transition-colors">{prop.email}</a>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-sm text-slate-400 italic">
-                                  <Mail className="w-4 h-4 opacity-50 flex-shrink-0" /> Nessuna email
-                                </div>
-                              )}
-                              
-                              <div className="flex items-start gap-2 text-sm text-slate-500">
-                                <MapPin className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-                                <span className="line-clamp-1" title={prop.indirizzo_residenza || prop.indirizzo}>
-                                   {prop.indirizzo_residenza || prop.indirizzo || "-"}
-                                </span>
-                              </div>
-                           </div>
-                        </td>
-                                               {/* 4. Immobili (Count) */}
-                        <td className="py-4 px-6 text-center">
-                           {(prop.numero_immobili || 0) > 0 || (prop.immobili_collegati && prop.immobili_collegati.length > 0) ? (
-                              <div 
-                                onClick={() => {
-                                   openSlideOver(prop);
-                                   setActiveTab("immobili");
-                                }}
-                                className="cursor-pointer inline-flex items-center justify-center bg-blue-50 text-blue-700 font-black px-4 py-2 rounded-xl text-sm gap-2 border border-blue-200 hover:bg-blue-100 hover:scale-105 transition-all shadow-sm"
-                              >
-                                <Building2 className="w-4 h-4" />
-                                {prop.numero_immobili || prop.immobili_collegati?.length}
-                              </div>
-                           ) : (
-                              <span className="inline-flex items-center justify-center bg-slate-50 text-slate-400 font-bold px-3 py-1 rounded-full text-xs border border-slate-200">
-                                0
-                              </span>
-                           )}
-                        </td>
-                        {/* 5. Azioni */}
-                        <td className="py-4 px-6 text-right">
-                           <div className="flex justify-end gap-2 items-center">
-                              {(prop.cellulare || prop.telefono || prop.cell1 || prop.Cellulare) && (
-                                <a 
-                                  href={`https://wa.me/39${(prop.cellulare || prop.telefono || prop.cell1 || prop.Cellulare || "").replace(/\s+/g, '')}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="bg-green-500 hover:bg-green-600 text-white w-8 h-8 rounded-xl font-bold text-xs transition-colors shadow-sm flex items-center justify-center mr-1"
-                                  title="Contatta su WhatsApp"
-                                >
-                                   WA
-                                </a>
-                              )}
-                              <button onClick={() => openSlideOver(prop)} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all" title="Visualizza / Modifica">
-                                 <Eye className="w-5 h-5" />
-                              </button>
-                              <a href={`/immobili?new=true&proprietarioId=${prop.id}`} className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-xl transition-all flex items-center gap-1 group/btn" title="Aggiungi Immobile">
-                                 <Plus className="w-3.5 h-3.5 -mr-1.5 group-hover/btn:scale-110 transition-transform" />
-                                 <Home className="w-5 h-5 group-hover/btn:scale-110 transition-transform" />
-                              </a>
-                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                </div>{/* overflow-x-auto */}
-              </div>
+                {/* ═══ GRID CARDS proprietari — 1→2→3→4 col ═══ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                  {filteredProprietari.slice(0, visibleCount).map((prop) => {
+                    const nome = (prop.nome || prop.Nome || '').trim();
+                    const cognome = (prop.cognome || prop.Cognome || '').trim();
+                    const fullName = [nome, cognome].filter(Boolean).join(' ') || 'Senza nome';
+                    const initials = ((nome[0] || '') + (cognome[0] || '')).toUpperCase() || '?';
+                    const telefono = prop.cellulare || prop.telefono || prop.cell1 || prop.Cellulare || prop.tel1 || '';
+                    const email = prop.email || '';
+                    const indirizzo = prop.indirizzo_residenza || prop.indirizzo || '';
+                    const nImmobili = prop.numero_immobili || prop.immobili_collegati?.length || 0;
 
-              {visibleCount < filteredProprietari.length && (
-                <div className="flex justify-center mt-8 mb-12">
-                   <button 
-                     onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
-                     className="px-8 py-3.5 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-3"
-                   >
-                     <Plus className="w-5 h-5 text-slate-400" />
-                     Carica altri {Math.min(PAGE_SIZE, filteredProprietari.length - visibleCount)} proprietari ({filteredProprietari.length - visibleCount} rimanenti)
-                   </button>
-                 </div>
-              )}
+                    // Colore avatar per genere (stessa logica clienti)
+                    const nomiMaschiliInA = new Set(['luca','andrea','nicola','mattia','elia','enea','battista','barnaba','geremia','zaccaria','isaia','simca','mirca']);
+                    const nomeNorm = nome.toLowerCase();
+                    const isFemale = nomeNorm.endsWith('a') && !nomiMaschiliInA.has(nomeNorm);
+                    const avatarBg = isFemale ? 'bg-purple-600' : 'bg-blue-600';
+
+                    return (
+                      <div
+                        key={prop.id}
+                        className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
+                      >
+                        {/* Fila 1: Avatar centrato + Nome */}
+                        <div className="pt-6 px-5 pb-4 flex flex-col items-center text-center">
+                          <div className={`h-16 w-16 rounded-full ${avatarBg} flex items-center justify-center text-white font-black text-xl shadow-md mb-3`}>
+                            {initials}
+                          </div>
+                          <h4 className="font-black text-base text-slate-900 leading-tight">{fullName}</h4>
+                        </div>
+
+                        {/* Fila 2: Contatti */}
+                        <div className="px-5 pb-4 flex flex-col gap-1.5 text-sm">
+                          <div className="flex items-center gap-2 text-slate-600 font-medium">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="truncate">{telefono || '—'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate text-xs">{email || 'Nessuna email'}</span>
+                          </div>
+                          {indirizzo && (
+                            <div className="flex items-start gap-2 text-slate-400">
+                              <MapPin className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                              <span className="truncate text-xs">{indirizzo}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">ID:</span>
+                            <span className="text-xs font-mono text-slate-400 truncate">{prop.id?.substring(0, 14) || '—'}</span>
+                          </div>
+                        </div>
+
+                        {/* Fila 3: Badge immobili + azioni */}
+                        <div className="mt-auto border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-2">
+                          {/* Badge proprietà */}
+                          <button
+                            onClick={() => { openSlideOver(prop); setActiveTab("immobili"); }}
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition-all",
+                              nImmobili > 0
+                                ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
+                                : "bg-slate-50 text-slate-400 border-slate-200 cursor-default"
+                            )}
+                          >
+                            <Building2 className="w-3.5 h-3.5" />
+                            {nImmobili} PROPRIETÀ
+                          </button>
+
+                          {/* Azioni rapide */}
+                          <div className="flex items-center gap-1">
+                            {telefono && (
+                              <a
+                                href={`https://wa.me/39${telefono.replace(/\D/g, '')}`}
+                                target="_blank" rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
+                                title="WhatsApp"
+                              >
+                                WA
+                              </a>
+                            )}
+                            <button
+                              onClick={() => openSlideOver(prop)}
+                              className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
+                              title="Visualizza / Modifica"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <a
+                              href={`/immobili?new=true&proprietarioId=${prop.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all"
+                              title="Aggiungi Immobile"
+                            >
+                              <Home className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {visibleCount < filteredProprietari.length && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => setVisibleCount(prev => prev + PAGE_SIZE)}
+                      className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-full shadow-sm hover:bg-slate-50 hover:text-primary hover:border-primary/30 transition-all flex items-center gap-2 text-sm"
+                    >
+                      <ChevronRight className="w-4 h-4 rotate-90" />
+                      Carica altri {Math.min(PAGE_SIZE, filteredProprietari.length - visibleCount)} ({filteredProprietari.length - visibleCount} rimanenti)
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
