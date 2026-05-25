@@ -527,8 +527,8 @@ export default function ClientiPage() {
                 </div>
               </div>
 
-              {/* Fila 3: Badges operazione + eye */}
-              <div className="mt-auto border-t border-slate-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+              {/* Fila 3: Badges operazione + azioni */}
+              <div className="mt-auto border-t border-slate-100 px-4 py-3 flex items-center justify-between gap-2">
                 <div className="flex flex-wrap gap-1.5">
                   {hasVendita && (
                     <div className="flex items-center gap-1.5">
@@ -546,7 +546,27 @@ export default function ClientiPage() {
                     <span className="text-[11px] font-bold text-slate-400">N/D</span>
                   )}
                 </div>
-                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0" />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {telefono && (
+                    <a
+                      href={`https://wa.me/39${telefono.replace(/\D/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
+                      title="Contatta su WhatsApp"
+                    >
+                      WA
+                    </a>
+                  )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleOpenModal(cliente); }}
+                    className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
+                    title="Visualizza / Modifica"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             </div>
           );
