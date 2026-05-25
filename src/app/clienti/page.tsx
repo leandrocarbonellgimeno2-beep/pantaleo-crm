@@ -447,42 +447,26 @@ export default function ClientiPage() {
           const iniziale = (nome[0] || cognome[0] || '?').toUpperCase();
           const telefono = cliente.DatiPersonali?.Telefono || (cliente as any).cell1 || '';
 
-          const avatarGradients: Record<string, string> = {
-            A: 'from-indigo-500 to-blue-600',   B: 'from-emerald-500 to-teal-600',
-            C: 'from-violet-500 to-purple-600',  D: 'from-rose-500 to-pink-600',
-            E: 'from-amber-500 to-orange-500',   F: 'from-cyan-500 to-sky-600',
-            G: 'from-lime-500 to-green-600',     H: 'from-fuchsia-500 to-pink-600',
-            I: 'from-blue-500 to-indigo-600',    J: 'from-teal-500 to-emerald-600',
-            K: 'from-purple-500 to-violet-600',  L: 'from-red-500 to-rose-600',
-            M: 'from-orange-500 to-amber-600',   N: 'from-sky-500 to-cyan-600',
-            O: 'from-green-500 to-lime-600',     P: 'from-pink-500 to-fuchsia-600',
-            Q: 'from-indigo-400 to-blue-500',    R: 'from-emerald-400 to-teal-500',
-            S: 'from-violet-400 to-purple-500',  T: 'from-rose-400 to-pink-500',
-            U: 'from-amber-400 to-orange-400',   V: 'from-cyan-400 to-sky-500',
-            W: 'from-lime-400 to-green-500',     X: 'from-fuchsia-400 to-pink-500',
-            Y: 'from-blue-400 to-indigo-500',    Z: 'from-teal-400 to-emerald-500',
-          };
-          const gradient = avatarGradients[iniziale] || 'from-slate-400 to-slate-500';
+          // Colore avatar per genere: nomi italiani terminati in 'a' = femminile,
+          // eccetto i maschili comuni che finiscono in 'a'.
+          const nomiMaschiliInA = new Set(['luca','andrea','nicola','mattia','mirca','beniamino','bonifica','elia','enea','battista','barnaba','geremia','zaccaria','isaia','giosuè','simca']);
+          const nomeNorm = nome.toLowerCase().trim();
+          const isFemale = nomeNorm.endsWith('a') && !nomiMaschiliInA.has(nomeNorm);
+          const avatarBg = isFemale ? 'bg-purple-600' : 'bg-blue-600';
 
-          const budgetLabel = (() => {
-            if (cliente.Richiesta?.Operazione?.Vendita) {
-              const max = cliente.Richiesta.BudgetAcquistoMax;
-              const min = cliente.Richiesta.BudgetAcquistoMin;
-              return {
-                label: 'VENDITA',
-                price: max ? `€${Number(max).toLocaleString('it-IT')}` : min ? `Da €${Number(min).toLocaleString('it-IT')}` : 'Da valutare',
-                cls: 'bg-indigo-600 text-white',
-              };
-            }
-            if (cliente.Richiesta?.Operazione?.Affitto) {
-              const max = cliente.Richiesta.BudgetAffittoMax;
-              return {
-                label: 'AFFITTO',
-                price: max ? `€${Number(max).toLocaleString('it-IT')}/m` : 'Da valutare',
-                cls: 'bg-emerald-600 text-white',
-              };
-            }
-            return { label: 'N/D', price: '', cls: 'bg-slate-200 text-slate-500' };
+          // Badge vendita
+          const hasVendita = !!cliente.Richiesta?.Operazione?.Vendita;
+          const hasAffitto = !!cliente.Richiesta?.Operazione?.Affitto;
+          const prezzoVendita = (() => {
+            const max = cliente.Richiesta?.BudgetAcquistoMax;
+            const min = cliente.Richiesta?.BudgetAcquistoMin;
+            if (max) return `€${Number(max).toLocaleString('it-IT')}`;
+            if (min) return `Da €${Number(min).toLocaleString('it-IT')}`;
+            return 'Da valutare';
+          })();
+          const prezzoAffitto = (() => {
+            const max = cliente.Richiesta?.BudgetAffittoMax;
+            return max ? `€${Number(max).toLocaleString('it-IT')}/m` : 'Da valutare';
           })();
 
           return (
@@ -490,11 +474,11 @@ export default function ClientiPage() {
               key={cliente.id}
               onClick={() => handleOpenModal(cliente)}
               className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col"
-              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 148px' }}
+              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 160px' }}
             >
-              {/* Top: avatar + name + phone */}
+              {/* Fila 1: Avatar + Nome + Telefono */}
               <div className="p-4 flex items-center gap-3">
-                <div className={`h-11 w-11 flex-shrink-0 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-black text-base shadow-sm`}>
+                <div className={`h-11 w-11 flex-shrink-0 rounded-full ${avatarBg} flex items-center justify-center text-white font-black text-base shadow-sm`}>
                   {iniziale}{cognome[0]?.toUpperCase() || ''}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -508,8 +492,8 @@ export default function ClientiPage() {
                 <Eye className="h-3.5 w-3.5 text-slate-200 group-hover:text-primary transition-colors flex-shrink-0" />
               </div>
 
-              {/* Middle: requisiti in una riga compatta */}
-              <div className="px-4 pb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 font-medium">
+              {/* Fila 2: Preferenze (Zona · Tipologia · m² · Camere) */}
+              <div className="px-4 pb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 font-medium min-h-[28px]">
                 {cliente.Richiesta?.Zone?.length ? (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
@@ -531,7 +515,7 @@ export default function ClientiPage() {
                 {cliente.Richiesta?.CamereLettoMin ? (
                   <span className="flex items-center gap-1">
                     <BedDouble className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    {cliente.Richiesta.CamereLettoMin} camere
+                    {cliente.Richiesta.CamereLettoMin} cam
                   </span>
                 ) : null}
                 {!cliente.Richiesta?.Zone?.length && !cliente.Richiesta?.Tipologie?.length &&
@@ -540,17 +524,27 @@ export default function ClientiPage() {
                 )}
               </div>
 
-              {/* Bottom: budget badge + eye */}
-              <div className="mt-auto border-t border-slate-100 px-4 py-2.5 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${budgetLabel.cls}`}>
-                    {budgetLabel.label}
-                  </span>
-                  {budgetLabel.price && (
-                    <span className="text-sm font-black text-slate-800">{budgetLabel.price}</span>
-                  )}
-                </div>
-                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0" />
+              {/* Fila 3: Badges operazione + prezzi */}
+              <div className="mt-auto border-t border-slate-100 px-4 py-3 flex flex-wrap items-center gap-2">
+                {hasVendita && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-600 text-white">
+                      VENDITA
+                    </span>
+                    <span className="text-sm font-black text-slate-800">{prezzoVendita}</span>
+                  </div>
+                )}
+                {hasAffitto && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-600 text-white">
+                      AFFITTO
+                    </span>
+                    <span className="text-sm font-black text-slate-800">{prezzoAffitto}</span>
+                  </div>
+                )}
+                {!hasVendita && !hasAffitto && (
+                  <span className="text-[11px] font-bold text-slate-400">Operazione non definita</span>
+                )}
               </div>
             </div>
           );
