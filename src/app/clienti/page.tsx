@@ -2,11 +2,12 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import NextImage from "next/image";
-import { 
+import {
   Search, User, Phone, Mail, Plus, Briefcase, MapPin, Home,
   CheckCircle2, Save, Trash2, X, FileSignature, Zap,
   ThumbsUp, ThumbsDown, Loader2, Hash, Printer, Upload, Eye,
-  ChevronDown, ChevronUp, MessageCircle, ExternalLink, BarChart3
+  ChevronDown, ChevronUp, MessageCircle, ExternalLink, BarChart3,
+  BedDouble, Maximize2, Euro, Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +24,7 @@ export default function ClientiPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterVendita, setFilterVendita] = useState(false);
   const [filterAffitto, setFilterAffitto] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(50);
+  const [visibleCount, setVisibleCount] = useState(30);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [activeTab, setActiveTab] = useState<"profilo" | "ricerca" | "matching" | "documenti" | "firma">("profilo");
@@ -412,12 +413,12 @@ export default function ClientiPage() {
         }
         search={{
           value: searchTerm,
-          onChange: (v) => { setSearchTerm(v); setVisibleCount(50); },
+          onChange: (v) => { setSearchTerm(v); setVisibleCount(30); },
           placeholder: "Cerca cliente per nome, email o telefono...",
         }}
       >
         <button
-          onClick={() => { setFilterVendita(!filterVendita); setVisibleCount(50); }}
+          onClick={() => { setFilterVendita(!filterVendita); setVisibleCount(30); }}
           className={cn(
             "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
             filterVendita ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
@@ -427,7 +428,7 @@ export default function ClientiPage() {
           Cerca Acquisto (Vendita)
         </button>
         <button
-          onClick={() => { setFilterAffitto(!filterAffitto); setVisibleCount(50); }}
+          onClick={() => { setFilterAffitto(!filterAffitto); setVisibleCount(30); }}
           className={cn(
             "px-4 py-2 rounded-full text-sm font-bold border transition-all flex items-center gap-2",
             filterAffitto ? "bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 shadow-sm"
@@ -438,113 +439,150 @@ export default function ClientiPage() {
         </button>
       </PageHeader>
 
-      {/* List / Table View */}
-      <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
-        <div className="grid grid-cols-1 divide-y divide-slate-100">
-          {filteredClienti.slice(0, visibleCount).map((cliente) => (
-            <div key={cliente.id} className="group p-5 flex flex-col lg:flex-row lg:items-center gap-6 hover:bg-slate-50/80 transition-all" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 120px' }}>
-              
-              {/* Left: Avatar & Identity */}
-              <div className="flex items-center gap-4 lg:w-1/3 min-w-0">
-                <div className="h-12 w-12 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border border-blue-200 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all">
-                  {cliente.DatiPersonali?.Nome?.[0] || '?'}{cliente.DatiPersonali?.Cognome?.[0] || ''}
+      {/* ═══ GRID CARDS — 2 colonne ═══ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {filteredClienti.slice(0, visibleCount).map((cliente) => {
+          const nome = cliente.DatiPersonali?.Nome || (cliente as any).nome || '';
+          const cognome = cliente.DatiPersonali?.Cognome || (cliente as any).cognome || '';
+          const iniziale = (nome[0] || cognome[0] || '?').toUpperCase();
+          const telefono = cliente.DatiPersonali?.Telefono || (cliente as any).cell1 || '';
+          const email = cliente.DatiPersonali?.Email || (cliente as any).email || '';
+
+          // Gradient dinamico basato sulla lettera iniziale
+          const avatarGradients: Record<string, string> = {
+            A: 'from-indigo-500 to-blue-600', B: 'from-emerald-500 to-teal-600',
+            C: 'from-violet-500 to-purple-600', D: 'from-rose-500 to-pink-600',
+            E: 'from-amber-500 to-orange-500', F: 'from-cyan-500 to-sky-600',
+            G: 'from-lime-500 to-green-600', H: 'from-fuchsia-500 to-pink-600',
+            I: 'from-blue-500 to-indigo-600', J: 'from-teal-500 to-emerald-600',
+            K: 'from-purple-500 to-violet-600', L: 'from-red-500 to-rose-600',
+            M: 'from-orange-500 to-amber-600', N: 'from-sky-500 to-cyan-600',
+            O: 'from-green-500 to-lime-600', P: 'from-pink-500 to-fuchsia-600',
+            Q: 'from-indigo-400 to-blue-500', R: 'from-emerald-400 to-teal-500',
+            S: 'from-violet-400 to-purple-500', T: 'from-rose-400 to-pink-500',
+            U: 'from-amber-400 to-orange-400', V: 'from-cyan-400 to-sky-500',
+            W: 'from-lime-400 to-green-500', X: 'from-fuchsia-400 to-pink-500',
+            Y: 'from-blue-400 to-indigo-500', Z: 'from-teal-400 to-emerald-500',
+          };
+          const gradient = avatarGradients[iniziale] || 'from-slate-400 to-slate-500';
+
+          return (
+            <div
+              key={cliente.id}
+              onClick={() => handleOpenModal(cliente)}
+              className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer overflow-hidden"
+              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 160px' }}
+            >
+              {/* Card top: avatar + identity + eye icon */}
+              <div className="p-5 flex items-start gap-4">
+                <div className={`h-14 w-14 flex-shrink-0 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white font-black text-xl shadow-md`}>
+                  {iniziale}{cognome[0]?.toUpperCase() || ''}
                 </div>
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-lg text-slate-900 truncate">
-                      {cliente.DatiPersonali?.Nome || (cliente as any).nome || 'Senza nome'} {cliente.DatiPersonali?.Cognome || (cliente as any).cognome || ''}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-black text-base text-slate-900 truncate">
+                      {[nome, cognome].filter(Boolean).join(' ') || 'Senza nome'}
                     </h4>
-                    {cliente.status === "Attivo" && (
+                    {cliente.status === 'Attivo' && (
                       <span className="flex-shrink-0 h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-50" />
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500">
-                    <span className="flex items-center gap-1 font-medium truncate">
-                      <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.DatiPersonali?.Telefono || (cliente as any).cell1 || 'N/A'}
-                    </span>
-                    <span className="flex items-center gap-1 truncate">
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                      {cliente.Richiesta?.Tipologie?.length ? cliente.Richiesta.Tipologie.join(', ') : 'Qualsiasi'}
-                    </span>
+                  <div className="flex flex-col gap-0.5">
+                    {telefono && (
+                      <span className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                        <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                        {telefono}
+                      </span>
+                    )}
+                    {email && (
+                      <span className="flex items-center gap-1.5 text-xs text-slate-400 truncate">
+                        <Mail className="h-3.5 w-3.5 text-slate-300 flex-shrink-0" />
+                        {email}
+                      </span>
+                    )}
                   </div>
                 </div>
+                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
               </div>
 
-              {/* Center: Search Summary */}
-              <div className="hidden md:flex flex-col justify-center gap-1.5 lg:w-1/3 text-sm text-slate-500 border-l border-slate-100 pl-6 h-full">
-                <div className="font-medium truncate flex items-center gap-1.5" title="Zone">
-                  <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                  <span className="truncate">{cliente.Richiesta?.Zone?.length ? cliente.Richiesta.Zone.join(', ') : 'Zona: Qualsiasi'}</span>
-                </div>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-600">
+              {/* Card divider */}
+              <div className="mx-5 border-t border-slate-100" />
+
+              {/* Card bottom: requisiti + budget */}
+              <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+                {/* Requisiti immobile */}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 font-medium min-w-0">
+                  {cliente.Richiesta?.Tipologie?.length ? (
+                    <span className="flex items-center gap-1 truncate">
+                      <Tag className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.Tipologie[0]}
+                    </span>
+                  ) : null}
+                  {cliente.Richiesta?.Zone?.length ? (
+                    <span className="flex items-center gap-1 truncate">
+                      <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.Zone[0]}
+                    </span>
+                  ) : null}
                   {cliente.Richiesta?.SuperficieMin ? (
-                    <span className="flex items-center gap-1" title="Superficie minima">📐 Min {cliente.Richiesta.SuperficieMin} m²</span>
+                    <span className="flex items-center gap-1">
+                      <Maximize2 className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.SuperficieMin}+ m²
+                    </span>
                   ) : null}
                   {cliente.Richiesta?.CamereLettoMin ? (
-                    <span className="flex items-center gap-1" title="Camere da letto minime">🛏️ {cliente.Richiesta.CamereLettoMin}+ cam</span>
+                    <span className="flex items-center gap-1">
+                      <BedDouble className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.CamereLettoMin}+
+                    </span>
                   ) : null}
-                  {cliente.Richiesta?.BagniMin ? (
-                    <span className="flex items-center gap-1" title="Bagni minimi">🚿 {cliente.Richiesta.BagniMin}+ bagni</span>
-                  ) : null}
-                  {!cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && !cliente.Richiesta?.BagniMin && (
-                    <span className="text-slate-400 font-normal">Nessun requisito fisico specifico</span>
+                  {!cliente.Richiesta?.Tipologie?.length && !cliente.Richiesta?.Zone?.length &&
+                   !cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && (
+                    <span className="text-slate-300 italic">Requisiti da definire</span>
                   )}
                 </div>
-              </div>
 
-              {/* Right: Operations, Budgets & Actions */}
-              <div className="flex items-center justify-between lg:justify-end gap-5 lg:w-1/3">
-                <div className="flex flex-col items-end gap-1.5 w-full sm:w-auto">
+                {/* Budget badge */}
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
                   {cliente.Richiesta?.Operazione?.Vendita && (
-                    <div className="text-xs sm:text-sm border border-indigo-100 bg-indigo-50/50 text-indigo-700 px-2.5 py-1 rounded-md font-bold flex items-center gap-1.5 shadow-sm">
-                      <span className="uppercase text-[10px] tracking-wider text-indigo-400">Vendita</span>
-                      {cliente.Richiesta.BudgetAcquistoMax 
-                        ? `€${Number(cliente.Richiesta.BudgetAcquistoMax).toLocaleString()}` 
-                        : cliente.Richiesta.BudgetAcquistoMin 
-                          ? `Da €${Number(cliente.Richiesta.BudgetAcquistoMin).toLocaleString()}` 
-                          : 'Da valutare'
-                      }
-                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-black whitespace-nowrap">
+                      <Euro className="h-3 w-3" />
+                      {cliente.Richiesta.BudgetAcquistoMax
+                        ? Number(cliente.Richiesta.BudgetAcquistoMax).toLocaleString('it-IT')
+                        : cliente.Richiesta.BudgetAcquistoMin
+                          ? `Da ${Number(cliente.Richiesta.BudgetAcquistoMin).toLocaleString('it-IT')}`
+                          : 'Da valutare'}
+                    </span>
                   )}
                   {cliente.Richiesta?.Operazione?.Affitto && (
-                    <div className="text-xs sm:text-sm border border-emerald-100 bg-emerald-50/50 text-emerald-700 px-2.5 py-1 rounded-md font-bold flex items-center gap-1.5 shadow-sm">
-                      <span className="uppercase text-[10px] tracking-wider text-emerald-400">Affitto</span>
-                      {cliente.Richiesta.BudgetAffittoMax 
-                        ? `€${Number(cliente.Richiesta.BudgetAffittoMax).toLocaleString()}/m` 
-                        : 'Da valutare'
-                      }
-                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-black whitespace-nowrap">
+                      <Euro className="h-3 w-3" />
+                      {cliente.Richiesta.BudgetAffittoMax
+                        ? `${Number(cliente.Richiesta.BudgetAffittoMax).toLocaleString('it-IT')}/m`
+                        : 'Da valutare'}
+                    </span>
                   )}
-                  {(!cliente.Richiesta?.Operazione?.Vendita && !cliente.Richiesta?.Operazione?.Affitto) && (
-                    <div className="text-xs sm:text-sm border border-slate-200 bg-slate-50 text-slate-500 px-2.5 py-1 rounded-md font-bold">
-                      Operazione non definita
-                    </div>
+                  {!cliente.Richiesta?.Operazione?.Vendita && !cliente.Richiesta?.Operazione?.Affitto && (
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
+                      N/D
+                    </span>
                   )}
                 </div>
-                
-                <button 
-                  onClick={() => handleOpenModal(cliente)}
-                  className="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:border-primary hover:text-primary transition-all shadow-sm group-hover:shadow-md"
-                  title="Vedi Dettagli Cliente"
-                >
-                  <Search className="h-[18px] w-[18px]" />
-                </button>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Paginazione */}
       {visibleCount < filteredClienti.length && (
-        <div className="flex justify-center mt-6">
+        <div className="flex justify-center mt-4">
           <button
-            onClick={() => setVisibleCount(prev => prev + 50)}
-            className="px-6 py-3 mr-auto ml-auto rounded-full border border-slate-200 bg-white text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-slate-700 hover:text-primary hover:border-primary/30"
+            onClick={() => setVisibleCount(prev => prev + 30)}
+            className="px-6 py-2.5 rounded-full border border-slate-200 bg-white text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-slate-600 hover:text-primary hover:border-primary/30"
           >
-            <Search className="h-4 w-4 text-slate-400" />
-            Carica altri 50 clienti ({filteredClienti.length - visibleCount} rimanenti)
+            <ChevronDown className="h-4 w-4" />
+            Carica altri 30 ({filteredClienti.length - visibleCount} rimanenti)
           </button>
         </div>
       )}
