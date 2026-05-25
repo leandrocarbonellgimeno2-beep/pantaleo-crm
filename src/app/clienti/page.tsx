@@ -440,21 +440,20 @@ export default function ClientiPage() {
       </PageHeader>
 
       {/* ═══ GRID CARDS — responsive: 1 → 2 → 3 → 4 col ═══ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
         {filteredClienti.slice(0, visibleCount).map((cliente) => {
           const nome = cliente.DatiPersonali?.Nome || (cliente as any).nome || '';
           const cognome = cliente.DatiPersonali?.Cognome || (cliente as any).cognome || '';
-          const iniziale = (nome[0] || cognome[0] || '?').toUpperCase();
+          const initials = ((nome[0] || '') + (cognome[0] || '')).toUpperCase() || '?';
+          const fullName = [nome, cognome].filter(Boolean).join(' ') || 'Senza nome';
           const telefono = cliente.DatiPersonali?.Telefono || (cliente as any).cell1 || '';
+          const email = cliente.DatiPersonali?.Email || (cliente as any).email || '';
 
-          // Colore avatar per genere: nomi italiani terminati in 'a' = femminile,
-          // eccetto i maschili comuni che finiscono in 'a'.
-          const nomiMaschiliInA = new Set(['luca','andrea','nicola','mattia','mirca','beniamino','bonifica','elia','enea','battista','barnaba','geremia','zaccaria','isaia','giosuè','simca']);
+          const nomiMaschiliInA = new Set(['luca','andrea','nicola','mattia','elia','enea','battista','barnaba','geremia','zaccaria','isaia','simca','mirca']);
           const nomeNorm = nome.toLowerCase().trim();
           const isFemale = nomeNorm.endsWith('a') && !nomiMaschiliInA.has(nomeNorm);
           const avatarBg = isFemale ? 'bg-purple-600' : 'bg-blue-600';
 
-          // Badge vendita
           const hasVendita = !!cliente.Richiesta?.Operazione?.Vendita;
           const hasAffitto = !!cliente.Richiesta?.Operazione?.Affitto;
           const prezzoVendita = (() => {
@@ -474,77 +473,80 @@ export default function ClientiPage() {
               key={cliente.id}
               onClick={() => handleOpenModal(cliente)}
               className="group bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:shadow-slate-200/60 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col"
-              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 160px' }}
+              style={{ contentVisibility: 'auto', containIntrinsicSize: '0 220px' }}
             >
-              {/* Fila 1: Avatar + Nome + Telefono */}
-              <div className="p-4 flex items-center gap-3">
-                <div className={`h-11 w-11 flex-shrink-0 rounded-full ${avatarBg} flex items-center justify-center text-white font-black text-base shadow-sm`}>
-                  {iniziale}{cognome[0]?.toUpperCase() || ''}
+              {/* Fila 1: Avatar centrato + Nome */}
+              <div className="pt-6 px-5 pb-4 flex flex-col items-center text-center">
+                <div className={`h-16 w-16 rounded-full ${avatarBg} flex items-center justify-center text-white font-black text-xl shadow-md mb-3`}>
+                  {initials}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-black text-sm text-slate-900 truncate leading-tight">
-                    {[nome, cognome].filter(Boolean).join(' ') || 'Senza nome'}
-                  </h4>
-                  <span className="text-xs text-slate-400 font-medium">
-                    {telefono || 'Nessun telefono'}
-                  </span>
-                </div>
-                <Eye className="h-3.5 w-3.5 text-slate-200 group-hover:text-primary transition-colors flex-shrink-0" />
+                <h4 className="font-black text-base text-slate-900 leading-tight">{fullName}</h4>
               </div>
 
-              {/* Fila 2: Preferenze (Zona · Tipologia · m² · Camere) */}
-              <div className="px-4 pb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500 font-medium min-h-[28px]">
-                {cliente.Richiesta?.Zone?.length ? (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    {cliente.Richiesta.Zone[0]}
-                  </span>
-                ) : null}
-                {cliente.Richiesta?.Tipologie?.length ? (
-                  <span className="flex items-center gap-1">
-                    <Tag className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    {cliente.Richiesta.Tipologie[0]}
-                  </span>
-                ) : null}
-                {cliente.Richiesta?.SuperficieMin ? (
-                  <span className="flex items-center gap-1">
-                    <Maximize2 className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    Min {cliente.Richiesta.SuperficieMin} m²
-                  </span>
-                ) : null}
-                {cliente.Richiesta?.CamereLettoMin ? (
-                  <span className="flex items-center gap-1">
-                    <BedDouble className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                    {cliente.Richiesta.CamereLettoMin} cam
-                  </span>
-                ) : null}
-                {!cliente.Richiesta?.Zone?.length && !cliente.Richiesta?.Tipologie?.length &&
-                 !cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && (
-                  <span className="text-slate-300 italic">Requisiti da definire</span>
-                )}
+              {/* Fila 2: Contatti + Preferenze */}
+              <div className="px-5 pb-4 flex flex-col gap-1.5 text-sm">
+                <div className="flex items-center gap-2 text-slate-600 font-medium">
+                  <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span className="truncate">{telefono || '—'}</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate text-xs">{email || 'Nessuna email'}</span>
+                </div>
+
+                {/* Preferenze immobile */}
+                <div className="mt-1 pt-1 border-t border-slate-50 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500 font-medium">
+                  {cliente.Richiesta?.Zone?.length ? (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.Zone[0]}
+                    </span>
+                  ) : null}
+                  {cliente.Richiesta?.Tipologie?.length ? (
+                    <span className="flex items-center gap-1">
+                      <Tag className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.Tipologie[0]}
+                    </span>
+                  ) : null}
+                  {cliente.Richiesta?.SuperficieMin ? (
+                    <span className="flex items-center gap-1">
+                      <Maximize2 className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                      Min {cliente.Richiesta.SuperficieMin} m²
+                    </span>
+                  ) : null}
+                  {cliente.Richiesta?.CamereLettoMin ? (
+                    <span className="flex items-center gap-1">
+                      <BedDouble className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                      {cliente.Richiesta.CamereLettoMin} cam
+                    </span>
+                  ) : null}
+                  {!cliente.Richiesta?.Zone?.length && !cliente.Richiesta?.Tipologie?.length &&
+                   !cliente.Richiesta?.SuperficieMin && !cliente.Richiesta?.CamereLettoMin && (
+                    <span className="text-slate-300 italic">Requisiti da definire</span>
+                  )}
+                </div>
               </div>
 
-              {/* Fila 3: Badges operazione + prezzi */}
-              <div className="mt-auto border-t border-slate-100 px-4 py-3 flex flex-wrap items-center gap-2">
-                {hasVendita && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-600 text-white">
-                      VENDITA
-                    </span>
-                    <span className="text-sm font-black text-slate-800">{prezzoVendita}</span>
-                  </div>
-                )}
-                {hasAffitto && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-600 text-white">
-                      AFFITTO
-                    </span>
-                    <span className="text-sm font-black text-slate-800">{prezzoAffitto}</span>
-                  </div>
-                )}
-                {!hasVendita && !hasAffitto && (
-                  <span className="text-[11px] font-bold text-slate-400">Operazione non definita</span>
-                )}
+              {/* Fila 3: Badges operazione + eye */}
+              <div className="mt-auto border-t border-slate-100 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {hasVendita && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-600 text-white">VENDITA</span>
+                      <span className="text-sm font-black text-slate-800">{prezzoVendita}</span>
+                    </div>
+                  )}
+                  {hasAffitto && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-600 text-white">AFFITTO</span>
+                      <span className="text-sm font-black text-slate-800">{prezzoAffitto}</span>
+                    </div>
+                  )}
+                  {!hasVendita && !hasAffitto && (
+                    <span className="text-[11px] font-bold text-slate-400">N/D</span>
+                  )}
+                </div>
+                <Eye className="h-4 w-4 text-slate-300 group-hover:text-primary transition-colors flex-shrink-0" />
               </div>
             </div>
           );
