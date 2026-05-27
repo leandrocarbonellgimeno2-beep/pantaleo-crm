@@ -48,6 +48,7 @@ export function sanitizeBody<T extends Record<string, any>>(
 
 export const IMMOBILI_ALLOWED = [
   'DatiBase', 'GestioneCommerciale', 'DettagliFisici', 'Textos', 'Documentazione', 'Media', 'Idealista',
+  'Caratteristiche',
   'images', 'thumbnail',
   'proprietarioId', 'proprietarioId_real',
   'note',
@@ -57,6 +58,7 @@ export const IMMOBILI_ALLOWED = [
 
 export const CLIENTI_ALLOWED = [
   'DatiPersonali', 'Richiesta', 'Matching', 'Caratteristiche',
+  'Documentazione',
   'status', 'dataCreazione',
   'note', 'note_riservate',
   'firmaDigitale',
@@ -155,4 +157,23 @@ export const PROPRIETARI_ALLOWED = [
   // contatori vetrina (vengono ricalcolati lato server ma li accettiamo per
   // compat retro — se arrivano stantii, vengono sovrascritti dal GET)
   'numero_immobili', 'immobili_collegati',
+] as const;
+
+export const DOCUMENTI_TEMPLATE_ALLOWED = [
+  'titolo', 'categoria', 'url', 'dataCreazione', 'fileName', 'size',
+] as const;
+
+export const DOCUMENTI_GENERATI_ALLOWED = [
+  'nomeFile', 'categoria', 'urlDownload', 'dataCreazione',
+  'clienteNome', 'clienteId',
+  'sezione', 'azione',
+  'fileName', 'size',
+  'formData', // snapshot completo del form per riapertura — accettato as-is (top-level only)
+] as const;
+
+export const APPOINTMENTS_ALLOWED = [
+  'clientName', 'propertyAddress', 'date', 'time', 'duration',
+  'tipo', 'clientPhone', 'agentName', 'notes', 'contactRole',
+  // server-set fields permessi su PATCH (es. dopo sync Google Calendar)
+  'status', 'googleEventId', 'googleEventLink',
 ] as const;

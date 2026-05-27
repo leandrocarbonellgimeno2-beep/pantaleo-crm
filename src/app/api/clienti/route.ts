@@ -94,6 +94,17 @@ export async function POST(request: Request) {
     const { id } = body;
     const rest = sanitizeBody(body, CLIENTI_ALLOWED, id ? 'clienti.UPDATE' : 'clienti.CREATE');
 
+    // Guard: mai sovrascrivere Matching con sub-array vuoti.
+    // Un salvataggio di campi non correlati (es. Documentazione) non deve
+    // cancellare Proposti/ListaNera/Preferiti accumulati.
+    if (rest.Matching) {
+      const m = rest.Matching as any;
+      if (Array.isArray(m.Proposti) && m.Proposti.length === 0) delete m.Proposti;
+      if (Array.isArray(m.ListaNera) && m.ListaNera.length === 0) delete m.ListaNera;
+      if (Array.isArray(m.Preferiti) && m.Preferiti.length === 0) delete m.Preferiti;
+      if (Object.keys(m).length === 0) delete (rest as any).Matching;
+    }
+
     const clientData: any = {
       ...rest,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

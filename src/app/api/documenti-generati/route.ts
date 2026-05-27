@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { sanitizeBody, DOCUMENTI_GENERATI_ALLOWED } from '@/lib/sanitize';
 
 const COLLECTION = 'documenti_generati';
 
@@ -25,9 +26,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const raw = await request.json();
+    const body = sanitizeBody(raw, DOCUMENTI_GENERATI_ALLOWED, 'documenti_generati.POST');
     const docRef = db.collection(COLLECTION).doc();
-    const finalData = {
+    const finalData: any = {
       ...body,
       id: docRef.id,
       dataCreazione: body.dataCreazione || new Date().toISOString(),

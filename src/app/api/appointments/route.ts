@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { createCalendarEvent } from '@/lib/google-calendar';
+import { sanitizeBody, APPOINTMENTS_ALLOWED } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
   try {
@@ -33,7 +34,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const raw = await request.json();
+    const body = sanitizeBody(raw, APPOINTMENTS_ALLOWED, 'appointments.POST') as any;
     const agentId = body.agentName || 'default_admin';
 
     // Reject appointments in the past (date is 'yyyy-MM-dd' string)
@@ -74,10 +76,12 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const { id, ...updates } = body;
+    const raw = await request.json();
+    const { id } = raw; // id da raw (ALWAYS_FORBIDDEN lo strappa dal sanitized)
 
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
+
+    const updates = sanitizeBody(raw, APPOINTMENTS_ALLOWED, 'appointments.PATCH');
 
     await db.collection('appointments').doc(id).update({
       ...updates,

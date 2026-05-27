@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { sanitizeBody, DOCUMENTI_TEMPLATE_ALLOWED } from '@/lib/sanitize';
 
 const COLLECTION_NAME = 'documenti_template';
 
@@ -19,16 +20,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const raw = await request.json();
+    const body = sanitizeBody(raw, DOCUMENTI_TEMPLATE_ALLOWED, 'documenti.POST');
     const docRef = db.collection(COLLECTION_NAME).doc();
-    
-    // Si trae un ID forzado, lo usamos (o actualizamos)
-    const idToUse = body.id || docRef.id;
-    const finalData = { ...body, id: idToUse };
+
+    // id viene da raw (ALWAYS_FORBIDDEN lo strappa dal body sanitizzato)
+    const idToUse = raw.id || docRef.id;
+    const finalData: any = { ...body, id: idToUse };
     if (!finalData.dataCreazione) finalData.dataCreazione = new Date().toISOString();
 
     await db.collection(COLLECTION_NAME).doc(idToUse).set(finalData, { merge: true });
-    
+
     return NextResponse.json({ success: true, id: idToUse, data: finalData });
   } catch (error: any) {
     console.error('[documenti]', error);

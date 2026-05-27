@@ -83,7 +83,7 @@ export async function GET(request: Request) {
         'DatiBase.Tipologia', 'DatiBase.Riferimento', 'DatiBase.SortKey',
         'GestioneCommerciale.PrezzoVendita', 'GestioneCommerciale.PrezzoAffitto',
         'GestioneCommerciale.InVendita', 'GestioneCommerciale.InAffitto', 'GestioneCommerciale.Sospeso',
-        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto', 'DettagliFisici.Bagni',
+        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto', 'DettagliFisici.Bagni', 'DettagliFisici.Vani',
         'images', '_status', 'proprietarioId', 'createdAt',
         'Idealista.idealistaStatus',
       )

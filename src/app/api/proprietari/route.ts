@@ -82,6 +82,15 @@ export async function PATCH(request: Request) {
 
     const updates = sanitizeBody(body, PROPRIETARI_ALLOWED, 'proprietari.PATCH');
 
+    // Guard: mai sovrascrivere documenti con oggetto/array vuoti
+    if (updates.documenti) {
+      const docs = updates.documenti as Record<string, any>;
+      for (const key of Object.keys(docs)) {
+        if (Array.isArray(docs[key]) && docs[key].length === 0) delete docs[key];
+      }
+      if (Object.keys(docs).length === 0) delete (updates as any).documenti;
+    }
+
     await db.collection('proprietari').doc(id).update({
       ...updates,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -98,6 +107,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const data = sanitizeBody(body, PROPRIETARI_ALLOWED, 'proprietari.POST');
+
+    // Guard: stessa protezione del PATCH — prevent empty documenti on create
+    if (data.documenti) {
+      const docs = data.documenti as Record<string, any>;
+      for (const key of Object.keys(docs)) {
+        if (Array.isArray(docs[key]) && docs[key].length === 0) delete docs[key];
+      }
+      if (Object.keys(docs).length === 0) delete (data as any).documenti;
+    }
 
     const docRef = await db.collection('proprietari').add({
       ...data,
