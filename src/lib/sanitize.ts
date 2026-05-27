@@ -47,7 +47,7 @@ export function sanitizeBody<T extends Record<string, any>>(
 // ── Whitelist per collezione ─────────────────────────────────────────────────
 
 export const IMMOBILI_ALLOWED = [
-  'DatiBase', 'GestioneCommerciale', 'DettagliFisici', 'Textos', 'Media', 'Idealista',
+  'DatiBase', 'GestioneCommerciale', 'DettagliFisici', 'Textos', 'Documentazione', 'Media', 'Idealista',
   'images', 'thumbnail',
   'proprietarioId', 'proprietarioId_real',
   'note',

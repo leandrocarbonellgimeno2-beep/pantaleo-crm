@@ -73,7 +73,10 @@ export async function GET(request: Request) {
       const nq = normalize(q);
       data = data.filter((c: any) => {
         const dp = c.DatiPersonali || {};
-        const fullSearch = normalize(`${dp.Nome || ''} ${dp.Cognome || ''} ${dp.Telefono || ''} ${dp.Email || ''} ${dp.CittaResidenza || ''}`);
+        const fullSearch = normalize(
+          `${dp.Nome || ''} ${dp.Cognome || ''} ${dp.Telefono || ''} ${dp.Email || ''} ${dp.CittaResidenza || ''}` +
+          ` ${c.nome || ''} ${c.cognome || ''} ${c.cell1 || ''}` // legacy top-level fields
+        );
         return fullSearch.includes(nq);
       });
     }
