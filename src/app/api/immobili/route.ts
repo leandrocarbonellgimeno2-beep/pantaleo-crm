@@ -83,7 +83,7 @@ export async function GET(request: Request) {
         'DatiBase.Tipologia', 'DatiBase.Riferimento', 'DatiBase.SortKey',
         'GestioneCommerciale.PrezzoVendita', 'GestioneCommerciale.PrezzoAffitto',
         'GestioneCommerciale.InVendita', 'GestioneCommerciale.InAffitto', 'GestioneCommerciale.Sospeso',
-        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto',
+        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto', 'DettagliFisici.Bagni',
         'images', '_status', 'proprietarioId', 'createdAt',
         'Idealista.idealistaStatus',
       )
@@ -117,6 +117,16 @@ export async function PATCH(request: Request) {
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
     const updates = sanitizeBody(body, IMMOBILI_ALLOWED, 'immobili.PATCH');
+
+    // Guard: never overwrite images/thumbnail with empty/falsy values.
+    // A PATCH for text fields (Textos, DatiBase, etc.) must never accidentally
+    // wipe photos if the client omits or sends an empty array.
+    if (!updates.images || (Array.isArray(updates.images) && (updates.images as any[]).length === 0)) {
+      delete (updates as any).images;
+    }
+    if (!updates.thumbnail) {
+      delete (updates as any).thumbnail;
+    }
 
     await db.collection('immobili').doc(id).update({
       ...updates,
