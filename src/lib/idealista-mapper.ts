@@ -97,12 +97,30 @@ export function mapPropertyToIdealista(
   const operation: 'sale' | 'rent' = gc.InAffitto && !gc.InVendita ? 'rent' : 'sale';
 
   // ── Address ──
+  // NUNCA inventamos datos catastrales. Antes había fallbacks falsos
+  // ('Via Non Specificata' / CAP '91025' / 'Marsala') que publicaban una
+  // dirección irreal en Idealista. Ahora exigimos los campos mínimos y, si
+  // faltan, abortamos el mapeo con un error claro: mejor no publicar que
+  // publicar datos falsos. Los callers (POST/PUT/dry-run) ya capturan y
+  // devuelven el message.
   const parsed = parseAddress(db.Indirizzo || '');
+  const town = (db.Citta || '').trim();
+  const postalCode = (db.CAP || '').toString().trim();
+  const missing: string[] = [];
+  if (!parsed.street) missing.push('Indirizzo');
+  if (!town) missing.push('Città');
+  if (!postalCode) missing.push('CAP');
+  if (missing.length > 0) {
+    throw new Error(
+      `Pubblicazione Idealista annullata: dati indirizzo mancanti (${missing.join(', ')}). ` +
+      `Completa l'indirizzo dell'immobile prima di pubblicarlo.`
+    );
+  }
   const address: IdealistaAddress = {
-    street: parsed.street || 'Via Non Specificata',
+    street: parsed.street,
     ...(parsed.streetNumber ? { streetNumber: parsed.streetNumber } : {}),
-    postalCode: db.CAP || '91025',
-    town: db.Citta || 'Marsala',
+    postalCode,
+    town,
     province: IDEALISTA_CONFIG.DEFAULT_PROVINCE,
     country: IDEALISTA_CONFIG.DEFAULT_COUNTRY,
     visibility: options.visibility || 'full',

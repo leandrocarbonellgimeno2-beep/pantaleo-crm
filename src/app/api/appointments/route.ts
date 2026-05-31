@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
-import { createCalendarEvent } from '@/lib/google-calendar';
+import { createCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 import { sanitizeBody, APPOINTMENTS_ALLOWED } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
@@ -107,12 +107,21 @@ export async function DELETE(request: Request) {
 
     if (!doc.exists) return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
 
-    const googleEventId = doc.data()?.googleEventId;
+    const apptData = doc.data() || {};
+    const googleEventId = apptData.googleEventId;
+    const agentId = apptData.agentName || 'default_admin';
     await docRef.delete();
 
-    // Best-effort GCal deletion — no delete function in google-calendar.ts yet, log for visibility
+    // Best-effort GCal deletion — non blocca la cancellazione CRM se fallisce.
     if (googleEventId) {
-      console.info(`[appointments] Deleted Firestore doc ${id}; GCal event ${googleEventId} requires manual removal.`);
+      try {
+        const removed = await deleteCalendarEvent(agentId, googleEventId);
+        if (!removed) {
+          console.warn(`[appointments] GCal event ${googleEventId} not removed for agent ${agentId}.`);
+        }
+      } catch (gcalError) {
+        console.error('[appointments] Failed to delete Google Calendar event:', gcalError);
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -39,15 +39,16 @@ export async function GET(request: Request) {
 
     const expired = snap.docs.filter(d => (d.data()._deletedAt ?? 0) < cutoff);
 
+    // Set de TODOS los immobili a purgar en esta corrida. Es la clave del fix:
+    // limpiamos cada cliente UNA sola vez contra este set, en vez de reescribir
+    // sus arrays por cada immobile dentro del loop. Antes, la 2ª iteración usaba
+    // el `c.data()` en memoria (stale, ya sin el id de la 1ª iteración) y al
+    // reescribir el array completo "resucitaba" la referencia recién quitada.
+    const expiredIds = new Set(expired.map(d => d.id));
+
     const bucketName = process.env.FIREBASE_STORAGE_BUCKET ||
       `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
     const bucket = admin.storage().bucket(bucketName);
-
-    // Hoist clienti fetch once before the loop — only if there's something to purge.
-    // Avoids downloading 453 client docs on nights when nothing is pending.
-    const clientiSnap = expired.length > 0
-      ? await db.collection('clienti').get()
-      : { docs: [] as any[] };
 
     // Collect affected proprietario IDs for a single batch recount after the loop.
     const affectedProprietariIds = new Set<string>();
@@ -70,18 +71,34 @@ export async function GET(request: Request) {
         })
       );
 
-      // Clean orphan refs in clienti.Matching — uses the hoisted snapshot.
+      // Delete Firestore doc
+      await doc.ref.delete();
+
+      if (data.proprietarioId) affectedProprietariIds.add(data.proprietarioId);
+      purged.immobili++;
+    }
+
+    // ── Limpieza de referencias huérfanas en clienti.Matching (single-pass) ────
+    // Una sola pasada DESPUÉS del loop: cada cliente se evalúa contra `expiredIds`
+    // y se reescribe como máximo una vez. arrayRemove para ListaNera/Preferiti
+    // (strings) y filter contra el set para Proposti (objetos con immobileId).
+    // Idempotente: si no hay cambios, no se escribe.
+    if (expired.length > 0) {
       try {
+        const clientiSnap = await db.collection('clienti').get();
         const matchingUpdates: Promise<any>[] = [];
         for (const c of clientiSnap.docs) {
           const m = c.data().Matching ?? {};
-          const proposti  = (m.Proposti  ?? []).filter((p: any) => p.immobileId !== doc.id);
-          const listaNera = (m.ListaNera ?? []).filter((id: string) => id !== doc.id);
-          const preferiti = (m.Preferiti ?? []).filter((id: string) => id !== doc.id);
+          const origProposti  = m.Proposti  ?? [];
+          const origListaNera = m.ListaNera ?? [];
+          const origPreferiti = m.Preferiti ?? [];
+          const proposti  = origProposti.filter((p: any) => !expiredIds.has(p.immobileId));
+          const listaNera = origListaNera.filter((id: string) => !expiredIds.has(id));
+          const preferiti = origPreferiti.filter((id: string) => !expiredIds.has(id));
           const changed =
-            proposti.length  !== (m.Proposti  ?? []).length ||
-            listaNera.length !== (m.ListaNera ?? []).length ||
-            preferiti.length !== (m.Preferiti ?? []).length;
+            proposti.length  !== origProposti.length  ||
+            listaNera.length !== origListaNera.length ||
+            preferiti.length !== origPreferiti.length;
           if (changed) {
             matchingUpdates.push(
               db.collection('clienti').doc(c.id).update({
@@ -94,14 +111,8 @@ export async function GET(request: Request) {
         }
         await Promise.all(matchingUpdates);
       } catch (e: any) {
-        errors.push(`Matching cleanup for ${doc.id}: ${e.message}`);
+        errors.push(`Matching cleanup: ${e.message}`);
       }
-
-      // Delete Firestore doc
-      await doc.ref.delete();
-
-      if (data.proprietarioId) affectedProprietariIds.add(data.proprietarioId);
-      purged.immobili++;
     }
 
     // Batch recount tramite il service condiviso (fonte unica).
