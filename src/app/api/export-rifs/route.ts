@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
-import * as fs from 'fs';
-import * as path from 'path';
 
-export const revalidate = 300; // Cache at Vercel edge for 5 minutes
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -19,14 +17,15 @@ export async function GET() {
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
     const content = codigos.join(', ');
-    const filePath = path.join(process.cwd(), 'codigos_actuales.txt');
-    fs.writeFileSync(filePath, content, 'utf-8');
 
-    return NextResponse.json({
-      status: '✅ Archivo creado',
-      path: filePath,
-      totalCodigos: codigos.length,
-      preview: codigos.slice(0, 20).join(', ') + '...',
+    // Vercel's filesystem is read-only outside /tmp; writing to process.cwd()
+    // previously threw EROFS in production. Return a direct download instead.
+    return new NextResponse(content, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Disposition': 'attachment; filename="codigos_actuales.txt"',
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
