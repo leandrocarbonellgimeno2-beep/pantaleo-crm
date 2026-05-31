@@ -19,8 +19,14 @@ import { db, admin } from '@/lib/firebase-admin';
 export async function GET() {
   try {
     const [proprietariSnap, immobiliSnap] = await Promise.all([
+      // proprietari: full doc — il diagnostico elenca `Object.keys(p)` per
+      // rilevare incoerenze di schema, quindi NON si può proiettare.
       db.collection('proprietari').get(),
-      db.collection('immobili').get(),
+      // immobili: proiezione ai soli campi usati qui sotto. Evita di scaricare
+      // ~800 documenti completi (con immagini) quando servono solo 4 campi.
+      db.collection('immobili')
+        .select('proprietarioId', 'DatiBase.Codice', 'DatiBase.Indirizzo', 'DatiBase.NomeProprietario', 'NomeProprietario')
+        .get(),
     ]);
 
     // Build a map id → proprietario for fast lookup

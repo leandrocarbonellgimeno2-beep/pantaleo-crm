@@ -10,9 +10,32 @@ const COLLECTION = 'documenti_generati';
  * DELETE → Remove a generated document by ID
  */
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const snapshot = await db.collection(COLLECTION).orderBy('dataCreazione', 'desc').limit(200).get();
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    // Single-doc fetch (full document, incl. formData) — usato dal pulsante
+    // "Riapri e modifica" che ha bisogno dello snapshot completo del form.
+    if (id) {
+      const doc = await db.collection(COLLECTION).doc(id).get();
+      if (!doc.exists) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      return NextResponse.json({ id: doc.id, ...doc.data() });
+    }
+
+    // Lista: proietta SOLO i campi leggeri della tabella. `formData` (snapshot
+    // completo del form, incl. firme base64) viene ESCLUSO dal payload della
+    // lista: con 200 documenti era la causa del picco di memoria. Si recupera
+    // on-demand via ?id= solo quando l'utente apre un documento per modificarlo.
+    const snapshot = await db.collection(COLLECTION)
+      .orderBy('dataCreazione', 'desc')
+      .limit(200)
+      .select(
+        'nomeFile', 'categoria', 'urlDownload', 'dataCreazione',
+        'clienteNome', 'clienteId', 'sezione', 'azione',
+        'fileName', 'size', '_status',
+      )
+      .get();
     // Esclude i soft-deleted per coerenza con immobili/clienti/proprietari.
     const data = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')

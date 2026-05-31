@@ -24,7 +24,24 @@ export async function GET(request: Request) {
     // Safety cap: 677 proprietari attivi → 2000 lascia margine 3x.
     // 806 immobili → 1500 idem.
     const [snapshot, immobiliSnap] = await Promise.all([
-      db.collection('proprietari').limit(2000).get(),
+      // Projection: SOLO i campi usati dalle card e dalla ricerca client-side.
+      // Esclude firmaDigitale (base64, pesante) e documenti: la scheda di
+      // modifica li recupera on-demand via ?id= (vedi openSlideOver in page.tsx).
+      // numero_immobili/immobili_collegati NON servono qui: vengono sovrascritti
+      // più sotto con il conteggio reale.
+      db.collection('proprietari')
+        .select(
+          'nome', 'Nome', 'NomeCompleto', 'nominativo', 'name',
+          'cognome', 'Cognome', 'surname',
+          'cellulare', 'Cellulare', 'telefono', 'Telefono',
+          'cell1', 'cell2', 'tel1', 'tel2',
+          'email', 'Email',
+          'indirizzo', 'Indirizzo', 'indirizzo_residenza', 'citta', 'Citta',
+          'codiceFiscale', 'CodiceFiscale', 'codice_fiscale',
+          'createdAt', '_status',
+        )
+        .limit(2000)
+        .get(),
       // Projection: only the 2 fields needed to compute the live count.
       // This avoids transferring ~4.5 MB of full immobili documents on every owner list load.
       db.collection('immobili').select('proprietarioId', '_status').limit(1500).get(),

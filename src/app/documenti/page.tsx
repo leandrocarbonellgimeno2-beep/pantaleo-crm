@@ -21,6 +21,17 @@ const IncaricoEsclusivaForm = dynamic(() => import('@/components/documenti/Incar
 // ═══ Document Template Registry ═══
 // ═══ ONLY real document templates ═══
 type FormType = 'foglio-visita' | 'incarico-locazione' | 'incarico-stagionale' | 'incarico-acquisto' | 'incarico-esclusiva';
+
+// Mappa categoria → tipo di form. Usata sia per decidere se mostrare il pulsante
+// "Riapri e modifica" sia per riaprire il form giusto. A livello di modulo così
+// la lista non dipende più dal campo `formData` (ora lazy-loaded via ?id=).
+const FORM_TYPE_BY_CATEGORIA: Record<string, FormType> = {
+  'Foglio di Visita': 'foglio-visita',
+  'Incarico Locazione': 'incarico-locazione',
+  'Incarico Stagionale': 'incarico-stagionale',
+  'Incarico Per Acquisto': 'incarico-acquisto',
+  "Incarico d'Esclusiva": 'incarico-esclusiva',
+};
 interface DocTemplate { id: string; name: string; desc: string; icon: string; color: string; formType: FormType }
 const DOC_TEMPLATES: Record<string, Record<string, DocTemplate[]>> = {
   clienti: {
@@ -470,21 +481,24 @@ export default function DocumentiPage() {
                           <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri in nuova scheda">
                             <Eye className="h-4 w-4" />
                           </a>
-                          {doc.formData && doc.categoria && (
+                          {doc.categoria && FORM_TYPE_BY_CATEGORIA[doc.categoria as string] && (
                             <button
-                              onClick={() => {
-                                const formTypeMap: Record<string, FormType> = {
-                                  'Foglio di Visita': 'foglio-visita',
-                                  'Incarico Locazione': 'incarico-locazione',
-                                  'Incarico Stagionale': 'incarico-stagionale',
-                                  'Incarico Per Acquisto': 'incarico-acquisto',
-                                  "Incarico d'Esclusiva": 'incarico-esclusiva',
-                                };
-                                const ft = formTypeMap[doc.categoria as string];
-                                if (ft) {
+                              onClick={async () => {
+                                const ft = FORM_TYPE_BY_CATEGORIA[doc.categoria as string];
+                                if (!ft) return;
+                                try {
+                                  // formData non è più nella lista (lazy): lo recuperiamo on-demand.
+                                  const res = await fetch(`/api/documenti-generati?id=${doc.id}`);
+                                  const full = await res.json();
+                                  if (!res.ok || !full?.formData) {
+                                    setToast('❌ Dati del modulo non disponibili');
+                                    return;
+                                  }
                                   setFormKey(k => k + 1);
-                                  setEditFormData(doc.formData as Record<string, unknown>);
+                                  setEditFormData(full.formData as Record<string, unknown>);
                                   setActiveForm(ft);
+                                } catch {
+                                  setToast('❌ Errore nel caricamento del modulo');
                                 }
                               }}
                               className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors text-slate-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200"

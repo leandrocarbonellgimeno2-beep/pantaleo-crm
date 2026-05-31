@@ -200,8 +200,8 @@ export default function ProprietariPage() {
   };
   const openSlideOver = (prop?: Proprietario) => {
     setSelectedProprietario(prop || null);
-    setFormData(prop || { 
-      stato: "Attivo", 
+    setFormData(prop || {
+      stato: "Attivo",
       nazione: "Italia",
       interessato_vendita: false,
       interessato_locazione: false,
@@ -210,6 +210,24 @@ export default function ProprietariPage() {
     });
     setActiveTab("dati");
     setIsSlideOverOpen(true);
+
+    // La lista è proiettata (campi leggeri, SENZA firmaDigitale/documenti) per
+    // non trasferire centinaia di firme base64 a ogni caricamento. Quando si
+    // apre la scheda di un proprietario esistente, recuperiamo il documento
+    // completo così firma e documenti vengono mostrati/modificati correttamente.
+    // Merge { ...full, ...prev }: preserva eventuali modifiche già digitate e
+    // aggiunge i campi pesanti mancanti.
+    if (prop?.id) {
+      fetch(`/api/proprietari?id=${prop.id}`)
+        .then(res => (res.ok ? res.json() : null))
+        .then(full => {
+          if (full && !full.error) {
+            setSelectedProprietario(full);
+            setFormData(prev => ({ ...full, ...prev }));
+          }
+        })
+        .catch(err => console.error('Error loading full proprietario:', err));
+    }
   };
   
   const closeSlideOver = () => setIsSlideOverOpen(false);
