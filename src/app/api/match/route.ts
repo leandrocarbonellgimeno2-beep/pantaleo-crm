@@ -13,22 +13,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing richiesta object' }, { status: 400 });
     }
 
-    // 1. Fetch ONLY active properties from Firestore (Sospeso === false).
-    //    This query runs server-side: Firestore never sends suspended/deleted docs.
-    //    If a property is suspended or deleted it is excluded immediately — no stale data.
+    // 1. Fetch properties. Los suspendidos se filtran en JS (no a nivel Firestore):
+    //    `where('Sospeso','==',false)` EXCLUYE todo doc sin el campo, ocultando
+    //    inmuebles activos creados sin él. Ausente/false = activo. Los soft-deleted
+    //    también se descartan en el loop.
     const snapshot = await db
       .collection('immobili')
-      .where('GestioneCommerciale.Sospeso', '==', false)
       .limit(1000)
       .get();
-
-    const docsScanned = snapshot.size;
 
     // 2. Blacklist & already proposed filter
     const excludeIds = new Set([...(listaNera || []), ...(propostiIds || [])]);
 
     // 3. Score each property
     const allMatches: MatchResult[] = [];
+    let docsScanned = 0; // inmuebles activos (no suspendidos, no borrados) evaluados
 
     for (const doc of snapshot.docs) {
       const immobile = { id: doc.id, ...doc.data() };
@@ -39,6 +38,11 @@ export async function POST(request: Request) {
       // Skip soft-deleted properties
       if ((immobile as any)._status === 'pendente_cancellazione') continue;
 
+      // Skip suspendidos — filtrado aquí (no en Firestore) para que los docs sin
+      // el campo `Sospeso` se traten como activos y nunca se oculten en silencio.
+      if ((immobile as any).GestioneCommerciale?.Sospeso) continue;
+
+      docsScanned++;
       const result = calculateMatch(richiesta, immobile);
 
       // Only include results at or above the minimum quality threshold.

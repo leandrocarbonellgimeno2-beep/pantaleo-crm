@@ -5,40 +5,41 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Conteos derivados por resta para que un `Sospeso` ausente jamás oculte un
+    // inmueble: attivi = total − sospesi (campo ausente ⇒ cuenta como activo).
+    // Igual para vendita/affitto: (marcados) − (marcados & suspendidos).
+    const imm = db.collection('immobili');
     const [
-      immobiliAttiviSnap,
+      immobiliTotaliSnap,
       immobiliSospesiSnap,
-      immobiliVenditaSnap,
-      immobiliAffittoSnap,
+      venditaTotSnap,
+      venditaSospSnap,
+      affittoTotSnap,
+      affittoSospSnap,
       clientiTotaliSnap,
       proprietariTotaliSnap,
     ] = await Promise.all([
-      // Active = not suspended
-      db.collection('immobili').where('GestioneCommerciale.Sospeso', '==', false).count().get(),
-      // Suspended
-      db.collection('immobili').where('GestioneCommerciale.Sospeso', '==', true).count().get(),
-      // For sale (active)
-      db.collection('immobili')
-        .where('GestioneCommerciale.Sospeso', '==', false)
-        .where('GestioneCommerciale.InVendita', '==', true)
-        .count()
-        .get(),
-      // For rent (active)
-      db.collection('immobili')
-        .where('GestioneCommerciale.Sospeso', '==', false)
-        .where('GestioneCommerciale.InAffitto', '==', true)
-        .count()
-        .get(),
+      imm.count().get(),
+      imm.where('GestioneCommerciale.Sospeso', '==', true).count().get(),
+      imm.where('GestioneCommerciale.InVendita', '==', true).count().get(),
+      imm.where('GestioneCommerciale.InVendita', '==', true)
+         .where('GestioneCommerciale.Sospeso', '==', true).count().get(),
+      imm.where('GestioneCommerciale.InAffitto', '==', true).count().get(),
+      imm.where('GestioneCommerciale.InAffitto', '==', true)
+         .where('GestioneCommerciale.Sospeso', '==', true).count().get(),
       db.collection('clienti').count().get(),
       db.collection('proprietari').count().get(),
     ]);
 
+    const immobiliTotali  = immobiliTotaliSnap.data().count;
+    const immobiliSospesi = immobiliSospesiSnap.data().count;
+
     return NextResponse.json(
       {
-        immobiliAttivi:    immobiliAttiviSnap.data().count,
-        immobiliSospesi:   immobiliSospesiSnap.data().count,
-        immobiliVendita:   immobiliVenditaSnap.data().count,
-        immobiliAffitto:   immobiliAffittoSnap.data().count,
+        immobiliAttivi:    immobiliTotali - immobiliSospesi,
+        immobiliSospesi:   immobiliSospesi,
+        immobiliVendita:   venditaTotSnap.data().count - venditaSospSnap.data().count,
+        immobiliAffitto:   affittoTotSnap.data().count - affittoSospSnap.data().count,
         clientiTotali:     clientiTotaliSnap.data().count,
         proprietariTotali: proprietariTotaliSnap.data().count,
       },

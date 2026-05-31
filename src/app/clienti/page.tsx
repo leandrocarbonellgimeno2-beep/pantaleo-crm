@@ -267,7 +267,8 @@ export default function ClientiPage() {
     setMatchResults(prev => prev.filter(p => p.id !== immobileId));
     if (snapshot.id) {
       try {
-        const res = await fetch('/api/clienti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: snapshot.id, Matching: updated.Matching }) });
+        // Delta atómico (arrayUnion server-side) — evita la race del array completo.
+        const res = await fetch('/api/clienti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: snapshot.id, MatchingOps: { addListaNera: [immobileId] } }) });
         await safeJson(res);
       } catch (e: any) {
         setSelectedCliente(snapshot); // A2 — revertir UI si Firestore falla
@@ -285,7 +286,8 @@ export default function ClientiPage() {
     setMatchResults(prev => prev.filter(p => p.id !== property.id));
     if (snapshot.id) {
       try {
-        const res = await fetch('/api/clienti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: snapshot.id, Matching: updated.Matching }) });
+        // Delta atómico (arrayUnion server-side) — evita la race del array completo.
+        const res = await fetch('/api/clienti', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: snapshot.id, MatchingOps: { addProposti: [item] } }) });
         await safeJson(res);
       } catch (e: any) {
         setSelectedCliente(snapshot); // A2 — revertir UI si Firestore falla

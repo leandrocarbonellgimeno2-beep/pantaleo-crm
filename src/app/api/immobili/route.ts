@@ -69,7 +69,9 @@ export async function GET(request: Request) {
     // 4. Build base Firestore query — ALL status+type filters pushed to DB level
     let baseQuery: any = db.collection('immobili');
     if (status === 'sospesi') baseQuery = baseQuery.where('GestioneCommerciale.Sospeso', '==', true);
-    else if (status === 'attivi') baseQuery = baseQuery.where('GestioneCommerciale.Sospeso', '==', false);
+    // 'attivi' NO se filtra en Firestore: where('Sospeso','==',false) excluye los
+    // docs sin el campo, ocultando inmuebles activos. Se filtra en JS más abajo
+    // (ausente/false = attivo). 'sospesi' sí va a DB (ausente nunca es sospeso).
     if (type === 'vendita') baseQuery = baseQuery.where('GestioneCommerciale.InVendita', '==', true);
     else if (type === 'affitto') baseQuery = baseQuery.where('GestioneCommerciale.InAffitto', '==', true);
 
@@ -91,7 +93,9 @@ export async function GET(request: Request) {
       .get();
     const docs = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
-      .map((doc: any) => stripToThumbnail({ id: doc.id, ...doc.data() }));
+      .map((doc: any) => stripToThumbnail({ id: doc.id, ...doc.data() }))
+      // 'attivi' filtrado en JS: ausente/false = activo (ver baseQuery arriba).
+      .filter((d: any) => status !== 'attivi' || !d.GestioneCommerciale?.Sospeso);
 
     // Text search in-memory (Firestore doesn't support full-text natively)
     if (q) {

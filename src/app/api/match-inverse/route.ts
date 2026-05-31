@@ -18,13 +18,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing immobile data' }, { status: 400 });
     }
 
-    // 1. Fetch clients excluding soft-deleted ones (Firestore-level filter)
-    // Hard cap: 453 active clients oggi, 2000 lascia margine 4x prima di toccare
+    // 1. Fetch clients. Los soft-deleted se filtran en JS más abajo, NO a nivel
+    //    Firestore: `where('_status','!=',...)` EXCLUYE todo doc que carezca del
+    //    campo `_status`, y los clientes activos creados antes del soft-delete no
+    //    lo tienen → quedarían invisibles al match inverso. Campo ausente = activo.
+    // Hard cap: ~470 clienti oggi, 2000 lascia margine 4x prima di toccare
     // questo limite. Se viene superato significa che bisogna migrare a una query
     // pre-filtrata (es. solo clienti con Richiesta non vuota).
     const snapshot = await db
       .collection('clienti')
-      .where('_status', '!=', 'pendente_cancellazione')
       .limit(2000)
       .get();
     const allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];

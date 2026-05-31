@@ -92,6 +92,35 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { id } = body;
+
+    // ── Mutaciones atómicas de Matching (race-safe) ──────────────────────────
+    // Los quick-actions (proponi/scarta) mandan deltas en `MatchingOps` en vez del
+    // array completo. Así dos agentes editando el mismo cliente a la vez no se
+    // pisan (la race del read-modify-write): arrayUnion añade, arrayRemove quita,
+    // ambos atómicos a nivel Firestore. Los dot-paths crean Matching/sub-array si
+    // no existen aún.
+    const ops = body.MatchingOps;
+    if (id && ops && typeof ops === 'object') {
+      const FV = admin.firestore.FieldValue;
+      const fieldUpdates: Record<string, any> = { updatedAt: FV.serverTimestamp() };
+      if (Array.isArray(ops.addProposti) && ops.addProposti.length)
+        fieldUpdates['Matching.Proposti'] = FV.arrayUnion(...ops.addProposti);
+      if (Array.isArray(ops.removeProposti) && ops.removeProposti.length)
+        fieldUpdates['Matching.Proposti'] = FV.arrayRemove(...ops.removeProposti);
+      if (Array.isArray(ops.addListaNera) && ops.addListaNera.length)
+        fieldUpdates['Matching.ListaNera'] = FV.arrayUnion(...ops.addListaNera);
+      if (Array.isArray(ops.removeListaNera) && ops.removeListaNera.length)
+        fieldUpdates['Matching.ListaNera'] = FV.arrayRemove(...ops.removeListaNera);
+      if (Array.isArray(ops.addPreferiti) && ops.addPreferiti.length)
+        fieldUpdates['Matching.Preferiti'] = FV.arrayUnion(...ops.addPreferiti);
+      if (Array.isArray(ops.removePreferiti) && ops.removePreferiti.length)
+        fieldUpdates['Matching.Preferiti'] = FV.arrayRemove(...ops.removePreferiti);
+
+      await db.collection('clienti').doc(id).update(fieldUpdates);
+      return NextResponse.json({ success: true, id });
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const rest = sanitizeBody(body, CLIENTI_ALLOWED, id ? 'clienti.UPDATE' : 'clienti.CREATE');
 
     // Guard: mai sovrascrivere Matching con sub-array vuoti.
