@@ -390,9 +390,30 @@ export default function ClientiPage() {
     generateSchedaIncarico(selectedCliente);
   };
 
-  const handleOpenModal = (cliente?: Cliente) => {
-    setSelectedCliente(cliente ? { ...cliente } : generateEmptyCliente());
-    setActiveTab("profilo"); setMatchResults([]); setIsModalOpen(true);
+  const handleOpenModal = async (cliente?: Cliente) => {
+    if (cliente?.id) {
+      // Imposta subito il cliente parziale per aprire il modal istantaneamente
+      setSelectedCliente({ ...cliente });
+      setIsModalOpen(true);
+      setActiveTab("profilo");
+      setMatchResults([]);
+      
+      try {
+        const res = await fetch(`/api/clienti?id=${cliente.id}`);
+        if (res.ok) {
+          const fullCliente = await res.json();
+          // Aggiorna lo stato solo se il modal visualizza ancora lo stesso cliente
+          setSelectedCliente(prev => prev?.id === cliente.id ? fullCliente : prev);
+        }
+      } catch (e) {
+        console.error('Errore nel caricamento del cliente completo:', e);
+      }
+    } else {
+      setSelectedCliente(generateEmptyCliente());
+      setIsModalOpen(true);
+      setActiveTab("profilo");
+      setMatchResults([]);
+    }
   };
   const handleCloseModal = () => { setIsModalOpen(false); setSelectedCliente(null); setMatchResults([]); };
   const updateNestedField = (section: keyof Cliente, field: string, value: any) => {
@@ -1222,17 +1243,17 @@ export default function ClientiPage() {
                      <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                        <SignaturePad
                          title="Firma Cliente"
-                         value={selectedCliente.FirmaDigitale.UrlFirma || ''}
+                         value={selectedCliente.FirmaDigitale?.UrlFirma || ''}
                          onSave={(b64) => {
                            setSelectedCliente(prev => prev ? {
                              ...prev,
-                             FirmaDigitale: { ...(prev.FirmaDigitale as any), UrlFirma: b64, HasFirma: true }
+                             FirmaDigitale: { ...(prev.FirmaDigitale || {}), UrlFirma: b64, HasFirma: true }
                            } : prev);
                          }}
                          onClear={() => {
                            setSelectedCliente(prev => prev ? {
                              ...prev,
-                             FirmaDigitale: { ...(prev.FirmaDigitale as any), UrlFirma: '', HasFirma: false }
+                             FirmaDigitale: { ...(prev.FirmaDigitale || {}), UrlFirma: '', HasFirma: false }
                            } : prev);
                          }}
                          heightClass="h-[300px] md:h-[400px]"
