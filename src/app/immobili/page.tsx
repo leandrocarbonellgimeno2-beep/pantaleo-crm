@@ -9,6 +9,7 @@ import { useInverseMatching } from "@/hooks/useInverseMatching";
 import { usePropertyImages } from "@/hooks/usePropertyImages";
 import { useImmobiliFilters } from "@/hooks/useImmobiliFilters";
 import { usePropertyDetail } from "@/hooks/usePropertyDetail";
+import { usePropertyPrinting } from "@/hooks/usePropertyPrinting";
 import { extractImageUrls } from "@/lib/imageUtils";
 import {
   buildPropertyWhatsAppMessage,
@@ -92,7 +93,6 @@ export default function ImmobiliPage() {
     isSaving,
     ownerData,
     ownerProperties, showOwnerPropsModal, setShowOwnerPropsModal,
-    isSchedaGenerating, setIsSchedaGenerating,
     isMapOpen, setIsMapOpen,
     deleteModalOpen, setDeleteModalOpen,
     deleteConfirmed, setDeleteConfirmed,
@@ -110,11 +110,6 @@ export default function ImmobiliPage() {
 
   
   // Printing states
-  const [showPrintSelector, setShowPrintSelector] = useState(false);
-  const [selectedPrintPhotos, setSelectedPrintPhotos] = useState<string[]>([]);
-  const [customPrintText, setCustomPrintText] = useState("");
-  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
-  const [pdfStatus, setPdfStatus] = useState('');
   
   // Optimistic UI state for parallel uploads
 
@@ -148,7 +143,6 @@ export default function ImmobiliPage() {
   };
 
   // ── Idealista Actions ──
-  const getIdealistaStatus = () => selectedProperty?.Idealista?.idealistaStatus || 'none';
   // Acciones de Idealista: ver src/hooks/useIdealistaActions.ts.
   // Recibe un parche en vez del setter, para no acoplar el hook a la forma
   // completa de selectedProperty.
@@ -168,69 +162,11 @@ export default function ImmobiliPage() {
 
   // Genera la ficha tecnica del inmueble en PDF. Si el propietario aun no se
   // ha cargado, lo trae antes para no imprimir la ficha sin sus datos.
-  const handleGenerateScheda = async () => {
-    setIsSchedaGenerating(true);
-    try {
-      // If owner not yet loaded, fetch it now
-      let owner = ownerData;
-      if (!owner && selectedProperty?.proprietarioId) {
-        const res = await fetch(`/api/proprietari?id=${selectedProperty.proprietarioId}`);
-        if (res.ok) owner = await res.json();
-      }
-      const { generateSchedaImmobilePDF } = await import('@/lib/generateSchedaImmobilePDF');
-      generateSchedaImmobilePDF({ property: selectedProperty, owner });
-    } catch (err) {
-      console.error('[Scheda PDF] Errore:', err);
-      toast.error('Errore generazione scheda PDF. Controlla la console.');
-    } finally {
-      setIsSchedaGenerating(false);
-    }
-  };
 
   // Abre el selector de fotos del cartel, precargando la primera foto y la
   // descripcion actual como texto por defecto.
-  const handleOpenPrintSelector = () => {
-    setSelectedPrintPhotos(extractImages(selectedProperty).slice(0, 1));
-    setCustomPrintText(selectedProperty?.Textos?.Descrizione || "");
-    setShowPrintSelector(true);
-  };
 
   // Genera el cartel de escaparate en PDF con las fotos y el texto elegidos.
-  const handleGenerateCartello = async () => {
-    setShowPrintSelector(false);
-    setIsPdfGenerating(true);
-    setPdfStatus('Conversione immagini...');
-    try {
-      const { generateCartelloPDF } = await import('@/lib/generateCartelloPDF');
-      const p = selectedProperty;
-      await generateCartelloPDF(
-        {
-          codice:      p?.DatiBase?.Codice    || '',
-          tipologia:   p?.DatiBase?.Tipologia  || 'Immobile',
-          citta:       p?.DatiBase?.Citta      || '',
-          indirizzo:   p?.DatiBase?.Indirizzo  || '',
-          zona:        p?.DatiBase?.Zona       || '',
-          prezzo:      p?.GestioneCommerciale?.PrezzoVendita  || '',
-          affitto:     p?.GestioneCommerciale?.PrezzoAffitto  || '',
-          inVendita:   !!p?.GestioneCommerciale?.InVendita,
-          inAffitto:   !!p?.GestioneCommerciale?.InAffitto,
-          mq:          p?.DettagliFisici?.MetriCommerciali    || '',
-          camere:      p?.DettagliFisici?.CamereLetto         || '',
-          bagni:       p?.DettagliFisici?.Bagni               || '',
-          piano:       p?.DettagliFisici?.Piano               || '',
-          descrizione: customPrintText || p?.Textos?.Descrizione || '',
-          photos:      selectedPrintPhotos,
-        },
-        setPdfStatus,
-      );
-    } catch (err) {
-      console.error('[PDF] Errore generazione:', err);
-      toast.error('Errore generazione PDF. Controlla la console per i dettagli.');
-    } finally {
-      setIsPdfGenerating(false);
-      setPdfStatus('');
-    }
-  };
 
   const handleInverseWhatsApp = (clientMatch: any) => {
     const waNumber = normalizeWhatsAppPhone(clientMatch.telefono);
@@ -326,6 +262,9 @@ export default function ImmobiliPage() {
     onSaved: refresh,
     confirm,
   });
+
+  // Ficha tecnica y cartel de escaparate. Ver src/hooks/usePropertyPrinting.ts.
+  const printing = usePropertyPrinting({ property: selectedProperty, ownerData });
 
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop: photos.onDrop, accept: {'image/*': [], 'application/pdf': []} });
@@ -493,24 +432,23 @@ export default function ImmobiliPage() {
           onSelectCliente={setSelectedClienteModal}
           onWhatsAppCliente={handleInverseWhatsApp}
           onFileUpload={handleFileUpload}
-          onGenerateScheda={handleGenerateScheda}
-          onOpenPrintSelector={handleOpenPrintSelector}
+          printing={printing}
         />
       )}
 
       {/* Print Selector Modal */}
-      {showPrintSelector && (
+      {printing.showPrintSelector && (
         <PrintSelectorModal
           images={extractImages(selectedProperty)}
-          selected={selectedPrintPhotos}
-          onSelectedChange={setSelectedPrintPhotos}
+          selected={printing.selectedPrintPhotos}
+          onSelectedChange={printing.setSelectedPrintPhotos}
           onLimitReached={() => toast.error(`Puoi selezionare massimo ${MAX_PRINT_PHOTOS} foto per il cartello.`)}
-          customText={customPrintText}
-          onCustomTextChange={setCustomPrintText}
-          generating={isPdfGenerating}
-          status={pdfStatus}
-          onGenerate={handleGenerateCartello}
-          onClose={() => setShowPrintSelector(false)}
+          customText={printing.customPrintText}
+          onCustomTextChange={printing.setCustomPrintText}
+          generating={printing.isPdfGenerating}
+          status={printing.pdfStatus}
+          onGenerate={printing.generateCartello}
+          onClose={() => printing.setShowPrintSelector(false)}
         />
       )}
 
@@ -530,8 +468,8 @@ export default function ImmobiliPage() {
       {selectedProperty && (
         <CartelloPrintLayout
           property={selectedProperty}
-          photos={selectedPrintPhotos}
-          customText={customPrintText}
+          photos={printing.selectedPrintPhotos}
+          customText={printing.customPrintText}
         />
       )}
 

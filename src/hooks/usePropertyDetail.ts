@@ -29,7 +29,6 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
   const [ownerData, setOwnerData] = useState<any>(null);
   const [ownerProperties, setOwnerProperties] = useState<any[]>([]);
   const [showOwnerPropsModal, setShowOwnerPropsModal] = useState(false);
-  const [isSchedaGenerating, setIsSchedaGenerating] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
 
   // Guardarraíl de borrado
@@ -254,7 +253,6 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
     isSaving,
     ownerData,
     ownerProperties, showOwnerPropsModal, setShowOwnerPropsModal,
-    isSchedaGenerating, setIsSchedaGenerating,
     isMapOpen, setIsMapOpen,
     deleteModalOpen, setDeleteModalOpen,
     deleteConfirmed, setDeleteConfirmed,

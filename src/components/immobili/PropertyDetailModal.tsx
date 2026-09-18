@@ -32,8 +32,8 @@ interface PropertyDetailModalProps {
     category: string,
     field: string,
   ) => void;
-  onGenerateScheda: () => void;
-  onOpenPrintSelector: () => void;
+  /** Objeto completo de usePropertyPrinting. */
+  printing: any;
 }
 
 /**
@@ -56,8 +56,7 @@ export function PropertyDetailModal({
   onSelectCliente,
   onWhatsAppCliente,
   onFileUpload,
-  onGenerateScheda,
-  onOpenPrintSelector,
+  printing,
 }: PropertyDetailModalProps) {
   const {
     selectedProperty,
@@ -67,7 +66,6 @@ export function PropertyDetailModal({
     isLoadingDetail, detailError,
     isMapOpen, setIsMapOpen,
     setIsModalOpen,
-    isSchedaGenerating,
     updateNested, validLightboxImages,
     saveProperty: handleSaveProperty,
     startDelete: handleDeleteProperty,
@@ -79,8 +77,7 @@ export function PropertyDetailModal({
   const openLightboxOnSource = onOpenLightbox;
   const setSelectedClienteModal = onSelectCliente;
   const handleInverseWhatsApp = onWhatsAppCliente;
-  const handleGenerateScheda = onGenerateScheda;
-  const handleOpenPrintSelector = onOpenPrintSelector;
+  const { isSchedaGenerating, generateScheda: handleGenerateScheda, openPrintSelector: handleOpenPrintSelector } = printing;
   const getIdealistaStatus = () => selectedProperty?.Idealista?.idealistaStatus || 'none';
 
   return (
