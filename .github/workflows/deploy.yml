@@ -1,0 +1,80 @@
+# Despliegue programado a producción, cada 4 horas.
+#
+# QUÉ HACE
+# Llama al Deploy Hook de Vercel, que construye y publica en producción lo que
+# haya en la rama principal EN ESE MOMENTO. No hace merge ni push: solo
+# redespliega.
+#
+# QUÉ NO HACE, Y CONVIENE SABERLO
+# Vercel ya despliega solo en cada push a master. Este cron NO sustituye a eso:
+# se suma. Su utilidad real es refrescar el contenido que se genera en tiempo
+# de build (las páginas prerenderizadas y /api/get-all-rifs, que tiene
+# revalidate). Si en las últimas 4 horas nadie tocó el repositorio, este
+# workflow reconstruye código idéntico y consume minutos de build.
+#
+# LIMITACIONES DE LOS CRON DE GITHUB ACTIONS
+# - Solo se ejecutan desde la RAMA POR DEFECTO del repositorio (aquí, master).
+# - GitHub los DESACTIVA automáticamente tras 60 días sin actividad en el
+#   repositorio. Hay que reactivarlos a mano desde la pestaña Actions.
+# - El horario es de mejor esfuerzo: bajo carga, GitHub retrasa la ejecución.
+#   No sirve para nada que dependa de un minuto exacto.
+# - El cron va en UTC.
+
+name: Despliegue programado a producción
+
+on:
+  schedule:
+    # Cada 4 horas, en punto: 00:00, 04:00, 08:00, 12:00, 16:00 y 20:00 UTC.
+    - cron: '0 */4 * * *'
+  # Permite lanzarlo a mano desde la pestaña Actions, útil para probar que el
+  # secret está bien configurado sin esperar a la siguiente franja.
+  workflow_dispatch:
+
+# Si se solapan dos ejecuciones, se cancela la anterior: no tiene sentido
+# encolar despliegues del mismo estado del repositorio.
+concurrency:
+  group: deploy-produccion
+  cancel-in-progress: true
+
+jobs:
+  desplegar:
+    name: Disparar despliegue en Vercel
+    runs-on: ubuntu-latest
+    # Sin permisos sobre el repositorio: este job solo hace una llamada saliente.
+    permissions: {}
+
+    steps:
+      - name: Comprobar que el Deploy Hook está configurado
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Falta el secret VERCEL_DEPLOY_HOOK_URL."
+            echo "Para configurarlo:"
+            echo "  1. Vercel > proyecto pantaleo-crm > Settings > Git > Deploy Hooks."
+            echo "     Crea uno con nombre 'cron-4h' y rama 'master'. Copia la URL."
+            echo "  2. GitHub > repositorio > Settings > Secrets and variables > Actions."
+            echo "     New repository secret, nombre VERCEL_DEPLOY_HOOK_URL, valor la URL."
+            echo "  3. Vuelve aqui y lanza el workflow a mano (Run workflow) para comprobarlo."
+            exit 1
+          fi
+
+      - name: Disparar el despliegue
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          # --fail-with-body no está en todas las versiones de curl; se
+          # comprueba el código a mano para poder mostrar la respuesta.
+          codigo=$(curl -sS -o respuesta.json -w '%{http_code}' -X POST "$HOOK")
+          echo "Respuesta de Vercel: HTTP $codigo"
+          cat respuesta.json || true
+          echo
+          if [ "$codigo" -lt 200 ] || [ "$codigo" -ge 300 ]; then
+            echo "::error::El Deploy Hook devolvio HTTP $codigo. El despliegue NO se ha disparado."
+            echo "Si es un 404, lo mas probable es que el hook se haya borrado en Vercel"
+            echo "y haya que crear uno nuevo y actualizar el secret."
+            exit 1
+          fi
+          echo "::notice::Despliegue disparado. El resultado del build se ve en el panel de Vercel:"
+          echo "https://vercel.com/leandrocarbonellgimeno2-4029s-projects/pantaleo-crm"
