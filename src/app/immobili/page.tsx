@@ -44,6 +44,7 @@ import { CartelloPrintLayout } from "@/components/immobili/CartelloPrintLayout";
 import { AdvancedFiltersDrawer } from "@/components/immobili/AdvancedFiltersDrawer";
 import { PrintSelectorModal, MAX_PRINT_PHOTOS } from "@/components/immobili/PrintSelectorModal";
 import { PropertyCard } from "@/components/immobili/PropertyCard";
+import { PropertyGallery } from "@/components/immobili/PropertyGallery";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
 
@@ -195,8 +196,6 @@ export default function ImmobiliPage() {
   });
 
   // Idealista Integration State
-  
-  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Delete Guardrail State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -1143,67 +1142,11 @@ export default function ImmobiliPage() {
                        <span className="text-sm font-bold uppercase tracking-widest">Errore caricamento dettagli</span>
                        <span className="text-xs text-red-300">{detailError}</span>
                      </div>
-                   ) : selectedProperty.images && selectedProperty.images.length > 0 ? (
-                     <div className="relative w-full h-[300px] md:h-[500px] bg-slate-100 rounded-3xl overflow-hidden shadow-sm group">
-                        <NextImage 
-                          src={selectedProperty.images[currentSlide]} 
-                          alt={`Foto ${currentSlide + 1}`}
-                          fill
-                          className="object-cover cursor-pointer transition-transform duration-500"
-                          sizes="(max-width: 768px) 100vw, 80vw"
-                          priority
-                          unoptimized
-                          onClick={() => openLightboxOnSource(currentSlide)}
-                        />
-                        {/* Status Bar Top */}
-                        <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-[11px] font-bold tracking-wider">
-                           {currentSlide + 1} / {selectedProperty.images.length}
-                        </div>
-                        
-                        {/* Navigation Arrows */}
-                        {selectedProperty.images.length > 1 && (
-                           <>
-                             <button 
-                               onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => prev === 0 ? selectedProperty.images.length - 1 : prev - 1); }}
-                               className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-                             >
-                               <ChevronLeft className="h-6 w-6 pr-0.5" />
-                             </button>
-                             <button 
-                               onClick={(e) => { e.stopPropagation(); setCurrentSlide(prev => prev === selectedProperty.images.length - 1 ? 0 : prev + 1); }}
-                               className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
-                             >
-                               <ChevronRight className="h-6 w-6 pl-0.5" />
-                             </button>
-                           </>
-                        )}
-                        
-                        {/* Thumbnail Indicators Bottom */}
-                        <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4">
-                           <div className="flex gap-2 p-2 bg-black/40 backdrop-blur-md rounded-2xl overflow-x-auto max-w-xl snap-x">
-                             {selectedProperty.images.map((_: any, idx: number) => (
-                               <button
-                                 key={idx}
-                                 onClick={(e) => { e.stopPropagation(); setCurrentSlide(idx); }}
-                                 className={cn(
-                                   "h-1.5 rounded-full transition-all shrink-0 snap-center",
-                                   currentSlide === idx ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80 hover:w-3"
-                                 )}
-                               />
-                             ))}
-                           </div>
-                        </div>
-
-                        {/* Floating Button for Gallery grid */}
-                        <button onClick={() => openLightboxOnSource(0)} className="absolute top-4 right-4 bg-white/90 backdrop-blur-md shadow-lg text-slate-800 font-bold h-9 px-4 rounded-full text-xs flex items-center hover:bg-white transition-colors">
-                           <ImageIcon className="h-3.5 w-3.5 mr-2" /> Schermo Intero
-                        </button>
-                     </div>
                    ) : (
-                     <div className="w-full h-48 bg-slate-100 rounded-3xl flex flex-col items-center justify-center text-slate-400">
-                        <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                        <span className="text-sm font-bold uppercase tracking-widest">Nessuna foto disponibile</span>
-                     </div>
+                     <PropertyGallery
+                       images={selectedProperty.images || []}
+                       onOpenLightbox={openLightboxOnSource}
+                     />
                    )}
 
                    {/* 2. Corpo Principale (Layout 2 Colonne) */}
