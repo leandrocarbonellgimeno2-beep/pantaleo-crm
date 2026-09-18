@@ -10,6 +10,13 @@ import { extractImageUrls } from "@/lib/imageUtils";
 import { compressImage } from "@/lib/immobili/imageCompression";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
 import {
+  type AdvFilters,
+  applyAdvancedFilters,
+  countActiveFilters,
+  createEmptyAdvFilters,
+  NON_RESIDENTIAL_TYPES,
+} from "@/lib/immobili/filters";
+import {
   buildPropertyWhatsAppMessage,
   normalizeWhatsAppPhone,
   openWhatsApp,
@@ -103,25 +110,12 @@ export default function ImmobiliPage() {
 
   // Advanced Filter Drawer
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [advFilters, setAdvFilters] = useState({
-    codice: '', proprietario: '', tipologia: '', zona: '',
-    prezzoMin: '', prezzoMax: '',
-    camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '', piano: '',
-    ascensore: false, balcone: false, terrazza: false, garage: false, giardino: false, arredato: false, vistaMare: false, ariaCondizionata: false, riscaldamentoAutonomo: false,
-    classeEnergetica: '', statoFiniture: '', provincia: '',
-  });
-  const resetAdvFilters = () => setAdvFilters({
-    codice: '', proprietario: '', tipologia: '', zona: '',
-    prezzoMin: '', prezzoMax: '',
-    camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '', piano: '',
-    ascensore: false, balcone: false, terrazza: false, garage: false, giardino: false, arredato: false, vistaMare: false, ariaCondizionata: false, riscaldamentoAutonomo: false,
-    classeEnergetica: '', statoFiniture: '', provincia: '',
-  });
+  const [advFilters, setAdvFilters] = useState<AdvFilters>(createEmptyAdvFilters);
+  const resetAdvFilters = () => setAdvFilters(createEmptyAdvFilters());
 
   // Auto-reset camere/bagni/superficie when selecting non-residential tipologie
-  const nonResidentialTypes = ['Terreni', 'Locale o Capannone', 'Garage o Posto auto', 'Ufficio'];
   useEffect(() => {
-    if (nonResidentialTypes.includes(advFilters.tipologia)) {
+    if (NON_RESIDENTIAL_TYPES.includes(advFilters.tipologia)) {
       setAdvFilters(p => ({ ...p, camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '' }));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -430,113 +424,13 @@ export default function ImmobiliPage() {
 
 
   // ═══ CLIENT-SIDE ADVANCED FILTERING — instant, zero network requests ═══
-  const filteredImmobili = useMemo(() => {
-    let result = immobiliData;
-    const af = advFilters;
-
-    // Tipologia (exact match — DB is normalized)
-    if (af.tipologia) result = result.filter((d: any) => d.DatiBase?.Tipologia === af.tipologia);
-
-    const nfd = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-
-    // Zona (contains match)
-    if (af.zona) {
-      const z = nfd(af.zona);
-      result = result.filter((d: any) => nfd(d.DatiBase?.Zona || '').includes(z));
-    }
-
-    // Provincia / Città
-    if (af.provincia) {
-      const p = nfd(af.provincia);
-      result = result.filter((d: any) => nfd(d.DatiBase?.Citta || '').includes(p));
-    }
-
-    // Prezzo
-    if (af.prezzoMin && Number(af.prezzoMin) > 0) {
-      const min = Number(af.prezzoMin);
-      result = result.filter((d: any) => Number(d.GestioneCommerciale?.PrezzoVendita || d.GestioneCommerciale?.PrezzoAffitto || 0) >= min);
-    }
-    if (af.prezzoMax && Number(af.prezzoMax) > 0) {
-      const max = Number(af.prezzoMax);
-      result = result.filter((d: any) => Number(d.GestioneCommerciale?.PrezzoVendita || d.GestioneCommerciale?.PrezzoAffitto || 0) <= max);
-    }
-
-    // Camere Min
-    if (af.camereMin && Number(af.camereMin) > 0) {
-      const min = Number(af.camereMin);
-      result = result.filter((d: any) => Number(d.DettagliFisici?.CamereLetto || 0) >= min);
-    }
-
-    // Bagni Min
-    if (af.bagniMin && Number(af.bagniMin) > 0) {
-      const min = Number(af.bagniMin);
-      result = result.filter((d: any) => Number(d.DettagliFisici?.Bagni || 0) >= min);
-    }
-
-    // Superficie
-    if (af.superficieMin && Number(af.superficieMin) > 0) {
-      const min = Number(af.superficieMin);
-      result = result.filter((d: any) => Number(d.DettagliFisici?.MetriCommerciali || 0) >= min);
-    }
-    if (af.superficieMax && Number(af.superficieMax) > 0) {
-      const max = Number(af.superficieMax);
-      result = result.filter((d: any) => Number(d.DettagliFisici?.MetriCommerciali || 0) <= max);
-    }
-
-    // Piano
-    if (af.piano) result = result.filter((d: any) => d.DettagliFisici?.Piano === af.piano);
-
-    // Classe energetica
-    if (af.classeEnergetica) result = result.filter((d: any) => d.DettagliFisici?.ClasseEnergetica === af.classeEnergetica);
-
-    // Stato finiture
-    if (af.statoFiniture) result = result.filter((d: any) => d.DettagliFisici?.StatoFiniture === af.statoFiniture);
-
-    // Boolean characteristics
-    const charMap: Record<string, string> = {
-      ascensore: 'Ascensore', balcone: 'Balcone', terrazza: 'Terrazza',
-      garage: 'Garage', giardino: 'Giardino', arredato: 'Arredato',
-      vistaMare: 'VistaMare', ariaCondizionata: 'AriaCondizionata',
-      riscaldamentoAutonomo: 'RiscaldamentoAutonomo',
-    };
-    for (const [key, fbKey] of Object.entries(charMap)) {
-      if (af[key as keyof typeof af]) {
-        result = result.filter((d: any) => d.Caratteristiche?.[fbKey]);
-      }
-    }
-
-    return result;
-  }, [immobiliData, advFilters]);
+  const filteredImmobili = useMemo(
+    () => applyAdvancedFilters(immobiliData, advFilters),
+    [immobiliData, advFilters],
+  );
 
   // Contatore filtri attivi per badge
-  const activeFilterCount = useMemo(() => {
-    const af = advFilters;
-    let count = 0;
-    if (af.codice) count++;
-    if (af.proprietario) count++;
-    if (af.tipologia) count++;
-    if (af.zona) count++;
-    if (af.prezzoMin) count++;
-    if (af.prezzoMax) count++;
-    if (af.camereMin) count++;
-    if (af.bagniMin) count++;
-    if (af.superficieMin) count++;
-    if (af.superficieMax) count++;
-    if (af.piano) count++;
-    if (af.classeEnergetica) count++;
-    if (af.statoFiniture) count++;
-    if (af.provincia) count++;
-    if (af.ascensore) count++;
-    if (af.balcone) count++;
-    if (af.terrazza) count++;
-    if (af.garage) count++;
-    if (af.giardino) count++;
-    if (af.arredato) count++;
-    if (af.vistaMare) count++;
-    if (af.ariaCondizionata) count++;
-    if (af.riscaldamentoAutonomo) count++;
-    return count;
-  }, [advFilters]);
+  const activeFilterCount = useMemo(() => countActiveFilters(advFilters), [advFilters]);
 
   // Pagination display values
   const hasActiveSearch = searchTerm.trim() !== "" || activeFilterCount > 0;

@@ -1,0 +1,129 @@
+import { describe, it, expect } from 'vitest';
+import {
+  applyAdvancedFilters,
+  countActiveFilters,
+  createEmptyAdvFilters,
+  NON_RESIDENTIAL_TYPES,
+} from '@/lib/immobili/filters';
+
+const base = createEmptyAdvFilters;
+
+const immobili = [
+  {
+    id: 'a',
+    DatiBase: { Tipologia: 'Appartamento', Zona: 'Centro Storico', Citta: 'Marsala' },
+    DettagliFisici: { CamereLetto: 3, Bagni: 2, MetriCommerciali: 90, Piano: '2', ClasseEnergetica: 'A', StatoFiniture: 'Nuovo' },
+    GestioneCommerciale: { PrezzoVendita: 250000 },
+    Caratteristiche: { Ascensore: true, VistaMare: false },
+  },
+  {
+    id: 'b',
+    DatiBase: { Tipologia: 'Villa', Zona: 'Periferia', Citta: 'Trapani' },
+    DettagliFisici: { CamereLetto: 5, Bagni: 3, MetriCommerciali: 200, Piano: 'T', ClasseEnergetica: 'C', StatoFiniture: 'Da ristrutturare' },
+    GestioneCommerciale: { PrezzoAffitto: 900 },
+    Caratteristiche: { VistaMare: true },
+  },
+  { id: 'c', DatiBase: { Tipologia: 'Terreni' } }, // documento minimo
+];
+
+const ids = (r: any[]) => r.map(x => x.id);
+
+describe('applyAdvancedFilters', () => {
+  it('sin filtros devuelve todo', () => {
+    expect(ids(applyAdvancedFilters(immobili, base()))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('tipologia es coincidencia exacta', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), tipologia: 'Villa' }))).toEqual(['b']);
+  });
+
+  it('zona ignora acentos y mayusculas y busca por contenido', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), zona: 'centro' }))).toEqual(['a']);
+  });
+
+  it('provincia filtra por ciudad', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), provincia: 'trapani' }))).toEqual(['b']);
+  });
+
+  it('el precio usa venta, y alquiler como alternativa', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMin: '1000' }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMax: '1000' }))).toEqual(['b', 'c']);
+  });
+
+  it('un precio de 0 o vacio no filtra', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMin: '0' }))).toEqual(['a', 'b', 'c']);
+  });
+
+  it('camere, bagni y superficie son minimos y maximos', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), camereMin: '4' }))).toEqual(['b']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), bagniMin: '3' }))).toEqual(['b']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMin: '100' }))).toEqual(['b']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMax: '100' }))).toEqual(['a', 'c']);
+  });
+
+  it('piano, clase energetica y estado son exactos', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), piano: 'T' }))).toEqual(['b']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), classeEnergetica: 'A' }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), statoFiniture: 'Nuovo' }))).toEqual(['a']);
+  });
+
+  it('las caracteristicas booleanas exigen el flag en el documento', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), ascensore: true }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), vistaMare: true }))).toEqual(['b']);
+  });
+
+  it('los filtros se acumulan', () => {
+    const r = applyAdvancedFilters(immobili, { ...base(), tipologia: 'Appartamento', camereMin: '2', ascensore: true });
+    expect(ids(r)).toEqual(['a']);
+  });
+
+  it('codice y proprietario NO filtran en cliente: van a la API', () => {
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), codice: 'XXX', proprietario: 'YYY' })))
+      .toEqual(['a', 'b', 'c']);
+  });
+
+  it('tolera documentos incompletos sin reventar', () => {
+    expect(() => applyAdvancedFilters(immobili, { ...base(), camereMin: '1', zona: 'x' })).not.toThrow();
+  });
+
+  it('no muta el array de entrada', () => {
+    const copia = [...immobili];
+    applyAdvancedFilters(immobili, { ...base(), tipologia: 'Villa' });
+    expect(immobili).toEqual(copia);
+  });
+});
+
+describe('countActiveFilters', () => {
+  it('cuenta 0 sin filtros', () => {
+    expect(countActiveFilters(base())).toBe(0);
+  });
+
+  it('cuenta cadenas y booleanos', () => {
+    expect(countActiveFilters({ ...base(), zona: 'Centro', ascensore: true, prezzoMin: '100' })).toBe(3);
+  });
+
+  it('cuenta codice y proprietario aunque no filtren en cliente', () => {
+    expect(countActiveFilters({ ...base(), codice: '1001', proprietario: 'Rossi' })).toBe(2);
+  });
+
+  it('cubre las 23 claves: todas activas suman 23', () => {
+    const todos = Object.fromEntries(
+      Object.entries(base()).map(([k, v]) => [k, typeof v === 'boolean' ? true : 'x']),
+    ) as any;
+    expect(countActiveFilters(todos)).toBe(23);
+  });
+});
+
+describe('createEmptyAdvFilters', () => {
+  it('devuelve una copia nueva cada vez', () => {
+    const a = createEmptyAdvFilters();
+    const b = createEmptyAdvFilters();
+    expect(a).not.toBe(b);
+    expect(a).toEqual(b);
+  });
+
+  it('NON_RESIDENTIAL_TYPES conserva las cuatro tipologias', () => {
+    expect(NON_RESIDENTIAL_TYPES).toHaveLength(4);
+    expect(NON_RESIDENTIAL_TYPES).toContain('Terreni');
+  });
+});
