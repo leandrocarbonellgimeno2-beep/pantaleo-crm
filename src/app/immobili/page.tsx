@@ -176,8 +176,8 @@ export default function ImmobiliPage() {
   const [uploadingPreviews, setUploadingPreviews] = useState<string[]>([]);
 
   // Drag & Drop State for Images
-  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
-  const [dragOverItemIndex, setDragOverItemIndex] = useState<number | null>(null);
+  const [draggedUrl, setDraggedUrl] = useState<string | null>(null);
+  const [dragOverUrl, setDragOverUrl] = useState<string | null>(null);
 
   // Inverse Matching State
   const inverse = useInverseMatching(selectedProperty);
@@ -678,19 +678,29 @@ export default function ImmobiliPage() {
     }
   }, [selectedProperty]);
 
-  const handleDeletePhoto = async (e: React.MouseEvent, indexToDelete: number) => {
+  // Por URL, NO por índice: la galería del formulario se pinta desde
+  // extractImages(), que deduplica y concatena los campos legacy, mientras que
+  // este flujo muta `images`. Son dos arrays con distinto orden y longitud, así
+  // que pasar el índice de uno al otro borraba la foto equivocada.
+  const handleDeletePhoto = async (e: React.MouseEvent, urlToDelete: string) => {
     e.stopPropagation();
+
+    const currentImages: string[] = selectedProperty.images || [];
+    if (!currentImages.includes(urlToDelete)) {
+      toast.error('Questa foto proviene da un campo legacy e non può essere rimossa da qui.');
+      return;
+    }
+
     const ok = await confirm({
       title: 'Eliminare la foto?',
       message: 'La foto verrà rimossa definitivamente dall\'immobile.',
       danger: true,
     });
     if (!ok) return;
-    
-    const imageToDelete = selectedProperty.images[indexToDelete];
-    const newImages = [...selectedProperty.images];
-    newImages.splice(indexToDelete, 1);
-    
+
+    const imageToDelete = urlToDelete;
+    const newImages = currentImages.filter(url => url !== urlToDelete);
+
     // Optimistic UI updates
     const updatedProperty = { ...selectedProperty, images: newImages };
     setSelectedProperty(updatedProperty);
@@ -732,36 +742,44 @@ export default function ImmobiliPage() {
     }));
   };
 
-  const handleImageDragStart = (e: React.DragEvent, index: number) => {
-    setDraggedItemIndex(index);
+  // Igual que el borrado: por URL, porque el índice de la galería no
+  // corresponde al del array `images` que se reordena.
+  const handleImageDragStart = (e: React.DragEvent, url: string) => {
+    setDraggedUrl(url);
     // Needed for Firefox
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/html", e.currentTarget.outerHTML);
   };
 
-  const handleImageDragEnter = (index: number) => {
-    setDragOverItemIndex(index);
+  const handleImageDragEnter = (url: string) => {
+    setDragOverUrl(url);
   };
 
   const handleImageDragEnd = async () => {
-    if (draggedItemIndex === null || dragOverItemIndex === null || draggedItemIndex === dragOverItemIndex) {
-      setDraggedItemIndex(null);
-      setDragOverItemIndex(null);
+    const resetDrag = () => { setDraggedUrl(null); setDragOverUrl(null); };
+
+    if (!draggedUrl || !dragOverUrl || draggedUrl === dragOverUrl) {
+      resetDrag();
       return;
     }
 
     const newImages = [...(selectedProperty.images || [])];
-    const draggedImage = newImages[draggedItemIndex];
-    newImages.splice(draggedItemIndex, 1);
-    newImages.splice(dragOverItemIndex, 0, draggedImage);
+    const from = newImages.indexOf(draggedUrl);
+    const to = newImages.indexOf(dragOverUrl);
+    if (from === -1 || to === -1) {
+      toast.error('Una delle foto proviene da un campo legacy: impossibile riordinare da qui.');
+      resetDrag();
+      return;
+    }
+
+    newImages.splice(from, 1);
+    newImages.splice(to, 0, draggedUrl);
 
     // Update Local State
     const updatedProperty = { ...selectedProperty, images: newImages };
     setSelectedProperty(updatedProperty);
-    
-    // Reset Drag state
-    setDraggedItemIndex(null);
-    setDragOverItemIndex(null);
+
+    resetDrag();
 
     // Save strictly to Backend through API (which uses Firebase updateDoc inside)
     try {
@@ -2018,17 +2036,17 @@ export default function ImmobiliPage() {
                                     if (isBlob) return;
                                     if (lightboxIdx !== -1) openLightboxOnSource(lightboxIdx);
                                   }}
-                                  onDragStart={(e) => !isBlob && handleImageDragStart(e, idx)}
+                                  onDragStart={(e) => !isBlob && handleImageDragStart(e, img)}
                                   onDragEnter={(e) => {
                                     e.preventDefault();
-                                    if (!isBlob) handleImageDragEnter(idx);
+                                    if (!isBlob) handleImageDragEnter(img);
                                   }}
                                   onDragEnd={handleImageDragEnd}
                                   onDragOver={(e) => e.preventDefault()}
                                   className={cn(
                                     "relative aspect-square rounded-xl overflow-hidden group border transition-all",
                                     !isBlob ? "cursor-grab active:cursor-grabbing" : "opacity-60 cursor-not-allowed",
-                                    dragOverItemIndex === idx ? "border-primary border-4 scale-105 shadow-xl" : "border-slate-200"
+                                    dragOverUrl === img ? "border-primary border-4 scale-105 shadow-xl" : "border-slate-200"
                                   )}
                                 >
                                   <img 
@@ -2042,7 +2060,7 @@ export default function ImmobiliPage() {
                                       Principale
                                     </div>
                                   )}
-                                  <button onClick={(e) => handleDeletePhoto(e, idx)} className="absolute top-2 right-2 h-7 w-7 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
+                                  <button onClick={(e) => handleDeletePhoto(e, img)} className="absolute top-2 right-2 h-7 w-7 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
                                      <Trash2 className="h-4 w-4" />
                                   </button>
                                   {isBlob && (
