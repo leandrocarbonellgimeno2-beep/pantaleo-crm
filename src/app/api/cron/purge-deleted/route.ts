@@ -22,8 +22,17 @@ function extractStoragePath(url: string, bucketName: string): string | null {
 }
 
 export async function GET(request: Request) {
+  // Esta ruta está exenta del middleware de sesión (el cron de Vercel llega sin
+  // cookies), así que esta comprobación es la ÚNICA barrera: sin CRON_SECRET
+  // configurado, `Bearer undefined` sería una credencial válida.
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error('[cron:purge-deleted] CRON_SECRET no configurado — petición rechazada');
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
