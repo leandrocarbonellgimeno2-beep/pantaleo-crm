@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import SignaturePad from "@/components/ui/SignaturePad";
 import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_FINITURE, PIANI_PREFERENZA, ARREDAMENTO_OPZIONI, CARATTERISTICHE_LABELS } from "@/types/cliente";
+import { hydrateCliente } from "@/lib/hydrate-cliente";
 import { useClienti } from "@/hooks/useClienti";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
@@ -392,18 +393,22 @@ export default function ClientiPage() {
 
   const handleOpenModal = async (cliente?: Cliente) => {
     if (cliente?.id) {
-      // Imposta subito il cliente parziale per aprire il modal istantaneamente
-      setSelectedCliente({ ...cliente });
+      // Imposta subito il cliente parziale per aprire il modal istantaneamente.
+      // hydrateCliente garantisce la FORMA completa: l'oggetto della lista è
+      // proiettato (senza FirmaDigitale né Documentazione) e i documenti legacy
+      // non hanno nemmeno DatiPersonali/Richiesta. Senza questo, qualunque
+      // accesso annidato nel render fa crashare il modal.
+      setSelectedCliente(hydrateCliente(cliente));
       setIsModalOpen(true);
       setActiveTab("profilo");
       setMatchResults([]);
-      
+
       try {
         const res = await fetch(`/api/clienti?id=${cliente.id}`);
         if (res.ok) {
           const fullCliente = await res.json();
           // Aggiorna lo stato solo se il modal visualizza ancora lo stesso cliente
-          setSelectedCliente(prev => prev?.id === cliente.id ? fullCliente : prev);
+          setSelectedCliente(prev => prev?.id === cliente.id ? hydrateCliente(fullCliente) : prev);
         }
       } catch (e) {
         console.error('Errore nel caricamento del cliente completo:', e);
