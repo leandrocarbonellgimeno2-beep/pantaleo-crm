@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import NextImage from "next/image";
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,9 +24,13 @@ interface PropertyGalleryProps {
 export function PropertyGallery({ images, onOpenLightbox }: PropertyGalleryProps) {
   const [index, setIndex] = useState(0);
 
-  useEffect(() => {
+  // Ajuste durante el render, no en un efecto: evita un render intermedio
+  // mostrando la foto del inmueble anterior.
+  const [lastImages, setLastImages] = useState(images);
+  if (lastImages !== images) {
+    setLastImages(images);
     setIndex(0);
-  }, [images]);
+  }
 
   if (images.length === 0) {
     return (

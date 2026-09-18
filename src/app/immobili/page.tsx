@@ -8,8 +8,8 @@ import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useIdealistaActions } from "@/hooks/useIdealistaActions";
 import { useInverseMatching } from "@/hooks/useInverseMatching";
+import { usePropertyImages } from "@/hooks/usePropertyImages";
 import { extractImageUrls } from "@/lib/imageUtils";
-import { compressImage } from "@/lib/immobili/imageCompression";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
 import {
   type AdvFilters,
@@ -173,11 +173,8 @@ export default function ImmobiliPage() {
   const [pdfStatus, setPdfStatus] = useState('');
   
   // Optimistic UI state for parallel uploads
-  const [uploadingPreviews, setUploadingPreviews] = useState<string[]>([]);
 
   // Drag & Drop State for Images
-  const [draggedUrl, setDraggedUrl] = useState<string | null>(null);
-  const [dragOverUrl, setDragOverUrl] = useState<string | null>(null);
 
   // Inverse Matching State
   const inverse = useInverseMatching(selectedProperty);
@@ -626,111 +623,17 @@ export default function ImmobiliPage() {
     }
   };
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    try {
-      if (!selectedProperty || acceptedFiles.length === 0) return;
+  // Fotos del inmueble: subida, borrado y reordenado. Ver
+  // src/hooks/usePropertyImages.ts — opera por URL, no por indice.
+  const photos = usePropertyImages({
+    property: selectedProperty,
+    onImagesChange: (images) => setSelectedProperty((prev: any) => ({ ...prev, images })),
+    onSaved: refresh,
+    confirm,
+  });
 
-      const previews = acceptedFiles.map(file => URL.createObjectURL(file));
-      setUploadingPreviews(prev => [...prev, ...previews]);
 
-      const uploadPromises = acceptedFiles.map(async (file) => {
-         try {
-           const compressedBlob = await compressImage(file);
-           const formData = new FormData();
-           formData.append("file", compressedBlob, file.name.replace(/\.[^/.]+$/, ".webp"));
-           formData.append("path", `immobili/${selectedProperty.DatiBase?.Codice}/foto/FotoN_${Date.now()}_${file.name.replace(/\.[^/.]+$/, "")}.webp`);
-
-           const res = await fetch('/api/upload', { method: 'POST', body: formData });
-           const data = await res.json();
-           if (res.ok && data.url) {
-              return data.url;
-           } else {
-              console.error("Errore caricamento foto dal server", data);
-              return null;
-           }
-         } catch (err) {
-           console.error("Errore compr./upload", err);
-           return null;
-         }
-      });
-
-      const results = await Promise.all(uploadPromises);
-      const successfulUrls = results.filter(url => url !== null) as string[];
-
-      const finalImages = [...(selectedProperty.images || []), ...successfulUrls];
-      const updatedProperty = { ...selectedProperty, images: finalImages };
-      setSelectedProperty(updatedProperty);
-
-      // Auto-save via POST immediately after uploading
-      await fetch('/api/immobili', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedProperty.id, images: finalImages }),
-      });
-      refresh();
-
-      setUploadingPreviews(prev => prev.filter(p => !previews.includes(p)));
-      previews.forEach(p => URL.revokeObjectURL(p));
-    } catch (err) {
-       console.error("Errore onDrop", err);
-       alert("Errore durante il caricamento. Riprova.");
-       setUploadingPreviews([]);
-    }
-  }, [selectedProperty]);
-
-  // Por URL, NO por índice: la galería del formulario se pinta desde
-  // extractImages(), que deduplica y concatena los campos legacy, mientras que
-  // este flujo muta `images`. Son dos arrays con distinto orden y longitud, así
-  // que pasar el índice de uno al otro borraba la foto equivocada.
-  const handleDeletePhoto = async (e: React.MouseEvent, urlToDelete: string) => {
-    e.stopPropagation();
-
-    const currentImages: string[] = selectedProperty.images || [];
-    if (!currentImages.includes(urlToDelete)) {
-      toast.error('Questa foto proviene da un campo legacy e non può essere rimossa da qui.');
-      return;
-    }
-
-    const ok = await confirm({
-      title: 'Eliminare la foto?',
-      message: 'La foto verrà rimossa definitivamente dall\'immobile.',
-      danger: true,
-    });
-    if (!ok) return;
-
-    const imageToDelete = urlToDelete;
-    const newImages = currentImages.filter(url => url !== urlToDelete);
-
-    // Optimistic UI updates
-    const updatedProperty = { ...selectedProperty, images: newImages };
-    setSelectedProperty(updatedProperty);
-
-    try {
-      // Delete from Firestore
-      const res = await fetch('/api/immobili', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedProperty.id, images: newImages }),
-      });
-      if (!res.ok) throw new Error("Errore aggiornamento Firestore");
-      refresh();
-
-      // Delete from Storage
-      await fetch('/api/upload', { 
-        method: 'DELETE', 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: imageToDelete })
-      });
-
-    } catch(err) {
-      console.error(err);
-      alert("Errore durante l'eliminazione della foto.");
-      // Rollback
-      setSelectedProperty({ ...updatedProperty, images: selectedProperty.images });
-    }
-  };
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: {'image/*': [], 'application/pdf': []} });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop: photos.onDrop, accept: {'image/*': [], 'application/pdf': []} });
 
   const updateNested = (category: string, field: string, value: any) => {
     setSelectedProperty((prev: any) => ({
@@ -744,57 +647,6 @@ export default function ImmobiliPage() {
 
   // Igual que el borrado: por URL, porque el índice de la galería no
   // corresponde al del array `images` que se reordena.
-  const handleImageDragStart = (e: React.DragEvent, url: string) => {
-    setDraggedUrl(url);
-    // Needed for Firefox
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/html", e.currentTarget.outerHTML);
-  };
-
-  const handleImageDragEnter = (url: string) => {
-    setDragOverUrl(url);
-  };
-
-  const handleImageDragEnd = async () => {
-    const resetDrag = () => { setDraggedUrl(null); setDragOverUrl(null); };
-
-    if (!draggedUrl || !dragOverUrl || draggedUrl === dragOverUrl) {
-      resetDrag();
-      return;
-    }
-
-    const newImages = [...(selectedProperty.images || [])];
-    const from = newImages.indexOf(draggedUrl);
-    const to = newImages.indexOf(dragOverUrl);
-    if (from === -1 || to === -1) {
-      toast.error('Una delle foto proviene da un campo legacy: impossibile riordinare da qui.');
-      resetDrag();
-      return;
-    }
-
-    newImages.splice(from, 1);
-    newImages.splice(to, 0, draggedUrl);
-
-    // Update Local State
-    const updatedProperty = { ...selectedProperty, images: newImages };
-    setSelectedProperty(updatedProperty);
-
-    resetDrag();
-
-    // Save strictly to Backend through API (which uses Firebase updateDoc inside)
-    try {
-      const res = await fetch('/api/immobili', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedProperty.id, images: newImages }),
-      });
-      if (!res.ok) throw new Error("Errore backend");
-      refresh();
-    } catch (err) {
-      console.error("Error saving image order", err);
-      alert("Errore nel salvataggio del nuovo ordine su Firebase.");
-    }
-  };
 
   const validLightboxImages = selectedProperty?.images?.filter((url: string) => typeof url === 'string' && url.startsWith('http')) || [];
 
@@ -2036,17 +1888,17 @@ export default function ImmobiliPage() {
                                     if (isBlob) return;
                                     if (lightboxIdx !== -1) openLightboxOnSource(lightboxIdx);
                                   }}
-                                  onDragStart={(e) => !isBlob && handleImageDragStart(e, img)}
+                                  onDragStart={(e) => !isBlob && photos.onDragStart(e, img)}
                                   onDragEnter={(e) => {
                                     e.preventDefault();
-                                    if (!isBlob) handleImageDragEnter(img);
+                                    if (!isBlob) photos.onDragEnter(img);
                                   }}
-                                  onDragEnd={handleImageDragEnd}
+                                  onDragEnd={photos.onDragEnd}
                                   onDragOver={(e) => e.preventDefault()}
                                   className={cn(
                                     "relative aspect-square rounded-xl overflow-hidden group border transition-all",
                                     !isBlob ? "cursor-grab active:cursor-grabbing" : "opacity-60 cursor-not-allowed",
-                                    dragOverUrl === img ? "border-primary border-4 scale-105 shadow-xl" : "border-slate-200"
+                                    photos.dragOverUrl === img ? "border-primary border-4 scale-105 shadow-xl" : "border-slate-200"
                                   )}
                                 >
                                   <img 
@@ -2060,7 +1912,7 @@ export default function ImmobiliPage() {
                                       Principale
                                     </div>
                                   )}
-                                  <button onClick={(e) => handleDeletePhoto(e, img)} className="absolute top-2 right-2 h-7 w-7 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
+                                  <button onClick={(e) => photos.deletePhoto(e, img)} className="absolute top-2 right-2 h-7 w-7 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
                                      <Trash2 className="h-4 w-4" />
                                   </button>
                                   {isBlob && (
@@ -2070,7 +1922,7 @@ export default function ImmobiliPage() {
                                   )}
                                 </div>
                               )})}
-                              {uploadingPreviews.map((preview, idx) => (
+                              {photos.uploadingPreviews.map((preview, idx) => (
                                 <div key={`preview-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 opacity-60">
                                   <img src={preview} alt="Uploading..." className="w-full h-full object-cover" />
                                   <div className="absolute inset-0 bg-slate-900/20 flex items-center justify-center pointer-events-none">

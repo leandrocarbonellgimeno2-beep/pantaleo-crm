@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
 /**
@@ -32,9 +32,14 @@ export function useInverseMatching(property: any) {
   }, []);
 
   // Al cambiar de inmueble, los resultados anteriores dejan de ser válidos.
-  useEffect(() => {
+  // Se ajusta DURANTE el render y no en un efecto: así no hay un render
+  // intermedio con los datos del inmueble anterior, y no se encadenan renders.
+  // Es el patrón que React documenta para adaptar estado a un cambio de prop.
+  const [lastPropertyId, setLastPropertyId] = useState(propertyId);
+  if (lastPropertyId !== propertyId) {
+    setLastPropertyId(propertyId);
     reset();
-  }, [propertyId, reset]);
+  }
 
   const run = async (nextPage = 0) => {
     if (!propertyId) return;
