@@ -30,5 +30,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "scripts"]
+  // tests/e2e queda fuera del programa TS: importa @playwright/test, que no
+  // está instalado, y vitest.config.ts tampoco lo ejecuta (solo incluye
+  // tests/unit). Mantenerlo dentro hacía fallar `tsc --noEmit` en master e
+  // impedía añadir un gate de tipos en CI. Si algún día se instala Playwright,
+  // basta con quitar esta entrada.
+  "exclude": ["node_modules", "scripts", "tests/e2e"]
 }
