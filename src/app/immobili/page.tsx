@@ -35,6 +35,10 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DeleteConfirmModal } from "@/components/immobili/DeleteConfirmModal";
+import { OwnerPropertiesModal } from "@/components/immobili/OwnerPropertiesModal";
+import { ClienteMatchModal } from "@/components/immobili/ClienteMatchModal";
+import { CartelloPrintLayout } from "@/components/immobili/CartelloPrintLayout";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
 
@@ -1358,81 +1362,19 @@ export default function ImmobiliPage() {
 
       {/* ═══ Owner's Other Properties Modal ═══ */}
       {showOwnerPropsModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowOwnerPropsModal(false)}>
-          <div className="w-full max-w-lg mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-            {/* Header */}
-            <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-blue-50 flex items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md shadow-indigo-200/50">
-                  <Home className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm">
-                    Altre proprietà di {ownerData ? `${ownerData.nome || ''} ${ownerData.cognome || ''}`.trim() : selectedProperty?.DatiBase?.NomeProprietario || 'Proprietario'}
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-medium">{ownerProperties.length} immobil{ownerProperties.length === 1 ? 'e' : 'i'} trovati</p>
-                </div>
-              </div>
-              <button onClick={() => setShowOwnerPropsModal(false)} className="h-9 w-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all shadow-sm">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            {/* List */}
-            <div className="overflow-y-auto flex-1 [&::-webkit-scrollbar]:hidden p-3 space-y-2">
-              {ownerProperties.map((prop: any) => {
-                const propPrezzo = prop.GestioneCommerciale?.InVendita
-                  ? `€${Number(prop.GestioneCommerciale?.PrezzoVendita || 0).toLocaleString()}`
-                  : prop.GestioneCommerciale?.InAffitto
-                    ? `€${Number(prop.GestioneCommerciale?.PrezzoAffitto || 0).toLocaleString()}/mese`
-                    : 'N/D';
-                return (
-                  <button
-                    key={prop.id}
-                    onClick={() => {
-                      setShowOwnerPropsModal(false);
-                      handleOpenDetail(prop);
-                    }}
-                    className="w-full group rounded-2xl p-3 flex items-center gap-4 hover:bg-indigo-50/50 transition-all border border-transparent hover:border-indigo-100 text-left"
-                  >
-                    {/* Thumbnail */}
-                    <div className="relative w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200/80 group-hover:border-indigo-200 transition-colors">
-                      {prop.images?.[0] ? (
-                        <NextImage src={prop.images[0]} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized />
-                      ) : (
-                        <Home className="w-6 h-6 text-slate-300" />
-                      )}
-                    </div>
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-black bg-indigo-50 text-indigo-500 px-1.5 py-0.5 rounded-md border border-indigo-100 tracking-wider">
-                          #{prop.DatiBase?.Codice || 'N/A'}
-                        </span>
-                        <h4 className="font-bold text-sm text-slate-800 truncate">
-                          {prop.DatiBase?.Tipologia || 'Immobile'}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-slate-400 font-medium flex items-center gap-1 truncate">
-                        <MapPin className="h-3 w-3 flex-shrink-0" />
-                        {prop.DatiBase?.Citta || 'N/D'}{prop.DatiBase?.Zona ? ` — ${prop.DatiBase.Zona}` : ''}
-                      </p>
-                    </div>
-                    {/* Price */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm font-extrabold text-indigo-600">{propPrezzo}</div>
-                      <div className="flex items-center gap-1 justify-end mt-1">
-                        {prop.DettagliFisici?.MetriCommerciali && (
-                          <span className="text-[10px] font-bold text-slate-400">{prop.DettagliFisici.MetriCommerciali} m²</span>
-                        )}
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors flex-shrink-0" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <OwnerPropertiesModal
+          ownerName={
+            ownerData
+              ? `${ownerData.nome || ''} ${ownerData.cognome || ''}`.trim()
+              : selectedProperty?.DatiBase?.NomeProprietario || 'Proprietario'
+          }
+          properties={ownerProperties}
+          onSelect={(prop) => {
+            setShowOwnerPropsModal(false);
+            handleOpenDetail(prop);
+          }}
+          onClose={() => setShowOwnerPropsModal(false)}
+        />
       )}
 
       {/* Property Detail Modal */}
@@ -2832,319 +2774,34 @@ export default function ImmobiliPage() {
           This renders an A4-sized professional property flyer
       ═══════════════════════════════════════════════════════════ */}
       {selectedProperty && (
-        <div
-          id="cartello-vetrina-print"
-          style={{ display: 'none', width: '210mm', minHeight: '297mm', fontFamily: 'system-ui, -apple-system, sans-serif' }}
-        >
-          <div style={{ width: '210mm', height: '297mm', position: 'relative', overflow: 'hidden', background: '#fff', display: 'flex', flexDirection: 'column' }}>
-            
-            {/* Hero Photo — Top 55% */}
-            <div style={{ position: 'relative', flex: '0 0 55%', overflow: 'hidden', background: '#f1f5f9' }}>
-              {selectedPrintPhotos?.[0] ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedPrintPhotos[0]}
-                    alt=""
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  />
-                  {/* Gradient overlay bottom */}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px', background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
-                </>
-              ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '18px', fontWeight: 600 }}>
-                  Nessuna foto disponibile
-                </div>
-              )}
-              
-              {/* Price Badge — floating on photo */}
-              <div style={{ position: 'absolute', bottom: '24px', right: '28px', background: '#4f46e5', color: 'white', padding: '12px 28px', borderRadius: '16px', fontSize: '28px', fontWeight: 900, letterSpacing: '-0.5px', boxShadow: '0 4px 20px rgba(79,70,229,0.4)' }}>
-                {selectedProperty.GestioneCommerciale?.InVendita && (
-                  <span>€ {Number(selectedProperty.GestioneCommerciale?.PrezzoVendita || 0).toLocaleString()}</span>
-                )}
-                {selectedProperty.GestioneCommerciale?.InVendita && selectedProperty.GestioneCommerciale?.InAffitto && (
-                  <span style={{ margin: '0 8px', opacity: 0.5 }}>|</span>
-                )}
-                {selectedProperty.GestioneCommerciale?.InAffitto && (
-                  <span>€ {Number(selectedProperty.GestioneCommerciale?.PrezzoAffitto || 0).toLocaleString()}/mese</span>
-                )}
-                {!selectedProperty.GestioneCommerciale?.InVendita && !selectedProperty.GestioneCommerciale?.InAffitto && (
-                  <span>Prezzo su richiesta</span>
-                )}
-              </div>
-
-              {/* Status badge — top left */}
-              <div style={{ position: 'absolute', top: '20px', left: '24px', display: 'flex', gap: '8px' }}>
-                {selectedProperty.GestioneCommerciale?.InVendita && (
-                  <span style={{ background: '#4f46e5', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    Vendita
-                  </span>
-                )}
-                {selectedProperty.GestioneCommerciale?.InAffitto && (
-                  <span style={{ background: '#f59e0b', color: 'white', padding: '6px 16px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    Affitto
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Content — Bottom 45% */}
-            <div style={{ flex: 1, padding: '28px 32px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              
-              {/* Property Info */}
-              <div>
-                {/* Tipologia + Location */}
-                <h1 style={{ fontSize: '32px', fontWeight: 900, color: '#0f172a', margin: '0 0 6px', lineHeight: 1.15 }}>
-                  {selectedProperty.DatiBase?.Tipologia || 'Immobile'}
-                  {selectedProperty.DatiBase?.Citta ? ` a ${selectedProperty.DatiBase.Citta}` : ''}
-                </h1>
-                <p style={{ fontSize: '16px', color: '#64748b', fontWeight: 600, margin: '0 0 20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  📍 {selectedProperty.DatiBase?.Indirizzo || 'Indirizzo non specificato'}
-                  {selectedProperty.DatiBase?.Zona ? `, ${selectedProperty.DatiBase.Zona}` : ''}
-                </p>
-
-                {/* Specs Grid */}
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                  {selectedProperty.DettagliFisici?.MetriCommerciali && (
-                    <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '14px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{selectedProperty.DettagliFisici.MetriCommerciali}</div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>MQ</div>
-                    </div>
-                  )}
-                  {selectedProperty.DettagliFisici?.CamereLetto && (
-                    <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '14px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{selectedProperty.DettagliFisici.CamereLetto}</div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>Camere</div>
-                    </div>
-                  )}
-                  {selectedProperty.DettagliFisici?.Bagni && (
-                    <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '14px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{selectedProperty.DettagliFisici.Bagni}</div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>Bagni</div>
-                    </div>
-                  )}
-                  {selectedProperty.DettagliFisici?.Piano && (
-                    <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '14px', padding: '14px 22px', textAlign: 'center', minWidth: '110px' }}>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a' }}>{selectedProperty.DettagliFisici.Piano}</div>
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '2px' }}>Piano</div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Description Text (from print selector) */}
-                {customPrintText && (
-                  <p style={{ fontSize: '13px', color: '#475569', lineHeight: 1.7, margin: '0 0 14px', maxHeight: '80px', overflow: 'hidden', fontWeight: 500 }}>
-                    {customPrintText.substring(0, 350)}{customPrintText.length > 350 ? '...' : ''}
-                  </p>
-                )}
-
-                {/* Additional photos row */}
-                {selectedPrintPhotos.length > 1 && (
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-                    {selectedPrintPhotos.slice(1, 4).map((photo, idx) => (
-                      <div key={idx} style={{ flex: 1, height: '90px', borderRadius: '12px', overflow: 'hidden', border: '2px solid #e2e8f0' }}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer — Agency Brand */}
-              <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                <div>
-                  <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px' }}>
-                    Pantaleo Real Estate
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
-                    Il tuo partner immobiliare di fiducia
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>
-                    Rif: {selectedProperty.DatiBase?.Codice || 'N/A'}
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginTop: '2px' }}>
-                    📞 Contattaci per info
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CartelloPrintLayout
+          property={selectedProperty}
+          photos={selectedPrintPhotos}
+          customText={customPrintText}
+        />
       )}
 
       {/* ═══ MODAL DETTAGLIO CLIENTE (da lista Inverse Matches) ═══
           Si apre in-page: la lista dei match rimane invariata in background */}
       {selectedClienteModal && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-violet-600 to-indigo-600">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 bg-white/20 rounded-xl flex items-center justify-center text-white font-black text-lg">
-                  {(selectedClienteModal.nome?.[0] || '?').toUpperCase()}
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-white">
-                    {selectedClienteModal.nome} {selectedClienteModal.cognome}
-                  </h2>
-                  <p className="text-violet-200 text-xs font-bold flex items-center gap-1.5 mt-0.5">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                    Match {selectedClienteModal.matchPercentage}% con questo immobile
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedClienteModal(null)}
-                className="h-9 w-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-6 space-y-4">
-              {/* Contacts */}
-              <div className="grid grid-cols-2 gap-3">
-                {selectedClienteModal.telefono && (
-                  <a
-                    href={`tel:${selectedClienteModal.telefono}`}
-                    className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 px-4 py-3 rounded-xl hover:bg-emerald-100 transition-colors"
-                  >
-                    <Phone className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-                    <span className="text-sm font-bold text-slate-700 truncate">{selectedClienteModal.telefono}</span>
-                  </a>
-                )}
-                {selectedClienteModal.email && (
-                  <a
-                    href={`mailto:${selectedClienteModal.email}`}
-                    className="flex items-center gap-3 bg-sky-50 border border-sky-100 px-4 py-3 rounded-xl hover:bg-sky-100 transition-colors"
-                  >
-                    <Mail className="h-4 w-4 text-sky-600 flex-shrink-0" />
-                    <span className="text-sm font-bold text-slate-700 truncate">{selectedClienteModal.email}</span>
-                  </a>
-                )}
-              </div>
-
-              {/* Urgency + Summary */}
-              {selectedClienteModal.urgenza && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Urgenza:</span>
-                  <span className={cn(
-                    "text-xs font-black px-2.5 py-1 rounded-lg",
-                    selectedClienteModal.urgenza === 'Alta' ? 'bg-rose-100 text-rose-700' :
-                    selectedClienteModal.urgenza === 'Media' ? 'bg-amber-100 text-amber-700' :
-                    'bg-slate-100 text-slate-600'
-                  )}>
-                    {selectedClienteModal.urgenza}
-                  </span>
-                </div>
-              )}
-
-              {selectedClienteModal.summary && (
-                <div className="bg-slate-50 rounded-xl border border-slate-100 p-4">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">Ricerca</p>
-                  <p className="text-sm font-medium text-slate-700 leading-relaxed">{selectedClienteModal.summary}</p>
-                </div>
-              )}
-
-              {selectedClienteModal.note && (
-                <div className="bg-yellow-50 rounded-xl border border-yellow-100 p-4">
-                  <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-1.5">Note Interne</p>
-                  <p className="text-sm font-medium text-slate-700 leading-relaxed whitespace-pre-wrap">{selectedClienteModal.note}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between gap-3">
-              <button
-                onClick={() => setSelectedClienteModal(null)}
-                className="px-5 py-2 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                Chiudi
-              </button>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { handleInverseWhatsApp(selectedClienteModal); setSelectedClienteModal(null); }}
-                  className="h-9 px-4 rounded-xl bg-emerald-500 text-white text-sm font-bold flex items-center gap-2 hover:bg-emerald-600 transition-colors"
-                >
-                  <MessageCircle className="h-4 w-4" /> WhatsApp
-                </button>
-                <a
-                  href={`/clienti?id=${selectedClienteModal.clienteId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-9 px-4 rounded-xl bg-violet-100 text-violet-700 text-sm font-bold flex items-center gap-2 hover:bg-violet-200 transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4" /> Apri Profilo
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ClienteMatchModal
+          cliente={selectedClienteModal}
+          onClose={() => setSelectedClienteModal(null)}
+          onWhatsApp={handleInverseWhatsApp}
+        />
       )}
 
       {/* ═══ DELETE GUARDRAIL MODAL ═══ */}
       {deleteModalOpen && selectedProperty && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-200" onClick={() => setDeleteModalOpen(false)}>
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-rose-100" onClick={(e) => e.stopPropagation()}>
-            <div className="p-8 text-center flex flex-col items-center">
-              <div className="h-20 w-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 ring-8 ring-rose-50/50 shadow-inner">
-                <Trash2 className="h-10 w-10 stroke-[1.5]" />
-              </div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
-                Sei sicuro di voler eliminare permanentemente la proprietà <span className="text-rose-600 block mt-1">#{selectedProperty.DatiBase?.Codice || 'N/A'}?</span>
-              </h2>
-              <p className="text-slate-500 mt-4 leading-relaxed font-medium">
-                Questa azione eliminerà definitivamente l'immobile dal database e TUTTE le foto associate da Firebase. <strong className="text-rose-500">Questa azione non si può annullare.</strong>
-              </p>
-              
-              <div className="mt-8 w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left">
-                <label className="flex items-start gap-4 cursor-pointer group">
-                  <div className="relative flex items-center">
-                    <input 
-                      type="checkbox" 
-                      className="peer sr-only" 
-                      checked={deleteConfirmed} 
-                      onChange={(e) => setDeleteConfirmed(e.target.checked)} 
-                    />
-                    <div className="h-6 w-6 rounded-md border-2 border-slate-300 bg-white group-hover:border-rose-400 peer-checked:bg-rose-500 peer-checked:border-rose-500 transition-all flex items-center justify-center">
-                      <CheckCircle2 className="h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
-                    </div>
-                  </div>
-                  <span className="text-sm font-bold text-slate-700 leading-snug group-hover:text-slate-900 transition-colors">
-                    Ho compreso e confermo di voler eliminare definitivamente questo immobile dal CRM e i suoi allegati.
-                  </span>
-                </label>
-              </div>
-
-              <div className="mt-8 w-full grid grid-cols-2 gap-3">
-                <button 
-                  onClick={() => setDeleteModalOpen(false)}
-                  className="px-5 py-3.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors tracking-wide"
-                >
-                  Annulla
-                </button>
-                <button 
-                  onClick={executeDeleteProperty}
-                  disabled={!deleteConfirmed || deleteTimer > 0 || isSaving}
-                  className="px-5 py-3.5 rounded-xl bg-rose-600 text-white font-black hover:bg-rose-700 hover:shadow-lg hover:shadow-rose-600/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 tracking-wide"
-                >
-                  {isSaving ? (
-                     <><Loader2 className="h-5 w-5 animate-spin" /> Eliminazione...</>
-                  ) : deleteTimer > 0 ? (
-                     `Attendi ${deleteTimer}s`
-                  ) : (
-                     <><Trash2 className="h-5 w-5" /> Conferma Elimina</>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirmModal
+          codice={selectedProperty.DatiBase?.Codice || ''}
+          confirmed={deleteConfirmed}
+          onToggleConfirm={setDeleteConfirmed}
+          timer={deleteTimer}
+          saving={isSaving}
+          onConfirm={executeDeleteProperty}
+          onClose={() => setDeleteModalOpen(false)}
+        />
       )}
     </div>
   );
