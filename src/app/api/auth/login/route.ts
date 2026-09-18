@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     // Rate limit per-IP: 7 tentativi ogni 15 minuti. Previene brute-force
     // su singolo IP senza penalizzare i typo legittimi dell'utente.
     const ip = getClientIp(request);
-    const rl = rateLimit({ key: `login:${ip}`, max: 7, windowMs: 15 * 60_000 });
+    const rl = await rateLimit({ key: `login:${ip}`, max: 7, windowMs: 15 * 60_000 });
     if (!rl.allowed) {
       console.warn(`[Auth] rate-limited login from ${ip}, retry in ${rl.retryAfterSec}s`);
       return NextResponse.json(

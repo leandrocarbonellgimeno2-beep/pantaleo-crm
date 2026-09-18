@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   // scarica ~2000 docs Firestore — preserva la quota free-tier in caso di
   // click ripetuti o di un client buggato che ri-richiede in loop.
   const userKey = session?.email || getClientIp(request);
-  const rl = rateLimit({ key: `backup:${userKey}`, max: 3, windowMs: 10 * 60_000 });
+  const rl = await rateLimit({ key: `backup:${userKey}`, max: 3, windowMs: 10 * 60_000 });
   if (!rl.allowed) {
     console.warn(`[backup-db] rate-limited for ${userKey}, retry in ${rl.retryAfterSec}s`);
     return NextResponse.json(
