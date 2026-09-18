@@ -39,6 +39,8 @@ import { DeleteConfirmModal } from "@/components/immobili/DeleteConfirmModal";
 import { OwnerPropertiesModal } from "@/components/immobili/OwnerPropertiesModal";
 import { ClienteMatchModal } from "@/components/immobili/ClienteMatchModal";
 import { CartelloPrintLayout } from "@/components/immobili/CartelloPrintLayout";
+import { AdvancedFiltersDrawer } from "@/components/immobili/AdvancedFiltersDrawer";
+import { PrintSelectorModal, MAX_PRINT_PHOTOS } from "@/components/immobili/PrintSelectorModal";
 import zonasData from "@/lib/zonas.json";
 import dynamic from "next/dynamic";
 
@@ -412,6 +414,43 @@ export default function ImmobiliPage() {
     } catch (e: any) { alert('Errore: ' + e.message); }
     setInverseLoading(false);
     setInverseLoadingMore(false);
+  };
+
+  // Genera el cartel de escaparate en PDF con las fotos y el texto elegidos.
+  const handleGenerateCartello = async () => {
+    setShowPrintSelector(false);
+    setIsPdfGenerating(true);
+    setPdfStatus('Conversione immagini...');
+    try {
+      const { generateCartelloPDF } = await import('@/lib/generateCartelloPDF');
+      const p = selectedProperty;
+      await generateCartelloPDF(
+        {
+          codice:      p?.DatiBase?.Codice    || '',
+          tipologia:   p?.DatiBase?.Tipologia  || 'Immobile',
+          citta:       p?.DatiBase?.Citta      || '',
+          indirizzo:   p?.DatiBase?.Indirizzo  || '',
+          zona:        p?.DatiBase?.Zona       || '',
+          prezzo:      p?.GestioneCommerciale?.PrezzoVendita  || '',
+          affitto:     p?.GestioneCommerciale?.PrezzoAffitto  || '',
+          inVendita:   !!p?.GestioneCommerciale?.InVendita,
+          inAffitto:   !!p?.GestioneCommerciale?.InAffitto,
+          mq:          p?.DettagliFisici?.MetriCommerciali    || '',
+          camere:      p?.DettagliFisici?.CamereLetto         || '',
+          bagni:       p?.DettagliFisici?.Bagni               || '',
+          piano:       p?.DettagliFisici?.Piano               || '',
+          descrizione: customPrintText || p?.Textos?.Descrizione || '',
+          photos:      selectedPrintPhotos,
+        },
+        setPdfStatus,
+      );
+    } catch (err) {
+      console.error('[PDF] Errore generazione:', err);
+      toast.error('Errore generazione PDF. Controlla la console per i dettagli.');
+    } finally {
+      setIsPdfGenerating(false);
+      setPdfStatus('');
+    }
   };
 
   const handleInverseWhatsApp = (clientMatch: any) => {
@@ -1176,188 +1215,14 @@ export default function ImmobiliPage() {
 
       {/* ═══ ADVANCED FILTER DRAWER ═══ */}
       {isFilterOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsFilterOpen(false)}>
-          <div className="w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
-            {/* Drawer Header — Premium */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center text-white border border-white/20">
-                  <SlidersHorizontal className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-black text-white">Filtri Avanzati</h3>
-                  <p className="text-xs text-slate-400 font-bold">
-                    {activeFilterCount > 0 ? `${activeFilterCount} filtri attivi · ` : ''}
-                    {filteredImmobili.length} risultat{filteredImmobili.length === 1 ? 'o' : 'i'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setIsFilterOpen(false)} className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-7">
-
-              {/* ── SEZIONE: IDENTIFICAZIONE ── */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
-                  <Tag className="h-3.5 w-3.5" /> Identificazione
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Codice</label>
-                    <input className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="es. 10047" value={advFilters.codice} onChange={e => setAdvFilters(p => ({...p, codice: e.target.value}))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Provincia / Città</label>
-                    <input className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="Marsala" value={advFilters.provincia} onChange={e => setAdvFilters(p => ({...p, provincia: e.target.value}))} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Tipologia</label>
-                    <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={advFilters.tipologia} onChange={e => setAdvFilters(p => ({...p, tipologia: e.target.value}))}>
-                      <option value="">Tutte le tipologie</option>
-                      {["Appartamento","Casa/Villa","Locale o Capannone","Terreni","Garage o Posto auto","Edificio","Ufficio","Rustico","Stanza","Cessione Di Attivita","Cantina","DA SCEGLIERE"].map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Zona</label>
-                    <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={advFilters.zona} onChange={e => setAdvFilters(p => ({...p, zona: e.target.value}))}>
-                      <option value="">Tutte le Zone</option>
-                      <option value="Nessuna Zona">Nessuna Zona</option>
-                      {zonasData.filter((z: string) => z !== "-").map((z: string) => <option key={z} value={z}>{z}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-              {/* ── SEZIONE: PREZZO ── */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
-                  <Euro className="h-3.5 w-3.5" /> Prezzo (€)
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Da (Min)</label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">€</span>
-                      <input type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={advFilters.prezzoMin} onChange={e => setAdvFilters(p => ({...p, prezzoMin: e.target.value}))} />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">A (Max)</label>
-                    <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">€</span>
-                      <input type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="1.000.000" value={advFilters.prezzoMax} onChange={e => setAdvFilters(p => ({...p, prezzoMax: e.target.value}))} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-              {/* ── SEZIONE: SUPERFICIE & DIMENSIONI ── */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-2">
-                  <Maximize2 className="h-3.5 w-3.5" /> Superficie e Dimensioni
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Min (m²)</label>
-                    <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={advFilters.superficieMin} onChange={e => setAdvFilters(p => ({...p, superficieMin: e.target.value}))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Max (m²)</label>
-                    <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={advFilters.superficieMax} onChange={e => setAdvFilters(p => ({...p, superficieMax: e.target.value}))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Camere Min</label>
-                    <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={advFilters.camereMin} onChange={e => setAdvFilters(p => ({...p, camereMin: e.target.value}))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Bagni Min</label>
-                    <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={advFilters.bagniMin} onChange={e => setAdvFilters(p => ({...p, bagniMin: e.target.value}))} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Piano</label>
-                  <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" value={advFilters.piano} onChange={e => setAdvFilters(p => ({...p, piano: e.target.value}))}>
-                    <option value="">Qualsiasi piano</option>
-                    {["Piano Terra","1","2","3","4","5","Attico","Seminterrato"].map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-              {/* ── SEZIONE: CARATTERISTICHE ── */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-violet-600 uppercase tracking-widest flex items-center gap-2">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Caratteristiche
-                </h4>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {([
-                    ['ascensore', 'Ascensore', '🛗'], ['balcone', 'Balcone', '🏠'], ['terrazza', 'Terrazzo', '☀️'],
-                    ['garage', 'Garage', '🚗'], ['giardino', 'Giardino', '🌳'], ['arredato', 'Arredato', '🛋️'],
-                    ['vistaMare', 'Vista Mare', '🌊'], ['ariaCondizionata', 'Aria Cond.', '❄️'], ['riscaldamentoAutonomo', 'Risc. Autonomo', '🔥']
-                  ] as const).map(([key, label, emoji]) => (
-                    <label key={key} className={cn(
-                      "flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-sm font-medium cursor-pointer transition-all duration-200",
-                      advFilters[key]
-                        ? 'bg-violet-50 border-violet-300 text-violet-700 font-bold shadow-sm shadow-violet-100'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
-                    )}>
-                      <input type="checkbox" className="sr-only" checked={advFilters[key] as boolean} onChange={() => setAdvFilters(p => ({...p, [key]: !p[key as keyof typeof p]}))} />
-                      <span className="text-base leading-none">{emoji}</span>
-                      {label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
-
-              {/* ── SEZIONE: CERTIFICAZIONI ── */}
-              <div className="space-y-4">
-                <h4 className="text-[11px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
-                  <Zap className="h-3.5 w-3.5" /> Certificazioni
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Classe Energetica</label>
-                    <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={advFilters.classeEnergetica} onChange={e => setAdvFilters(p => ({...p, classeEnergetica: e.target.value}))}>
-                      <option value="">Tutte</option>
-                      {['A4','A3','A2','A1','A','B','C','D','E','F','G'].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Stato Finiture</label>
-                    <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={advFilters.statoFiniture} onChange={e => setAdvFilters(p => ({...p, statoFiniture: e.target.value}))}>
-                      <option value="">Tutti</option>
-                      {['Nuovo','Ottime','Buono','Abitabile','Da Ristrutturare'].map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Drawer Footer — Premium */}
-            <div className="sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-slate-200 px-6 py-4 flex gap-3">
-              <button onClick={() => { resetAdvFilters(); }} className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors inline-flex items-center justify-center gap-2">
-                <RotateCcw className="h-3.5 w-3.5" />
-                Azzera
-              </button>
-              <button onClick={() => setIsFilterOpen(false)} className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-black shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all inline-flex items-center justify-center gap-2">
-                <Filter className="h-3.5 w-3.5" />
-                Mostra {filteredImmobili.length} risultat{filteredImmobili.length === 1 ? 'o' : 'i'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <AdvancedFiltersDrawer
+          filters={advFilters}
+          onChange={setAdvFilters}
+          onReset={resetAdvFilters}
+          onClose={() => setIsFilterOpen(false)}
+          activeCount={activeFilterCount}
+          resultCount={filteredImmobili.length}
+        />
       )}
 
       {/* ═══ Owner's Other Properties Modal ═══ */}
@@ -2643,121 +2508,18 @@ export default function ImmobiliPage() {
 
       {/* Print Selector Modal */}
       {showPrintSelector && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 print:hidden">
-          <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-             <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-               <div>
-                 <h2 className="text-xl font-black text-slate-800">Seleziona Immagini per il Cartello</h2>
-                 <p className="text-sm font-medium text-slate-500 mt-1">Scegli da 1 a 4 foto. Selezionate: {selectedPrintPhotos.length}/4</p>
-               </div>
-               <button onClick={() => setShowPrintSelector(false)} className="h-10 w-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center transition-colors">
-                 <X className="h-5 w-5" />
-               </button>
-             </div>
-             
-             <div className="p-6 overflow-y-auto flex-1 bg-slate-100/50">
-                {extractImages(selectedProperty).length > 0 ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                     {selectedProperty.images.map((img: string, idx: number) => {
-                        const isSelected = selectedPrintPhotos.includes(img);
-                        return (
-                          <div 
-                            key={idx} 
-                            onClick={() => {
-                               if(isSelected) {
-                                  setSelectedPrintPhotos(prev => prev.filter(p => p !== img));
-                               } else {
-                                  if(selectedPrintPhotos.length < 4) {
-                                     setSelectedPrintPhotos(prev => [...prev, img]);
-                                  } else {
-                                     alert("Puoi selezionare massimo 4 foto per il cartello.");
-                                  }
-                               }
-                            }}
-                            className={cn(
-                               "relative aspect-video rounded-xl overflow-hidden cursor-pointer border-4 transition-all hover:opacity-90",
-                               isSelected ? "border-primary shadow-md scale-[0.98]" : "border-transparent"
-                            )}
-                          >
-                             <NextImage src={img} alt="" fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" loading="lazy" unoptimized />
-                             {isSelected && (
-                                <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 shadow-sm">
-                                   <CheckCircle2 className="w-5 h-5" />
-                                </div>
-                             )}
-                          </div>
-                        )
-                     })}
-                  </div>
-                ) : (
-                  <div className="text-center text-slate-500 py-10 font-medium">Nessuna immagine disponibile per questo immobile.</div>
-                )}
-
-                <div className="mt-8 space-y-2">
-                   <label className="text-xs font-bold text-slate-500 uppercase">Testo per il Cartello (Modificabile)</label>
-                   <textarea 
-                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium min-h-[160px] resize-none"
-                     value={customPrintText}
-                     onChange={(e) => setCustomPrintText(e.target.value)}
-                     placeholder="Inserisci la descrizione da mostrare sul cartello stampato..."
-                   />
-                </div>
-             </div>
-
-             <div className="p-6 border-t border-slate-200 bg-white flex justify-end gap-4">
-                <button 
-                  onClick={() => setShowPrintSelector(false)}
-                  className="px-6 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Annulla
-                </button>
-                <button 
-                   disabled={selectedPrintPhotos.length === 0 || isPdfGenerating}
-                   onClick={async () => {
-                       setShowPrintSelector(false);
-                       setIsPdfGenerating(true);
-                       setPdfStatus('Conversione immagini...');
-                       try {
-                         const { generateCartelloPDF } = await import('@/lib/generateCartelloPDF');
-                         const p = selectedProperty;
-                         await generateCartelloPDF(
-                           {
-                             codice:      p?.DatiBase?.Codice    || '',
-                             tipologia:   p?.DatiBase?.Tipologia  || 'Immobile',
-                             citta:       p?.DatiBase?.Citta      || '',
-                             indirizzo:   p?.DatiBase?.Indirizzo  || '',
-                             zona:        p?.DatiBase?.Zona       || '',
-                             prezzo:      p?.GestioneCommerciale?.PrezzoVendita  || '',
-                             affitto:     p?.GestioneCommerciale?.PrezzoAffitto  || '',
-                             inVendita:   !!p?.GestioneCommerciale?.InVendita,
-                             inAffitto:   !!p?.GestioneCommerciale?.InAffitto,
-                             mq:          p?.DettagliFisici?.MetriCommerciali    || '',
-                             camere:      p?.DettagliFisici?.CamereLetto         || '',
-                             bagni:       p?.DettagliFisici?.Bagni               || '',
-                             piano:       p?.DettagliFisici?.Piano               || '',
-                             descrizione: customPrintText || p?.Textos?.Descrizione || '',
-                             photos:      selectedPrintPhotos,
-                           },
-                           setPdfStatus,
-                         );
-                       } catch (err) {
-                         console.error('[PDF] Errore generazione:', err);
-                         alert('❌ Errore generazione PDF. Controlla la console per i dettagli.');
-                       } finally {
-                         setIsPdfGenerating(false);
-                         setPdfStatus('');
-                       }
-                    }}
-                   className="px-8 py-2.5 rounded-xl bg-primary text-white font-black shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                 >
-                   {isPdfGenerating
-                     ? <><Loader2 className="w-4 h-4 animate-spin" />{pdfStatus || 'Generazione...'}</>
-                     : <><Printer className="w-4 h-4" />Genera PDF</>
-                   }
-                 </button>
-             </div>
-          </div>
-        </div>
+        <PrintSelectorModal
+          images={extractImages(selectedProperty)}
+          selected={selectedPrintPhotos}
+          onSelectedChange={setSelectedPrintPhotos}
+          onLimitReached={() => toast.error(`Puoi selezionare massimo ${MAX_PRINT_PHOTOS} foto per il cartello.`)}
+          customText={customPrintText}
+          onCustomTextChange={setCustomPrintText}
+          generating={isPdfGenerating}
+          status={pdfStatus}
+          onGenerate={handleGenerateCartello}
+          onClose={() => setShowPrintSelector(false)}
+        />
       )}
 
       {/* Photo Viewer Isolated at the Root Level */}
