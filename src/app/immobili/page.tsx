@@ -7,6 +7,13 @@ import { useImmobili } from "@/hooks/useImmobili";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { extractImageUrls } from "@/lib/imageUtils";
+import { compressImage } from "@/lib/immobili/imageCompression";
+import { getOwnerDisplayName } from "@/lib/immobili/owner";
+import {
+  buildPropertyWhatsAppMessage,
+  normalizeWhatsAppPhone,
+  openWhatsApp,
+} from "@/lib/immobili/whatsapp";
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { 
@@ -74,34 +81,6 @@ const PhotoViewer = ({ images, toggler, sourceIndex }: { images: string[], toggl
   );
 };
 
-const compressImage = (file: File): Promise<Blob> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = String(event.target?.result);
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const MAX_WIDTH = 1920;
-        if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width);
-          width = MAX_WIDTH;
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject('No ctx');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => blob ? resolve(blob) : reject('Blob error'), 'image/webp', 0.82);
-      };
-      img.onerror = () => reject('Image load error');
-    };
-    reader.onerror = () => reject('File read error');
-  });
-};
 
 export default function ImmobiliPage() {
   const confirm = useConfirm();
@@ -411,14 +390,6 @@ export default function ImmobiliPage() {
     }
   };
 
-  // ── Owner Display Name (safe accessor for mixed-casing migration data) ──
-  const getOwnerDisplayName = (owner: any, fallback = 'Proprietario da verificare'): string => {
-    if (!owner) return fallback;
-    const nome = (owner.nome || owner.Nome || '').trim();
-    const cognome = (owner.cognome || owner.Cognome || '').trim();
-    const full = `${nome} ${cognome}`.trim();
-    return full || fallback;
-  };
 
   // ── Inverse Matching Functions ──
   const runInverseMatching = async (page = 0) => {
@@ -446,65 +417,12 @@ export default function ImmobiliPage() {
   };
 
   const handleInverseWhatsApp = (clientMatch: any) => {
-    let phone = (clientMatch.telefono || '').replace(/[\s\-\.\(\)]/g, '');
-    if (!phone) {
-      alert('⚠️ Questo cliente non ha un numero di telefono registrato.');
+    const waNumber = normalizeWhatsAppPhone(clientMatch.telefono);
+    if (!waNumber) {
+      toast.error('Questo cliente non ha un numero di telefono registrato.');
       return;
     }
-    if (!phone.startsWith('+')) phone = '+39' + phone;
-    const waNumber = phone.replace('+', '');
-
-    // Dati immobile
-    const codice    = selectedProperty?.DatiBase?.Codice || '';
-    const tipologia = selectedProperty?.DatiBase?.Tipologia || 'immobile';
-    const zona      = selectedProperty?.DatiBase?.Zona || '';
-    const citta     = selectedProperty?.DatiBase?.Citta || '';
-    const localita  = zona || citta;
-    const mq        = selectedProperty?.DettagliFisici?.MetriCommerciali || 0;
-    const camere    = selectedProperty?.DettagliFisici?.CamereLetto || 0;
-    const bagni     = selectedProperty?.DettagliFisici?.Bagni || 0;
-    const pct       = clientMatch.matchPercentage || 0;
-
-    // Prezzo con suffisso affitto
-    const isVendita = selectedProperty?.GestioneCommerciale?.InVendita;
-    const rawPrezzo = Number(
-      isVendita
-        ? selectedProperty?.GestioneCommerciale?.PrezzoVendita || 0
-        : selectedProperty?.GestioneCommerciale?.PrezzoAffitto || 0
-    );
-    const prezzoStr = rawPrezzo > 0
-      ? `€${rawPrezzo.toLocaleString('it-IT')}${isVendita ? '' : '/mese'}`
-      : 'Su richiesta';
-
-    // Estratto descrizione (max 100 chars)
-    const descrizioneFull = selectedProperty?.Textos?.Descrizione || '';
-    const descrizioneExt  = descrizioneFull.length > 100
-      ? descrizioneFull.slice(0, 100).trimEnd() + '...'
-      : descrizioneFull;
-
-    // Link pubblico
-    const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL || 'https://pantaleo-crm.vercel.app';
-    const propLink = codice ? `${siteUrl}/immobili?codice=${codice}` : siteUrl;
-
-    // Messaggio — solo testo ASCII puro (niente emoji, niente simboli)
-    const dettagli = [
-      mq > 0     ? `Superficie: ${mq} mq` : '',
-      camere > 0 ? `Camere: ${camere}`    : '',
-      bagni > 0  ? `Bagni: ${bagni}`      : '',
-    ].filter(Boolean).join(' - ');
-
-    const lines = [
-      `Immobiliare Pantaleo | Nuova Proposta!`,
-      `${tipologia}${localita ? ' in ' + localita : ''}`,
-      `Prezzo: ${prezzoStr}${dettagli ? ' - ' + dettagli : ''}`,
-      `Rif: ${codice}`,
-      descrizioneExt ? descrizioneExt : '',
-      `Contattaci per maggiori informazioni!`,
-    ].filter(Boolean);
-
-    // Sanitizza: rimuovi caratteri fuori ASCII 32-126 (rombi, surrogati, ecc.)
-    const cleanMsg = lines.join('\n').replace(/[^\x20-\x7E\n]/g, '');
-    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(cleanMsg)}`, '_blank');
+    openWhatsApp(waNumber, buildPropertyWhatsAppMessage(selectedProperty, 'proposal'));
   };
 
   // Visual "load more" — no network, just show 15 more cards
@@ -1685,46 +1603,10 @@ export default function ImmobiliPage() {
 
                       {/* ═══ WHATSAPP SHARE ═══ */}
                       <button
-                        onClick={() => {
-                          const p = selectedProperty;
-                          const tipo    = String(p?.DatiBase?.Tipologia || 'Immobile');
-                          const citta   = String(p?.DatiBase?.Citta     || '');
-                          const codice  = String(p?.DatiBase?.Codice    || 'N/A');
-                          const mq      = Number(p?.DettagliFisici?.MetriCommerciali || 0);
-                          const camere  = Number(p?.DettagliFisici?.CamereLetto      || 0);
-                          const bagni   = Number(p?.DettagliFisici?.Bagni            || 0);
-
-                          let prezzoStr = '';
-                          if (p?.GestioneCommerciale?.InVendita) {
-                            const v = Number(p.GestioneCommerciale?.PrezzoVendita || 0);
-                            if (v > 0) prezzoStr = `€${v.toLocaleString('it-IT')}`;
-                          }
-                          if (p?.GestioneCommerciale?.InAffitto) {
-                            const a = Number(p.GestioneCommerciale?.PrezzoAffitto || 0);
-                            if (a > 0) {
-                              const aStr = `€${a.toLocaleString('it-IT')}/mese`;
-                              prezzoStr = prezzoStr ? `${prezzoStr} - ${aStr}` : aStr;
-                            }
-                          }
-
-                          const dettagli = [
-                            mq     > 0 ? `Superficie: ${mq} mq` : '',
-                            camere > 0 ? `Camere: ${camere}`     : '',
-                            bagni  > 0 ? `Bagni: ${bagni}`       : '',
-                          ].filter(Boolean).join(' - ');
-
-                          const lines = [
-                            `Immobiliare Pantaleo | Nuova Proposta!`,
-                            `${tipo}${citta ? ' a ' + citta : ''}`,
-                            `${prezzoStr ? 'Prezzo: ' + prezzoStr : ''}${dettagli ? (prezzoStr ? ' - ' : '') + dettagli : ''}`,
-                            `Rif: ${codice}`,
-                            `Contattaci per maggiori informazioni!`,
-                          ].filter(Boolean);
-
-                          // Sanitizza: rimuovi qualsiasi carattere fuori ASCII 32-126
-                          const cleanMsg = lines.join('\n').replace(/[^\x20-\x7E\n]/g, '');
-                          window.open(`https://wa.me/?text=${encodeURIComponent(cleanMsg)}`, '_blank');
-                        }}
+                        onClick={() => openWhatsApp(
+                          null,
+                          buildPropertyWhatsAppMessage(selectedProperty, 'share'),
+                        )}
                         className="inline-flex items-center justify-center rounded-xl bg-[#25D366] px-5 py-2 text-sm font-bold text-white transition-all hover:bg-[#1da851] shadow-sm shadow-emerald-500/25"
                       >
                         <MessageCircle className="h-4 w-4 mr-2 fill-current" /> WhatsApp
