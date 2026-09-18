@@ -2,7 +2,7 @@
 import NextImage from "next/image";
 import Link from "next/link";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useIdealistaActions } from "@/hooks/useIdealistaActions";
 import { useInverseMatching } from "@/hooks/useInverseMatching";
@@ -222,7 +222,20 @@ export default function ImmobiliPage() {
 
 
   // Quick status change handler
-  const handleQuickStatusChange = async (item: any, newSospeso: boolean) => {
+  // Los tres handlers que recibe PropertyCard van en useCallback con
+  // referencias estables. Antes eran arrow functions inline, asi que el
+  // React.memo de la tarjeta no servia de nada: cualquier tecla en el buscador
+  // o en el formulario de edicion reconciliaba las 15 tarjetas visibles.
+  const handleToggleMenu = useCallback((item: any) => {
+    setOpenMenuId(prev => (prev === item.id ? null : item.id));
+  }, []);
+
+  const handleCardOpenDetail = useCallback((item: any) => {
+    setOpenMenuId(null);
+    handleOpenDetail(item);
+  }, [handleOpenDetail]);
+
+  const handleQuickStatusChange = useCallback(async (item: any, newSospeso: boolean) => {
     setOpenMenuId(null);
     const updatedGC = { ...item.GestioneCommerciale, Sospeso: newSospeso };
     try {
@@ -242,7 +255,7 @@ export default function ImmobiliPage() {
       refresh();
       toast.error('Errore durante il cambio stato');
     }
-  };
+  }, [refresh]);
 
 
 
@@ -376,9 +389,9 @@ export default function ImmobiliPage() {
             item={item}
             priority={idx < 6}
             menuOpen={openMenuId === item.id}
-            onToggleMenu={() => setOpenMenuId(openMenuId === item.id ? null : item.id)}
-            onOpenDetail={() => { setOpenMenuId(null); handleOpenDetail(item); }}
-            onQuickStatusChange={(sospeso) => handleQuickStatusChange(item, sospeso)}
+            onToggleMenu={handleToggleMenu}
+            onOpenDetail={handleCardOpenDetail}
+            onQuickStatusChange={handleQuickStatusChange}
           />
         ))}
       </div>

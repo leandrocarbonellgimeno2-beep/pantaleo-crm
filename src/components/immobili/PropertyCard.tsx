@@ -10,10 +10,17 @@ interface PropertyCardProps {
   /** true para las primeras tarjetas: next/image las carga con prioridad (LCP). */
   priority: boolean;
   menuOpen: boolean;
-  onToggleMenu: () => void;
-  onOpenDetail: () => void;
+  /**
+   * Los callbacks reciben `item` de vuelta en lugar de capturarlo en un
+   * closure del padre. Así el padre puede declararlos con useCallback una sola
+   * vez y el React.memo de abajo sirve de algo: con arrow functions inline las
+   * props cambiaban en cada render y las 15 tarjetas visibles se reconciliaban
+   * ante cualquier tecla del buscador o del formulario de edición.
+   */
+  onToggleMenu: (item: any) => void;
+  onOpenDetail: (item: any) => void;
   /** Cambio rápido de estado desde el menú contextual. */
-  onQuickStatusChange: (sospeso: boolean) => void;
+  onQuickStatusChange: (item: any, sospeso: boolean) => void;
 }
 
 /**
@@ -47,7 +54,7 @@ function PropertyCardBase({
   >
     {/* Quick Action ⋮ */}
     <button
-      onClick={(e) => { e.stopPropagation(); onToggleMenu(); }}
+      onClick={(e) => { e.stopPropagation(); onToggleMenu(item); }}
       className="absolute top-4 right-4 z-20 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md text-white/80 flex items-center justify-center hover:bg-black/70 hover:text-white transition-all opacity-0 group-hover:opacity-100"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
@@ -55,23 +62,23 @@ function PropertyCardBase({
     {menuOpen && (
       <div className="absolute top-14 right-4 z-30 bg-white rounded-2xl shadow-2xl border border-slate-100 w-52 py-2 animate-in fade-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
         <div className="px-3 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cambia Stato</div>
-        <button onClick={() => onQuickStatusChange(false)} className={cn("w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors", !item.GestioneCommerciale?.Sospeso ? "text-emerald-700 bg-emerald-50" : "text-slate-700")}>
+        <button onClick={() => onQuickStatusChange(item, false)} className={cn("w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 hover:bg-emerald-50 transition-colors", !item.GestioneCommerciale?.Sospeso ? "text-emerald-700 bg-emerald-50" : "text-slate-700")}>
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Libero / Attivo
           {!item.GestioneCommerciale?.Sospeso && <CheckCircle2 className="h-3.5 w-3.5 ml-auto text-emerald-500" />}
         </button>
-        <button onClick={() => onQuickStatusChange(true)} className={cn("w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 hover:bg-rose-50 transition-colors", item.GestioneCommerciale?.Sospeso ? "text-rose-700 bg-rose-50" : "text-slate-700")}>
+        <button onClick={() => onQuickStatusChange(item, true)} className={cn("w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 hover:bg-rose-50 transition-colors", item.GestioneCommerciale?.Sospeso ? "text-rose-700 bg-rose-50" : "text-slate-700")}>
           <span className="h-2.5 w-2.5 rounded-full bg-rose-500" /> Sospeso
           {item.GestioneCommerciale?.Sospeso && <CheckCircle2 className="h-3.5 w-3.5 ml-auto text-rose-500" />}
         </button>
         <div className="border-t border-slate-100 mt-1 pt-1">
-          <button onClick={() => onOpenDetail()} className="w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 text-slate-600 hover:bg-slate-50">
+          <button onClick={() => onOpenDetail(item)} className="w-full px-3 py-2 text-left text-sm font-bold flex items-center gap-2 text-slate-600 hover:bg-slate-50">
             <Eye className="h-3.5 w-3.5" /> Apri Scheda Completa
           </button>
         </div>
       </div>
     )}
 
-    <div onClick={() => onOpenDetail()}>
+    <div onClick={() => onOpenDetail(item)}>
       {/* ── Hero Photo (55%+ height) ── */}
       <div className="relative h-64 bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center overflow-hidden">
         {item.thumbnail || item.mainImage ? (
