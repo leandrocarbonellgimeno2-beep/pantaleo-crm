@@ -6,6 +6,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useImmobili } from "@/hooks/useImmobili";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
+import { useIdealistaActions } from "@/hooks/useIdealistaActions";
 import { extractImageUrls } from "@/lib/imageUtils";
 import { compressImage } from "@/lib/immobili/imageCompression";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
@@ -200,8 +201,6 @@ export default function ImmobiliPage() {
   });
 
   // Idealista Integration State
-  const [idealistaLoading, setIdealistaLoading] = useState(false);
-  const [idealistaAction, setIdealistaAction] = useState<'publish' | 'update' | 'deactivate' | 'activate' | null>(null);
   
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -229,167 +228,19 @@ export default function ImmobiliPage() {
 
   // ── Idealista Actions ──
   const getIdealistaStatus = () => selectedProperty?.Idealista?.idealistaStatus || 'none';
-  const propCodice = () => selectedProperty?.DatiBase?.Codice || '';
-
-  const handleIdealistaPublish = async () => {
-    if (!selectedProperty?.id) return;
-    setIdealistaLoading(true);
-    setIdealistaAction('publish');
-    try {
-      const res = await fetch('/api/idealista/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: selectedProperty.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSelectedProperty((prev: any) => ({
-          ...prev,
-          Idealista: {
-            ...prev?.Idealista,
-            idealistaPropertyId: data.idealistaPropertyId,
-            idealistaStatus: 'active',
-            idealistaError: null,
-          },
-        }));
-        toast.success(`Rif. ${propCodice()} pubblicato su Idealista`, {
-          description: 'L\'immobile è ora visibile sul portale.',
-        });
-      } else {
-        setSelectedProperty((prev: any) => ({
-          ...prev,
-          Idealista: {
-            ...prev?.Idealista,
-            idealistaStatus: 'error',
-            idealistaError: data.error,
-          },
-        }));
-        toast.error('Errore pubblicazione Idealista', {
-          description: data.error || 'Errore sconosciuto',
-          duration: 8000,
-        });
-      }
-    } catch (err: any) {
-      toast.error('Errore di rete', {
-        description: `Impossibile contattare il server: ${err.message}`,
-        duration: 8000,
-      });
-    } finally {
-      setIdealistaLoading(false);
-      setIdealistaAction(null);
-    }
-  };
-
-  const handleIdealistaUpdate = async () => {
-    if (!selectedProperty?.id) return;
-    setIdealistaLoading(true);
-    setIdealistaAction('update');
-    try {
-      const res = await fetch('/api/idealista/properties', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: selectedProperty.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`Rif. ${propCodice()} aggiornato su Idealista`, {
-          description: 'Le modifiche sono state sincronizzate.',
-        });
-      } else {
-        toast.error('Errore aggiornamento Idealista', {
-          description: data.error || 'Errore sconosciuto',
-          duration: 8000,
-        });
-      }
-    } catch (err: any) {
-      toast.error('Errore di rete', {
-        description: `Impossibile contattare il server: ${err.message}`,
-        duration: 8000,
-      });
-    } finally {
-      setIdealistaLoading(false);
-      setIdealistaAction(null);
-    }
-  };
-
-  const handleIdealistaDeactivate = async () => {
-    if (!selectedProperty?.id) return;
-    const ok = await confirm({
-      title: 'Disattivare da Idealista?',
-      message: 'L\'immobile verrà rimosso dal portale pubblico. Potrai ripubblicarlo successivamente.',
-      confirmLabel: 'Disattiva',
-      danger: true,
-    });
-    if (!ok) return;
-    setIdealistaLoading(true);
-    setIdealistaAction('deactivate');
-    try {
-      const res = await fetch('/api/idealista/properties/deactivate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: selectedProperty.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSelectedProperty((prev: any) => ({
-          ...prev,
-          Idealista: { ...prev?.Idealista, idealistaStatus: 'deactivated' },
-        }));
-        toast.success(`Rif. ${propCodice()} rimosso da Idealista`, {
-          description: 'L\'immobile non è più visibile sul portale.',
-        });
-      } else {
-        toast.error('Errore rimozione Idealista', {
-          description: data.error || 'Errore sconosciuto',
-          duration: 8000,
-        });
-      }
-    } catch (err: any) {
-      toast.error('Errore di rete', {
-        description: `Impossibile contattare il server: ${err.message}`,
-        duration: 8000,
-      });
-    } finally {
-      setIdealistaLoading(false);
-      setIdealistaAction(null);
-    }
-  };
-
-  const handleIdealistaActivate = async () => {
-    if (!selectedProperty?.id) return;
-    setIdealistaLoading(true);
-    setIdealistaAction('activate');
-    try {
-      const res = await fetch('/api/idealista/properties/activate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ propertyId: selectedProperty.id }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSelectedProperty((prev: any) => ({
-          ...prev,
-          Idealista: { ...prev?.Idealista, idealistaStatus: 'active' },
-        }));
-        toast.success(`Rif. ${propCodice()} riattivato su Idealista`, {
-          description: 'L\'immobile è di nuovo visibile sul portale.',
-        });
-      } else {
-        toast.error('Errore riattivazione Idealista', {
-          description: data.error || 'Errore sconosciuto',
-          duration: 8000,
-        });
-      }
-    } catch (err: any) {
-      toast.error('Errore di rete', {
-        description: `Impossibile contattare il server: ${err.message}`,
-        duration: 8000,
-      });
-    } finally {
-      setIdealistaLoading(false);
-      setIdealistaAction(null);
-    }
-  };
+  // Acciones de Idealista: ver src/hooks/useIdealistaActions.ts.
+  // Recibe un parche en vez del setter, para no acoplar el hook a la forma
+  // completa de selectedProperty.
+  const idealista = useIdealistaActions({
+    propertyId: selectedProperty?.id,
+    codice: selectedProperty?.DatiBase?.Codice || '',
+    onPatch: (patch) =>
+      setSelectedProperty((prev: any) => ({
+        ...prev,
+        Idealista: { ...prev?.Idealista, ...patch },
+      })),
+    confirm,
+  });
 
 
   // ── Inverse Matching Functions ──
@@ -1183,25 +1034,25 @@ export default function ImmobiliPage() {
                           <div className="flex items-center gap-2">
                             {status === 'none' || status === 'error' ? (
                               <button
-                                onClick={handleIdealistaPublish}
-                                disabled={idealistaLoading}
+                                onClick={idealista.publish}
+                                disabled={idealista.loading}
                                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 text-sm font-bold text-white transition-all hover:from-green-600 hover:to-emerald-700 shadow-sm shadow-emerald-500/25 disabled:opacity-50"
                               >
-                                {idealistaLoading && idealistaAction === 'publish' ? (
+                                {idealista.loading && idealista.action === 'publish' ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <Zap className="h-4 w-4 mr-2" />
                                 )}
-                                {idealistaLoading && idealistaAction === 'publish' ? 'Pubblicando...' : 'Pubblica su Idealista'}
+                                {idealista.loading && idealista.action === 'publish' ? 'Pubblicando...' : 'Pubblica su Idealista'}
                               </button>
                             ) : status === 'active' ? (
                               <>
                                 <button
-                                  onClick={handleIdealistaUpdate}
-                                  disabled={idealistaLoading}
+                                  onClick={idealista.update}
+                                  disabled={idealista.loading}
                                   className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-2 text-sm font-bold text-white transition-all hover:from-blue-600 hover:to-indigo-700 shadow-sm shadow-blue-500/25 disabled:opacity-50"
                                 >
-                                  {idealistaLoading && idealistaAction === 'update' ? (
+                                  {idealista.loading && idealista.action === 'update' ? (
                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                   ) : (
                                     <Zap className="h-4 w-4 mr-2" />
@@ -1209,12 +1060,12 @@ export default function ImmobiliPage() {
                                   Aggiorna su Idealista
                                 </button>
                                 <button
-                                  onClick={handleIdealistaDeactivate}
-                                  disabled={idealistaLoading}
+                                  onClick={idealista.deactivate}
+                                  disabled={idealista.loading}
                                   className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-600 transition-all hover:bg-rose-50 disabled:opacity-50"
                                   title="Rimuovi da Idealista"
                                 >
-                                  {idealistaLoading && idealistaAction === 'deactivate' ? (
+                                  {idealista.loading && idealista.action === 'deactivate' ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                   ) : (
                                     <X className="h-4 w-4" />
@@ -1223,11 +1074,11 @@ export default function ImmobiliPage() {
                               </>
                             ) : status === 'deactivated' ? (
                               <button
-                                onClick={handleIdealistaActivate}
-                                disabled={idealistaLoading}
+                                onClick={idealista.activate}
+                                disabled={idealista.loading}
                                 className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-4 py-2 text-sm font-bold text-white transition-all hover:from-amber-600 hover:to-orange-700 shadow-sm shadow-amber-500/25 disabled:opacity-50"
                               >
-                                {idealistaLoading && idealistaAction === 'activate' ? (
+                                {idealista.loading && idealista.action === 'activate' ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <Zap className="h-4 w-4 mr-2" />
