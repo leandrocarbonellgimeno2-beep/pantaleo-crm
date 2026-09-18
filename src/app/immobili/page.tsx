@@ -7,6 +7,7 @@ import { useImmobili } from "@/hooks/useImmobili";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useIdealistaActions } from "@/hooks/useIdealistaActions";
+import { useInverseMatching } from "@/hooks/useInverseMatching";
 import { extractImageUrls } from "@/lib/imageUtils";
 import { compressImage } from "@/lib/immobili/imageCompression";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
@@ -178,14 +179,7 @@ export default function ImmobiliPage() {
   const [dragOverItemIndex, setDragOverItemIndex] = useState<number | null>(null);
 
   // Inverse Matching State
-  const [inverseMatches, setInverseMatches] = useState<any[]>([]);
-  const [inverseLoading, setInverseLoading] = useState(false);
-  const [inverseLoadingMore, setInverseLoadingMore] = useState(false);
-  const [inversePage, setInversePage] = useState(0);
-  const [inverseTotal, setInverseTotal] = useState(0);
-  const [inverseHasMore, setInverseHasMore] = useState(false);
-  const [inverseExpanded, setInverseExpanded] = useState<string | null>(null);
-  const [inverseOpen, setInverseOpen] = useState(false);
+  const inverse = useInverseMatching(selectedProperty);
   // Modal in-page per dettaglio cliente (evita navigazione che perde lo stato dei match)
   const [selectedClienteModal, setSelectedClienteModal] = useState<any>(null);
 
@@ -244,29 +238,6 @@ export default function ImmobiliPage() {
 
 
   // ── Inverse Matching Functions ──
-  const runInverseMatching = async (page = 0) => {
-    if (!selectedProperty?.id) return;
-    if (page === 0) { setInverseLoading(true); setInverseMatches([]); }
-    else { setInverseLoadingMore(true); }
-    try {
-      const res = await fetch('/api/match-inverse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ immobile: selectedProperty, page }),
-      });
-      const json = await res.json();
-      if (page === 0) {
-        setInverseMatches(json.matches || []);
-      } else {
-        setInverseMatches(prev => [...prev, ...(json.matches || [])]);
-      }
-      setInverseTotal(json.total || 0);
-      setInverseHasMore(json.hasMore || false);
-      setInversePage(page);
-    } catch (e: any) { alert('Errore: ' + e.message); }
-    setInverseLoading(false);
-    setInverseLoadingMore(false);
-  };
 
   // Genera el cartel de escaparate en PDF con las fotos y el texto elegidos.
   const handleGenerateCartello = async () => {
@@ -1493,30 +1464,30 @@ export default function ImmobiliPage() {
                        </div>
                        <button
                          onClick={() => {
-                           setInverseOpen(!inverseOpen);
-                           if (!inverseOpen && inverseMatches.length === 0) runInverseMatching(0);
+                           inverse.setOpen(!inverse.open);
+                           if (!inverse.open && inverse.matches.length === 0) inverse.run(0);
                          }}
                          className={cn(
                            "px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm",
-                           inverseOpen
+                           inverse.open
                              ? 'bg-white text-violet-700 border border-violet-200 hover:bg-violet-50'
                              : 'bg-violet-600 text-white hover:bg-violet-700'
                          )}
                        >
-                         {inverseLoading ? (
+                         {inverse.loading ? (
                            <><Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />Analisi...</>
-                         ) : inverseOpen ? 'Chiudi' : (<><Zap className="h-4 w-4 inline mr-1" />Cerca Clienti</>)}
+                         ) : inverse.open ? 'Chiudi' : (<><Zap className="h-4 w-4 inline mr-1" />Cerca Clienti</>)}
                        </button>
                      </div>
 
-                     {inverseOpen && (
+                     {inverse.open && (
                        <div>
-                         {inverseLoading ? (
+                         {inverse.loading ? (
                            <div className="flex flex-col items-center py-12 gap-3">
                              <Loader2 className="h-10 w-10 animate-spin text-violet-400" />
                              <p className="text-sm text-violet-600 font-medium">Analisi dei clienti in corso...</p>
                            </div>
-                         ) : inverseMatches.length === 0 ? (
+                         ) : inverse.matches.length === 0 ? (
                            <div className="text-center py-10">
                              <BarChart3 className="h-12 w-12 text-violet-200 mx-auto mb-3" />
                              <p className="text-sm font-bold text-violet-400">Nessun cliente compatibile trovato (≥40%)</p>
@@ -1524,13 +1495,13 @@ export default function ImmobiliPage() {
                          ) : (
                            <>
                              <p className="text-xs font-bold text-violet-600 mb-4">
-                               {inverseTotal} client{inverseTotal !== 1 ? 'i' : 'e'} compatibil{inverseTotal !== 1 ? 'i' : 'e'}
+                               {inverse.total} client{inverse.total !== 1 ? 'i' : 'e'} compatibil{inverse.total !== 1 ? 'i' : 'e'}
                              </p>
 
                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                               {inverseMatches.map((cm: any) => {
+                               {inverse.matches.map((cm: any) => {
                                  const pct = cm.matchPercentage;
-                                 const isExp = inverseExpanded === cm.clienteId;
+                                 const isExp = inverse.expanded === cm.clienteId;
                                  const dateStr = cm.dataCreazione
                                    ? new Date(cm.dataCreazione).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
                                    : null;
@@ -1590,7 +1561,7 @@ export default function ImmobiliPage() {
                                            <MessageCircle className="h-4 w-4" />
                                          </button>
                                          <button
-                                           onClick={() => setInverseExpanded(isExp ? null : cm.clienteId)}
+                                           onClick={() => inverse.setExpanded(isExp ? null : cm.clienteId)}
                                            className={cn(
                                              "h-9 w-9 rounded-lg flex items-center justify-center transition-colors border",
                                              isExp ? 'bg-violet-100 text-violet-600 border-violet-200' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'
@@ -1633,16 +1604,16 @@ export default function ImmobiliPage() {
                              </div>
 
                              {/* Load More */}
-                             {inverseHasMore && (
+                             {inverse.hasMore && (
                                <button
-                                 onClick={() => runInverseMatching(inversePage + 1)}
-                                 disabled={inverseLoadingMore}
+                                 onClick={() => inverse.run(inverse.page + 1)}
+                                 disabled={inverse.loadingMore}
                                  className="w-full py-3 mt-4 bg-white border border-violet-200 text-violet-700 text-sm font-bold rounded-xl hover:bg-violet-50 transition-colors disabled:opacity-50"
                                >
-                                 {inverseLoadingMore ? (
+                                 {inverse.loadingMore ? (
                                    <><Loader2 className="h-4 w-4 animate-spin inline mr-1.5" />Caricamento...</>
                                  ) : (
-                                   `Carica altri 15 clienti (${inverseMatches.length}/${inverseTotal})`
+                                   `Carica altri 15 clienti (${inverse.matches.length}/${inverse.total})`
                                  )}
                                </button>
                              )}
