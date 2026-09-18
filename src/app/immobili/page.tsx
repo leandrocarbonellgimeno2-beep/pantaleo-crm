@@ -178,13 +178,19 @@ export default function ImmobiliPage() {
   const deleteIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
-  // Clear the countdown interval whenever the delete modal closes
+  // Limpia la cuenta atrás al cerrar el modal Y al desmontar la página: antes
+  // solo cubría el cierre, así que salir de la pantalla con el modal abierto
+  // dejaba el intervalo corriendo.
   useEffect(() => {
     if (!deleteModalOpen && deleteIntervalRef.current) {
       clearInterval(deleteIntervalRef.current);
       deleteIntervalRef.current = null;
     }
   }, [deleteModalOpen]);
+
+  useEffect(() => () => {
+    if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
+  }, []);
 
   const openLightboxOnSource = (index: number) => {
     setLightboxController({
@@ -282,8 +288,6 @@ export default function ImmobiliPage() {
   const handleQuickStatusChange = async (item: any, newSospeso: boolean) => {
     setOpenMenuId(null);
     const updatedGC = { ...item.GestioneCommerciale, Sospeso: newSospeso };
-    // Optimistic local update
-    refresh();
     try {
       const res = await fetch('/api/immobili', {
         method: 'PATCH',
@@ -291,9 +295,13 @@ export default function ImmobiliPage() {
         body: JSON.stringify({ id: item.id, GestioneCommerciale: updatedGC }),
       });
       if (!res.ok) throw new Error('Errore di rete');
+      // Revalidar DESPUES del PATCH. Antes se hacia antes, con el comentario
+      // "Optimistic local update": no actualizaba nada localmente y ademas
+      // refrescaba el catalogo entero trayendo el estado VIEJO, asi que la
+      // tarjeta seguia mostrando el estado anterior hasta el siguiente refetch.
+      refresh();
       toast.success(`Immobile ${item.DatiBase?.Codice || ''} → ${newSospeso ? 'Sospeso' : 'Attivo'}`);
     } catch {
-      // Revert on error
       refresh();
       toast.error('Errore durante il cambio stato');
     }
