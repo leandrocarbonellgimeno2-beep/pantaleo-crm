@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
+import { buildUpdateArgs } from '@/lib/firestore-update';
 import { markForSoftDelete } from '@/lib/services/soft-delete';
 import { recountProprietario } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
@@ -132,11 +133,20 @@ export async function PATCH(request: Request) {
       delete (updates as any).thumbnail;
     }
 
-    await db.collection('immobili').doc(id).update({
+    // Escritura por field paths, no por mapas completos: `update({ DatiBase })`
+    // REEMPLAZA el mapa entero y borra los subcampos que el payload no traiga.
+    // Como el listado va proyectado (.select), el frontend manda a menudo
+    // objetos parciales — de ahí que un cambio rápido de estado borrase campos
+    // del incarico. Ver src/lib/firestore-update.ts.
+    const updateArgs = buildUpdateArgs({
       ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    
+
+    await db.collection('immobili').doc(id).update(
+      ...(updateArgs as [string, unknown, ...unknown[]]),
+    );
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[immobili PATCH]', error);

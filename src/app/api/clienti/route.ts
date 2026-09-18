@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, CLIENTI_ALLOWED } from '@/lib/sanitize';
+import { buildUpdateArgs } from '@/lib/firestore-update';
 import { markForSoftDelete } from '@/lib/services/soft-delete';
 
 export const dynamic = 'force-dynamic';
@@ -141,7 +142,16 @@ export async function POST(request: Request) {
 
     // UPDATE existing
     if (id) {
-      await db.collection('clienti').doc(id).update(clientData);
+      // Por field paths, no por mapas completos: `update({ Matching })` habría
+      // reemplazado el mapa entero y borrado las proposte que otro agente
+      // acumuló mientras esta ficha estaba abierta. Lo mismo con Documentazione
+      // al subir un adjunto sobre un cliente proyectado.
+      // El guard de sub-arrays vacíos de arriba sigue siendo necesario: un
+      // array vacío sí sustituye al array existente.
+      const updateArgs = buildUpdateArgs(clientData);
+      await db.collection('clienti').doc(id).update(
+        ...(updateArgs as [string, unknown, ...unknown[]]),
+      );
       return NextResponse.json({ success: true, id });
     }
 

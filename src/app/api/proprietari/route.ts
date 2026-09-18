@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, PROPRIETARI_ALLOWED } from '@/lib/sanitize';
+import { buildUpdateArgs } from '@/lib/firestore-update';
 import { markForSoftDelete } from '@/lib/services/soft-delete';
 
 export async function GET(request: Request) {
@@ -108,10 +109,16 @@ export async function PATCH(request: Request) {
       if (Object.keys(docs).length === 0) delete (updates as any).documenti;
     }
 
-    await db.collection('proprietari').doc(id).update({
+    // Mismo patrón que immobili y clienti: por field paths, para que guardar la
+    // ficha no borre los subcampos que la proyección del listado omitió.
+    const updateArgs = buildUpdateArgs({
       ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+
+    await db.collection('proprietari').doc(id).update(
+      ...(updateArgs as [string, unknown, ...unknown[]]),
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
