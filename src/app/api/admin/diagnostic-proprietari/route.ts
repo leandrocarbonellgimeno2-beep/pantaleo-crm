@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, admin } from '@/lib/firebase-admin';
+import { db } from '@/lib/firebase-admin';
 
 /**
  * GET /api/admin/diagnostic-proprietari
@@ -11,9 +11,6 @@ import { db, admin } from '@/lib/firebase-admin';
  *  - orphanedImmobili: immobili whose proprietarioId doesn't exist in `proprietari`
  *  - nameMismatches: immobili where NomeProprietario doesn't match the linked proprietario name
  *
- * POST /api/admin/diagnostic-proprietari
- * Body: { action: 'stamp-created-at' }
- * Stamps createdAt = now on every proprietario that is missing it (batch write).
  */
 
 export async function GET() {
@@ -93,40 +90,6 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error('[diagnostic-proprietari GET]', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-
-    if (body.action === 'stamp-created-at') {
-      const snap = await db.collection('proprietari').get();
-      const toStamp = snap.docs.filter((d) => !d.data().createdAt);
-
-      if (toStamp.length === 0) {
-        return NextResponse.json({ success: true, stamped: 0, message: 'All proprietari already have createdAt.' });
-      }
-
-      // Firestore batch limit = 500 ops
-      const BATCH_SIZE = 400;
-      let stamped = 0;
-      for (let i = 0; i < toStamp.length; i += BATCH_SIZE) {
-        const batch = db.batch();
-        toStamp.slice(i, i + BATCH_SIZE).forEach((d) => {
-          batch.update(d.ref, { createdAt: admin.firestore.FieldValue.serverTimestamp() });
-        });
-        await batch.commit();
-        stamped += Math.min(BATCH_SIZE, toStamp.length - i);
-      }
-
-      return NextResponse.json({ success: true, stamped, message: `Stamped createdAt on ${stamped} proprietari.` });
-    }
-
-    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
-  } catch (error: any) {
-    console.error('[diagnostic-proprietari POST]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
