@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   X, Search, User, Home, Calendar, Percent, ShieldCheck,
   Printer, Send, Save, Loader2, FileText, Sparkles, CheckCircle2
@@ -121,17 +122,22 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
     import('@/lib/saveDocumentToCloud').catch(() => {});
   }, []);
 
-  // Search clients
-  const searchClienti = useCallback(async (q: string) => {
-    setClienteSearch(q);
-    if (q.length < 2) { setClienteResults([]); setShowClienteDropdown(false); return; }
+  // Search clients. La petición va con debounce: antes salía una por cada
+  // tecla, y una búsqueda de clientes escanea la colección entera.
+  const fetchClienti = useDebouncedCallback(async (q: string) => {
     try {
       const res = await fetch(`/api/clienti?q=${encodeURIComponent(q)}&limit=6`);
       const data = await res.json();
       setClienteResults(Array.isArray(data) ? data : []);
       setShowClienteDropdown(true);
     } catch { setClienteResults([]); }
-  }, []);
+  }, 300);
+
+  const searchClienti = useCallback((q: string) => {
+    setClienteSearch(q);
+    if (q.length < 2) { setClienteResults([]); setShowClienteDropdown(false); return; }
+    fetchClienti(q);
+  }, [fetchClienti]);
 
   const selectCliente = (c: any) => {
     const nome = `${c.DatiPersonali?.Nome || c.nome || ''} ${c.DatiPersonali?.Cognome || c.cognome || ''}`.trim();
@@ -145,10 +151,8 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
     setClienteResults([]);
   };
 
-  // Search immobili
-  const searchImmobili = useCallback(async (q: string) => {
-    setImmobileSearch(q);
-    if (q.length < 2) { setImmobileResults([]); setShowImmobileDropdown(false); return; }
+  // Search immobili, con el mismo debounce que la búsqueda de clientes.
+  const fetchImmobili = useDebouncedCallback(async (q: string) => {
     try {
       const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`);
       const json = await res.json();
@@ -156,7 +160,13 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
       setImmobileResults(items);
       setShowImmobileDropdown(true);
     } catch { setImmobileResults([]); }
-  }, []);
+  }, 300);
+
+  const searchImmobili = useCallback((q: string) => {
+    setImmobileSearch(q);
+    if (q.length < 2) { setImmobileResults([]); setShowImmobileDropdown(false); return; }
+    fetchImmobili(q);
+  }, [fetchImmobili]);
 
   const selectImmobile = (i: any) => {
     const addr = i.DatiBase?.Indirizzo || '';

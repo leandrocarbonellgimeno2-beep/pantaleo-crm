@@ -51,9 +51,21 @@ export async function GET(request: Request) {
     } else {
       query = query.orderBy('createdAt', 'desc');
     }
-    // Hard safety cap: anche senza ?limit= esplicito, mai oltre 1500 docs.
-    // Oggi ci sono 453 clienti attivi → 1500 lascia 3x di margine.
-    query = query.limit(limitCount > 0 ? Math.min(limitCount, 1500) : 1500);
+    // Tope de ESCANEO, distinto del tope de SALIDA. Sin ?limit= explícito
+    // tampoco se pasa de aquí. Hoy hay ~453 clientes activos, así que 1500 deja
+    // 3x de margen.
+    const SCAN_CAP = 1500;
+
+    // Cuando hay búsqueda de texto, el filtro ocurre EN MEMORIA más abajo, así
+    // que el limit no puede aplicarse en la consulta: recortaría antes de
+    // filtrar. Era el bug de `?q=rossi&limit=5`, que traía los 5 clientes más
+    // recientes y buscaba "rossi" solo entre ellos — casi siempre nada.
+    //
+    // Buscar subcadenas obliga a escanear: Firestore no lo hace de forma
+    // nativa y añadir un campo normalizado indexado exigiría migrar datos. Una
+    // búsqueda cuesta por tanto ~453 lecturas; los typeaheads que consumen esto
+    // llevan debounce para que sea una por búsqueda y no una por tecla.
+    query = query.limit(q ? SCAN_CAP : (limitCount > 0 ? Math.min(limitCount, SCAN_CAP) : SCAN_CAP));
 
     // Projection: omits large binary fields (firmaDigitale, etc.) not needed in the list.
     // Single-ID fetches (above) still return the full document.
@@ -82,7 +94,9 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.json(data);
+    // El recorte de salida va AL FINAL, sobre lo ya filtrado. Sin búsqueda de
+    // texto es un no-op, porque la consulta ya aplicó el mismo límite.
+    return NextResponse.json(limitCount > 0 ? data.slice(0, limitCount) : data);
   } catch (error: any) {
     console.error('[clienti]', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });

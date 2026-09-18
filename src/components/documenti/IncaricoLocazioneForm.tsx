@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   X, Search, User, Home, Percent, ShieldCheck, Printer, Send, Save, Loader2,
   FileText, CheckCircle2, Sparkles, Building2, CreditCard, MapPin
@@ -76,11 +77,17 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
     import('@/lib/saveDocumentToCloud').catch(() => {});
   }, []);
 
-  const searchClienti = useCallback(async (q: string) => {
+  // La peticion va con debounce: antes salia una por cada tecla, y una
+  // busqueda de clientes escanea la coleccion entera.
+  const fetchClienti = useDebouncedCallback(async (q: string) => {
+  try { const r = await fetch(`/api/clienti?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); setCResults(Array.isArray(d) ? d : []); setCOpen(true); } catch { setCResults([]); }
+  }, 300);
+
+  const searchClienti = useCallback((q: string) => {
     setCSearch(q);
     if (q.length < 2) { setCResults([]); setCOpen(false); return; }
-    try { const r = await fetch(`/api/clienti?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); setCResults(Array.isArray(d) ? d : []); setCOpen(true); } catch { setCResults([]); }
-  }, []);
+    fetchClienti(q);
+  }, [fetchClienti]);
 
   const selectCliente = (c: any, target: 'locatore' | 'conduttore') => {
     const nome = `${c.DatiPersonali?.Nome || c.nome || ''} ${c.DatiPersonali?.Cognome || c.cognome || ''}`.trim();

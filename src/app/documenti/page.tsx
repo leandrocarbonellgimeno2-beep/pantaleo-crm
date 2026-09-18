@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import dynamic from 'next/dynamic';
 import {
   FileText, Search, Plus, Printer, Download, Share2,
@@ -168,20 +169,30 @@ export default function DocumentiPage() {
     }).sort((a, b) => String(b.dataCreazione || "").localeCompare(String(a.dataCreazione || "")));
   }, [generatedDocs, searchTerm, mainTab, subTab]);
 
-  const searchPeople = async (q: string) => {
-    setPersonSearch(q);
-    if (q.length < 2) { setPersonResults([]); return; }
+  // Las dos búsquedas van con debounce: antes salía una petición por cada
+  // tecla, y buscar clientes o inmuebles por texto escanea la colección.
+  const fetchPeople = useDebouncedCallback(async (q: string) => {
     const res = await fetch(`/api/clienti?q=${encodeURIComponent(q)}&limit=5`);
     const data = await res.json();
     setPersonResults(Array.isArray(data) ? data : []);
+  }, 300);
+
+  const searchPeople = (q: string) => {
+    setPersonSearch(q);
+    if (q.length < 2) { setPersonResults([]); return; }
+    fetchPeople(q);
   };
 
-  const searchImmobili = async (q: string) => {
-    setImmSearch(q);
-    if (q.length < 2) { setImmResults([]); return; }
+  const fetchImmobili = useDebouncedCallback(async (q: string) => {
     const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=5`);
     const data = await res.json();
     setImmResults(Array.isArray(data) ? data : []);
+  }, 300);
+
+  const searchImmobili = (q: string) => {
+    setImmSearch(q);
+    if (q.length < 2) { setImmResults([]); return; }
+    fetchImmobili(q);
   };
 
   const handleCompile = async () => {
