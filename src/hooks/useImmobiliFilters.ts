@@ -34,7 +34,6 @@ export function useImmobiliFilters() {
     if (NON_RESIDENTIAL_TYPES.includes(advFilters.tipologia)) {
       setAdvFilters(p => ({ ...p, camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '' }));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [advFilters.tipologia]);
 
   // El input responde al instante; el filtrado espera 300 ms.

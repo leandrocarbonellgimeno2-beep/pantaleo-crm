@@ -3,7 +3,6 @@
 import type { DropzoneRootProps, DropzoneInputProps } from "react-dropzone";
 import { Home, Loader2, FileText, Printer, MessageCircle, Zap, X, Trash2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { extractImageUrls as extractImages } from "@/lib/imageUtils";
 import { Button } from "@/components/ui/Button";
 import { buildPropertyWhatsAppMessage, openWhatsApp } from "@/lib/immobili/whatsapp";
 import { PropertyDetailView } from "@/components/immobili/PropertyDetailView";
