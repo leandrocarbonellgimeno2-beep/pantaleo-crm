@@ -184,6 +184,25 @@ export async function GET(request: Request) {
       'Siguen pendientes y se reintentarán en la próxima ejecución.',
     );
   }
+
+  // Rastro auditable en los logs de Vercel. La respuesta HTTP no vale para
+  // esto: cuando invoca el cron programado, Vercel descarta el cuerpo, y sus
+  // logs de petición tampoco lo capturan. Sin esta línea, un borrado
+  // irreversible de documentos y de ficheros de Storage no deja constancia
+  // ninguna de cuánto se llevó por delante.
+  //
+  // Se emite SIEMPRE, incluso con todo a cero: saber que el cron corrió y no
+  // encontró nada que purgar es tan informativo como saber que borró 40 cosas.
+  console.log(
+    '[cron/purge-deleted] resultado:',
+    JSON.stringify({
+      purged,
+      totalPurged: purged.immobili + purged.proprietari + purged.clienti,
+      skippedByIdealista,
+      errorCount: errors.length,
+    }),
+  );
+
   return NextResponse.json({
     purged,
     skippedByIdealista,
