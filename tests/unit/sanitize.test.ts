@@ -162,3 +162,32 @@ describe('sanitizeBody — edge cases', () => {
     expect(sanitizeBody({}, IMMOBILI_ALLOWED, 'test')).toEqual({});
   });
 });
+
+// Regressione: 'firmaDigitale' (minuscolo, chiave di PROPRIETARI) era finito in
+// CLIENTI_ALLOWED per copia. I clienti usano 'FirmaDigitale' (PascalCase), quindi
+// sanitizeBody scartava la firma a ogni salvataggio, in silenzio, e la Scheda
+// Incarico stampava "(Firma non ancora acquisita)".
+describe('sanitizeBody — casing della firma digitale', () => {
+  it('conserva FirmaDigitale (PascalCase) per i clienti', () => {
+    const body = {
+      DatiPersonali: { Nome: 'Mario' },
+      FirmaDigitale: { UrlFirma: 'data:image/png;base64,AAA', HasFirma: true },
+    };
+    const out = sanitizeBody(body, CLIENTI_ALLOWED, 'test') as any;
+    expect(out.FirmaDigitale).toEqual(body.FirmaDigitale);
+  });
+
+  it('conserva firmaDigitale (minuscolo) per i proprietari', () => {
+    const out = sanitizeBody(
+      { firmaDigitale: 'data:image/png;base64,BBB' },
+      PROPRIETARI_ALLOWED,
+      'test',
+    ) as any;
+    expect(out.firmaDigitale).toBe('data:image/png;base64,BBB');
+  });
+
+  it('le due whitelist coprono la chiave usata dal rispettivo modulo', () => {
+    expect(CLIENTI_ALLOWED).toContain('FirmaDigitale');
+    expect(PROPRIETARI_ALLOWED).toContain('firmaDigitale');
+  });
+});

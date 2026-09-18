@@ -61,7 +61,13 @@ export const CLIENTI_ALLOWED = [
   'Documentazione',
   'status', 'dataCreazione',
   'note', 'note_riservate',
-  'firmaDigitale',
+  // OJO con el casing: los clienti usan 'FirmaDigitale' (PascalCase) — así lo
+  // declara Cliente en types/cliente.ts, así lo escribe clienti/page.tsx y así
+  // lo leen generatePDF/pdfUtils. La variante en minúscula es la de
+  // PROPRIETARI_ALLOWED; estaba aquí por copia y hacía que sanitizeBody
+  // descartara la firma en CADA guardado de cliente, en silencio.
+  'FirmaDigitale',
+  'firmaDigitale', // legacy: documenti antiguos que puedan traerla en minúscula
   // legacy top-level
   'nome', 'cognome', 'cell1',
 ] as const;
