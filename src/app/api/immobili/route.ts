@@ -3,6 +3,7 @@ import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
 import { buildUpdateArgs } from '@/lib/firestore-update';
 import { markForSoftDelete } from '@/lib/services/soft-delete';
+import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 import { recountProprietario } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
 import type { Property } from '@/types/property';
@@ -246,10 +247,25 @@ export async function DELETE(request: Request) {
 
     const data = doc.data() as Property;
 
+    // Despublicar de Idealista ANTES de marcar el borrado: si no, el anuncio
+    // sigue vivo en el portal —y cobrándose— con el inmueble ya fuera del CRM.
+    // Nunca bloquea el borrado: si el portal está caído, se marca igual y el
+    // cron de purga lo reintenta antes de eliminar el documento.
+    const idealista = await deactivateOnIdealista(id, data as any);
+    if (!idealista.ok) {
+      console.error(`[immobili DELETE] Idealista no despublicó ${id}: ${idealista.reason}`);
+    }
+
     await markForSoftDelete('immobili', id);
     if (data.proprietarioId) await recountProprietario(data.proprietarioId);
 
-    return NextResponse.json({ success: true, message: 'Property marked for deletion.' });
+    return NextResponse.json({
+      success: true,
+      message: 'Property marked for deletion.',
+      idealista: idealista.ok
+        ? (idealista.changed ? 'deactivated' : idealista.reason)
+        : 'deactivation-failed',
+    });
   } catch (error: any) {
     console.error('[immobili DELETE]', error);
     return NextResponse.json({ error: 'Eliminazione non riuscita. Riprova più tardi.' }, { status: 500 });

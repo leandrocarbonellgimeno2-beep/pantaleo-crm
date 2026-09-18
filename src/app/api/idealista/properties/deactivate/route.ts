@@ -4,14 +4,16 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
-import { idealistaRequest } from '@/lib/idealista-auth';
-import { db, admin } from '@/lib/firebase-admin';
+import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/idealista/properties/deactivate
  * Body: { propertyId: string (Firestore doc ID) }
+ *
+ * La lógica vive en src/lib/services/idealista-deactivate.ts porque el borrado
+ * de un inmueble y el cron de purga necesitan despublicar sin pasar por HTTP.
  */
 export async function POST(request: Request) {
   try {
@@ -22,39 +24,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'propertyId is required' }, { status: 400 });
     }
 
-    // Fetch property from Firestore to get idealistaPropertyId
-    const propDoc = await db.collection('immobili').doc(propertyId).get();
-    if (!propDoc.exists) {
-      return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+    const result = await deactivateOnIdealista(propertyId);
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.reason }, { status: 502 });
     }
 
-    const property = propDoc.data() as any;
-    const idealistaId = property.Idealista?.idealistaPropertyId;
-
-    if (!idealistaId) {
-      return NextResponse.json(
-        { error: 'Property is not published on Idealista' },
-        { status: 400 }
-      );
+    if (!result.changed) {
+      // Se conserva el 404 y el 400 que el frontend ya distinguía.
+      if (result.reason === 'not-found') {
+        return NextResponse.json({ error: 'Property not found' }, { status: 404 });
+      }
+      if (result.reason === 'not-published') {
+        return NextResponse.json(
+          { error: 'Property is not published on Idealista' },
+          { status: 400 },
+        );
+      }
+      // already-deactivated: no es un error, ya está en el estado deseado.
+      return NextResponse.json({ success: true, alreadyDeactivated: true });
     }
 
-    // Deactivate on Idealista
-    const result = await idealistaRequest(
-      `/v1/properties/${idealistaId}/deactivate`,
-      { method: 'POST' }
-    );
-
-    // Update Firestore status
-    if (result.ok) {
-      await db.collection('immobili').doc(propertyId).update({
-        'Idealista.idealistaStatus': 'deactivated',
-        'Idealista.idealistaLastSync': admin.firestore.FieldValue.serverTimestamp(),
-        'Idealista.idealistaError': null,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
-
-    return NextResponse.json(result.data, { status: result.status });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[Idealista Deactivate]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

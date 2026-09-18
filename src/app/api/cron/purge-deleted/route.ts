@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
 import { recountManyProprietari } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
+import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,8 @@ export async function GET(request: Request) {
   const cutoff = Date.now() - THIRTY_MINUTES_MS;
   const errors: string[] = [];
   const purged = { immobili: 0, proprietari: 0, clienti: 0 };
+  // Inmuebles que NO se purgan porque Idealista no los pudo despublicar.
+  let skippedByIdealista = 0;
 
   // ── 1. Purge immobili ─────────────────────────────────────────────────────
   try {
@@ -48,12 +51,16 @@ export async function GET(request: Request) {
 
     const expired = snap.docs.filter(d => (d.data()._deletedAt ?? 0) < cutoff);
 
-    // Set de TODOS los immobili a purgar en esta corrida. Es la clave del fix:
-    // limpiamos cada cliente UNA sola vez contra este set, en vez de reescribir
-    // sus arrays por cada immobile dentro del loop. Antes, la 2ª iteración usaba
-    // el `c.data()` en memoria (stale, ya sin el id de la 1ª iteración) y al
-    // reescribir el array completo "resucitaba" la referencia recién quitada.
-    const expiredIds = new Set(expired.map(d => d.id));
+    // Set de los immobili REALMENTE purgados en esta corrida. Con él limpiamos
+    // cada cliente UNA sola vez, en vez de reescribir sus arrays por cada
+    // immobile dentro del loop: antes, la 2ª iteración usaba el `c.data()` en
+    // memoria (stale, ya sin el id de la 1ª) y al reescribir el array completo
+    // "resucitaba" la referencia recién quitada.
+    //
+    // Se rellena DENTRO del loop, no desde `expired`: ahora un documento puede
+    // saltarse si Idealista no lo despublica, y limpiar las referencias de un
+    // inmueble que sigue existiendo lo dejaría huérfano en los Matching.
+    const expiredIds = new Set<string>();
 
     const bucketName = process.env.FIREBASE_STORAGE_BUCKET ||
       `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`;
@@ -64,6 +71,19 @@ export async function GET(request: Request) {
 
     for (const doc of expired) {
       const data = doc.data();
+
+      // Último punto en el que existe idealistaPropertyId: al borrar el
+      // documento se pierde y el anuncio queda huérfano para siempre, sin
+      // forma de bajarlo desde el CRM. Si el portal falla, se salta este
+      // documento entero —ni fotos ni doc— y el cron de mañana lo reintenta.
+      // Va antes de borrar las imágenes: despublicar después dejaría un
+      // anuncio vivo con las fotos rotas.
+      const idealista = await deactivateOnIdealista(doc.id, data);
+      if (!idealista.ok) {
+        errors.push(`Idealista deactivate ${doc.id}: ${idealista.reason}`);
+        skippedByIdealista++;
+        continue;
+      }
 
       // Delete Storage images — fonte unica in lib/imageUtils.
       const allUrls = extractImageUrls(data);
@@ -83,6 +103,7 @@ export async function GET(request: Request) {
       // Delete Firestore doc
       await doc.ref.delete();
 
+      expiredIds.add(doc.id);
       if (data.proprietarioId) affectedProprietariIds.add(data.proprietarioId);
       purged.immobili++;
     }
@@ -92,7 +113,7 @@ export async function GET(request: Request) {
     // y se reescribe como máximo una vez. arrayRemove para ListaNera/Preferiti
     // (strings) y filter contra el set para Proposti (objetos con immobileId).
     // Idempotente: si no hay cambios, no se escribe.
-    if (expired.length > 0) {
+    if (expiredIds.size > 0) {
       try {
         const clientiSnap = await db.collection('clienti').get();
         const matchingUpdates: Promise<any>[] = [];
@@ -157,5 +178,15 @@ export async function GET(request: Request) {
   if (errors.length > 0) {
     console.warn('[cron/purge-deleted] errors:', errors);
   }
-  return NextResponse.json({ purged, errors: errors.length ? errors : [] });
+  if (skippedByIdealista > 0) {
+    console.warn(
+      `[cron/purge-deleted] ${skippedByIdealista} immobili NO purgados: Idealista no los despublicó. ` +
+      'Siguen pendientes y se reintentarán en la próxima ejecución.',
+    );
+  }
+  return NextResponse.json({
+    purged,
+    skippedByIdealista,
+    errors: errors.length ? errors : [],
+  });
 }
