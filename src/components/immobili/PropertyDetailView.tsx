@@ -31,7 +31,6 @@ interface PropertyDetailViewProps {
   property: any;
   ownerData: any;
   ownerProperties: any[];
-  ownerPropsLoading: boolean;
   isLoadingDetail: boolean;
   detailError: string | null;
   onShowOwnerProperties: () => void;
@@ -51,7 +50,6 @@ export function PropertyDetailView({
   property,
   ownerData,
   ownerProperties,
-  ownerPropsLoading,
   isLoadingDetail,
   detailError,
   onShowOwnerProperties,

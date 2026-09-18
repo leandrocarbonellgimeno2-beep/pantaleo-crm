@@ -2,12 +2,13 @@
 import NextImage from "next/image";
 import Link from "next/link";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useIdealistaActions } from "@/hooks/useIdealistaActions";
 import { useInverseMatching } from "@/hooks/useInverseMatching";
 import { usePropertyImages } from "@/hooks/usePropertyImages";
 import { useImmobiliFilters } from "@/hooks/useImmobiliFilters";
+import { usePropertyDetail } from "@/hooks/usePropertyDetail";
 import { extractImageUrls } from "@/lib/imageUtils";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
 import {
@@ -82,16 +83,30 @@ export default function ImmobiliPage() {
     totalCount, loading, isFilterTransitioning, refresh,
     visibleCount, setVisibleCount, displayedCount, remaining, PAGE_SIZE,
   } = useImmobiliFilters();
+  // Ficha del inmueble: estado, carga diferida y acciones.
+  // Ver src/hooks/usePropertyDetail.ts. Se renombra en la desestructuracion
+  // para no tocar el JSX existente.
+  const {
+    selectedProperty, setSelectedProperty,
+    isLoadingDetail, detailError,
+    isModalOpen, setIsModalOpen,
+    viewMode, setViewMode,
+    isSaving,
+    ownerData,
+    ownerProperties, showOwnerPropsModal, setShowOwnerPropsModal,
+    isSchedaGenerating, setIsSchedaGenerating,
+    isMapOpen, setIsMapOpen,
+    deleteModalOpen, setDeleteModalOpen,
+    deleteConfirmed, setDeleteConfirmed,
+    deleteTimer,
+    updateNested, validLightboxImages,
+    openDetail: handleOpenDetail,
+    createNew: handleCreateNew,
+    saveProperty: handleSaveProperty,
+    startDelete: handleDeleteProperty,
+    executeDelete: executeDeleteProperty,
+  } = usePropertyDetail({ refresh });
 
-  const [selectedProperty, setSelectedProperty] = useState<any>(null);
-  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [ownerData, setOwnerData] = useState<any>(null);
-  const [isSchedaGenerating, setIsSchedaGenerating] = useState(false);
-  const [isMapOpen, setIsMapOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
 
@@ -113,9 +128,6 @@ export default function ImmobiliPage() {
   const [selectedClienteModal, setSelectedClienteModal] = useState<any>(null);
 
   // Owner's other properties state
-  const [ownerProperties, setOwnerProperties] = useState<any[]>([]);
-  const [ownerPropsLoading, setOwnerPropsLoading] = useState(false);
-  const [showOwnerPropsModal, setShowOwnerPropsModal] = useState(false);
 
   // Lightbox state
   const [lightboxController, setLightboxController] = useState({
@@ -126,25 +138,9 @@ export default function ImmobiliPage() {
   // Idealista Integration State
 
   // Delete Guardrail State
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
-  const [deleteTimer, setDeleteTimer] = useState(2);
-  const deleteIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
 
-  // Limpia la cuenta atrás al cerrar el modal Y al desmontar la página: antes
-  // solo cubría el cierre, así que salir de la pantalla con el modal abierto
-  // dejaba el intervalo corriendo.
-  useEffect(() => {
-    if (!deleteModalOpen && deleteIntervalRef.current) {
-      clearInterval(deleteIntervalRef.current);
-      deleteIntervalRef.current = null;
-    }
-  }, [deleteModalOpen]);
 
-  useEffect(() => () => {
-    if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
-  }, []);
 
   const openLightboxOnSource = (index: number) => {
     setLightboxController({
@@ -248,278 +244,11 @@ export default function ImmobiliPage() {
     }
   };
 
-  // Auto-open logic from URL parameters
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlId = params.get('id');
-      const isNew = params.get('new');
-      const propId = params.get('proprietarioId');
 
-      if (urlId) {
-        // Fetch specific property details directly
-        fetch(`/api/immobili?id=${urlId}`)
-          .then(res => res.json())
-          .then(data => {
-            if (!data.error) {
-              handleOpenDetail(data);
-              window.history.replaceState({}, '', '/immobili'); // Clean URL
-            }
-          })
-          .catch(console.error);
-      } else if (isNew === 'true') {
-        // We delay slightly to let \`immobiliData\` load for ID generation, but fallback is ok
-        setTimeout(() => {
-           handleCreateNew(propId || undefined);
-           window.history.replaceState({}, '', '/immobili'); // Clean URL
-        }, 500);
-      }
-    }
-  }, []);
 
-  const handleOpenDetail = async (property: any) => {
-    setSelectedProperty({ ...property });
-    setIsModalOpen(true);
-    setViewMode(true);
-    setOwnerData(null);
-    setOwnerProperties([]);
-    setShowOwnerPropsModal(false);
-    setIsLoadingDetail(true);
-    setDetailError(null);
 
-    // Lazy-load full property data (including all images) + owner details
-    const fetches: Promise<any>[] = [
-      // Always fetch full property by ID to get complete images array
-      fetch(`/api/immobili?id=${property.id}`).then(r => r.json()),
-    ];
 
-    if (property.proprietarioId) {
-      // Dev diagnostic: log the linking field type and value
-      if (process.env.NODE_ENV === 'development') {
-        console.log(
-          `[Owner Link Debug] Rif: ${property.DatiBase?.Codice} | proprietarioId: "${property.proprietarioId}" (type: ${typeof property.proprietarioId})`
-        );
-      }
-      fetches.push(
-        fetch(`/api/proprietari?id=${property.proprietarioId}`).then(r => r.json()),
-        fetch(`/api/immobili?proprietarioId=${property.proprietarioId}&limit=50`).then(r => r.json()),
-      );
-    }
 
-    try {
-      const results = await Promise.all(fetches);
-      
-      // Update property with full data (including all images)
-      const fullProperty = results[0];
-      if (fullProperty && !fullProperty.error) {
-        setSelectedProperty((prev: any) => ({ ...prev, ...fullProperty }));
-      } else if (fullProperty?.error) {
-        console.error('[Detail fetch] API returned error for id', property.id, '→', fullProperty.error);
-        setDetailError(fullProperty.error);
-      }
-
-      // Owner data
-      if (property.proprietarioId && results[1]) {
-        // Dev diagnostic: check if owner came back empty or with missing name fields
-        if (process.env.NODE_ENV === 'development') {
-          const o = results[1];
-          if (o.error) {
-            console.warn(`[Owner Link Debug] Owner fetch FAILED for propertyId "${property.proprietarioId}":`, o.error);
-          } else if (!o.nome && !o.Nome && !o.cognome && !o.Cognome) {
-            console.warn(
-              `[Owner Link Debug] Owner "${property.proprietarioId}" exists but has NO name fields. Keys:`, Object.keys(o)
-            );
-          }
-        }
-        setOwnerData(results[1].error ? null : results[1]);
-      }
-      // Owner's other properties
-      if (property.proprietarioId && results[2]) {
-        const allOwnerProps = results[2].data || results[2] || [];
-        const otherProps = (Array.isArray(allOwnerProps) ? allOwnerProps : []).filter((p: any) => p.id !== property.id);
-        setOwnerProperties(otherProps);
-      }
-    } catch (error: any) {
-      console.error('[Detail fetch] Network/parse error for id', property.id, '→', error);
-      setDetailError('Errore di rete durante il caricamento dei dettagli.');
-    } finally {
-      setIsLoadingDetail(false);
-    }
-  };
-
-  const handleSaveProperty = async () => {
-    if (!selectedProperty) return;
-    setIsSaving(true);
-    try {
-      if (selectedProperty.id) {
-        // UPDATE
-        const res = await fetch('/api/immobili', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(selectedProperty),
-        });
-        
-        if (res.ok) {
-          refresh();
-          setIsModalOpen(false);
-        }
-      } else {
-        // CREATE
-        const res = await fetch('/api/immobili', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(selectedProperty),
-        });
-
-        if (res.ok) {
-          const newDoc = await res.json();
-          // Server returns the definitive auto-incremented Codice
-          const newlyCreatedProperty = {
-            ...selectedProperty,
-            id: newDoc.id,
-            DatiBase: { ...selectedProperty.DatiBase, Codice: newDoc.codice || selectedProperty.DatiBase?.Codice },
-          };
-          refresh();
-          setSelectedProperty(newlyCreatedProperty);
-          setIsModalOpen(false);
-        } else {
-          alert("Errore durante la creazione dell'immobile.");
-        }
-      }
-    } catch (error) {
-      console.error("Error saving property:", error);
-      alert("Si è verificato un errore di rete durante il salvataggio.");
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDeleteProperty = () => {
-    if (!selectedProperty?.id) return;
-    
-    setDeleteModalOpen(true);
-    setDeleteConfirmed(false);
-    setDeleteTimer(2);
-    
-    if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
-    deleteIntervalRef.current = setInterval(() => {
-      setDeleteTimer((prev) => {
-        if (prev <= 1) {
-          if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  const executeDeleteProperty = async () => {
-    if (!selectedProperty?.id) return;
-    
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/immobili?id=${selectedProperty.id}`, {
-        method: 'DELETE',
-      });
-      
-      if (res.ok) {
-        refresh();
-        setIsModalOpen(false); // Close detail modal
-        setDeleteModalOpen(false); // Close delete modal
-        toast.success("Immobile eliminato correttamente");
-      } else {
-        const errorData = await res.json();
-        alert(`Errore durante l'eliminazione: ${errorData.error}`);
-        setDeleteModalOpen(false);
-      }
-    } catch (error) {
-      console.error("Error deleting property:", error);
-      alert("Si è verificato un errore di rete durante l'eliminazione.");
-      setDeleteModalOpen(false);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleCreateNew = (ownerId?: string) => {
-    // Codice is now assigned SERVER-SIDE on save (max existing + 1, base 1000000).
-    // We show a placeholder here; the real code is returned by the API on POST.
-    const nextCode = '---';
-
-    const emptyProperty = {
-      proprietarioId_real: ownerId || "",
-      proprietarioId: ownerId || "", // compatibility
-      DatiBase: {
-        Codice: String(nextCode),
-        Riferimento: "",
-        Tipologia: "Appartamento",
-        Indirizzo: "",
-        Citta: "",
-        CAP: "",
-        Zona: ""
-      },
-      DettagliFisici: {
-        MetriCommerciali: "",
-        Vani: "",
-        CamereLetto: "",
-        Bagni: "",
-        Piano: "",
-        StatoFiniture: "Abitabile",
-        TipoEdificio: "Unica Elevazione",
-        ClasseEnergetica: "G"
-      },
-      Caratteristiche: {
-        Ascensore: false,
-        RiscaldamentoAutonomo: false,
-        AriaCondizionata: false,
-        VistaMare: false,
-        Balcone: false,
-        Garage: false,
-        Terrazza: false,
-        Giardino: false,
-        PostoAutoScoperto: false,
-        CucinaAbitabile: false
-      },
-      GestioneCommerciale: {
-        InVendita: true,
-        InAffitto: false,
-        PrezzoVendita: "",
-        PrezzoAffitto: "",
-        PrezzoMinimo: "",
-        SpeseCondominio: "",
-        Amministratore: "",
-        Sospeso: false
-      },
-      Documentazione: {
-        Planimetria: "-- Non specificato --",
-        UrlPlanimetria: "",
-        AttoImmobile: "-- Non specificato --",
-        UrlAttoImmobile: "",
-        StatoChiavi: "-- Non specificato --",
-        UrlAltriDocumenti: ""
-      },
-      Textos: {
-        Descrizione: "",
-        NoteInterne: ""
-      },
-      images: []
-    };
-
-    setSelectedProperty(emptyProperty);
-    setOwnerData(null);
-    setIsModalOpen(true);
-    setViewMode(false);
-    
-    // Fetch owner details if we passed one via URL
-    if (ownerId) {
-      fetch(`/api/proprietari?id=${ownerId}`)
-        .then(res => res.json())
-        .then(data => {
-            if (!data.error) setOwnerData(data);
-        })
-        .catch(console.error);
-    }
-  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, pathPrefix: string, fieldToUpdateCategory: string, fieldToUpdate: string) => {
     try {
@@ -561,20 +290,10 @@ export default function ImmobiliPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop: photos.onDrop, accept: {'image/*': [], 'application/pdf': []} });
 
-  const updateNested = (category: string, field: string, value: any) => {
-    setSelectedProperty((prev: any) => ({
-      ...prev,
-      [category]: {
-        ...(prev[category] || {}),
-        [field]: value
-      }
-    }));
-  };
 
   // Igual que el borrado: por URL, porque el índice de la galería no
   // corresponde al del array `images` que se reordena.
 
-  const validLightboxImages = selectedProperty?.images?.filter((url: string) => typeof url === 'string' && url.startsWith('http')) || [];
 
   return (
     <div className="space-y-6">
@@ -885,7 +604,6 @@ export default function ImmobiliPage() {
                    property={selectedProperty}
                    ownerData={ownerData}
                    ownerProperties={ownerProperties}
-                   ownerPropsLoading={ownerPropsLoading}
                    isLoadingDetail={isLoadingDetail}
                    detailError={detailError}
                    onShowOwnerProperties={() => setShowOwnerPropsModal(true)}
