@@ -19,11 +19,11 @@ import {
 import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { 
-  Search, MapPin, Euro, Maximize2, BedDouble, Bath, Home, Tag, Filter,
+  Search, MapPin, Euro, Maximize2, BedDouble, Bath,  Tag, Filter,
   Plus, ChevronRight, ChevronLeft,     User, Camera,
   Image as ImageIcon, Phone, Mail,     Key,
     CheckCircle2, Map, UploadCloud,  Eye,
-    ChevronDown, ChevronUp, BarChart3, SlidersHorizontal, RotateCcw, ExternalLink, FileText
+     ChevronUp, BarChart3, SlidersHorizontal, RotateCcw, ExternalLink, FileText
 } from "lucide-react";
 // FsLightbox lazy-loaded: ~50KB chunk caricato solo al primo apertura della galleria
 // invece che nel bundle iniziale della pagina immobili.
@@ -36,7 +36,7 @@ import { ClienteMatchModal } from "@/components/immobili/ClienteMatchModal";
 import { CartelloPrintLayout } from "@/components/immobili/CartelloPrintLayout";
 import { AdvancedFiltersDrawer } from "@/components/immobili/AdvancedFiltersDrawer";
 import { PrintSelectorModal, MAX_PRINT_PHOTOS } from "@/components/immobili/PrintSelectorModal";
-import { PropertyCard } from "@/components/immobili/PropertyCard";
+import { PropertyGrid } from "@/components/immobili/PropertyGrid";
 import { PropertyGallery } from "@/components/immobili/PropertyGallery";
 import { PropertyDetailModal } from "@/components/immobili/PropertyDetailModal";
 import dynamic from "next/dynamic";
@@ -329,67 +329,18 @@ export default function ImmobiliPage() {
         </button>
       </PageHeader>
 
-      {/* ═══ SKELETON — visible while first load or filter transition ═══ */}
-      {(loading || isFilterTransitioning) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-              <div className="h-52 bg-slate-100" />
-              <div className="p-4 space-y-3">
-                <div className="h-3 bg-slate-100 rounded-full w-1/4" />
-                <div className="h-5 bg-slate-100 rounded-full w-2/3" />
-                <div className="h-3 bg-slate-100 rounded-full w-1/2" />
-                <div className="mt-2 h-12 bg-slate-50 rounded-xl" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ═══ GRID — Premium Property Cards ═══ */}
-      {!loading && !isFilterTransitioning && (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
-        {filteredImmobili.slice(0, visibleCount).map((item: any, idx: number) => (
-          <PropertyCard
-            key={item.id}
-            item={item}
-            priority={idx < 6}
-            menuOpen={openMenuId === item.id}
-            onToggleMenu={handleToggleMenu}
-            onOpenDetail={handleCardOpenDetail}
-            onQuickStatusChange={handleQuickStatusChange}
-          />
-        ))}
-      </div>
-      )}
-
-      {/* Load More — visual only, no network */}
-      {visibleCount < filteredImmobili.length && !loading && !isFilterTransitioning && (
-        <div className="flex justify-center mt-6 mb-4">
-          <button 
-            onClick={handleLoadMore}
-            className="px-8 py-3 rounded-full border border-slate-200 bg-white text-sm font-bold shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2 text-slate-700 hover:text-indigo-600 hover:border-indigo-200"
-          >
-            <ChevronDown className="h-4 w-4" />
-            {remaining <= 15 
-              ? `Carica i ${remaining} restanti` 
-              : `Carica altri 15 (${remaining} restanti)`
-            }
-          </button>
-        </div>
-      )}
-
-      {filteredImmobili.length === 0 && !loading && !isFilterTransitioning && (
-        <div className="py-24 text-center">
-          <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-50 text-slate-200 mb-4">
-            <Home className="h-10 w-10" />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900">Nessun immobile trovato</h3>
-          <p className="text-slate-500 max-w-xs mx-auto mt-2 font-medium">
-            Prova a cambiare i filtri o il termine di ricerca.
-          </p>
-        </div>
-      )}
+      <PropertyGrid
+        items={filteredImmobili}
+        visibleCount={visibleCount}
+        loading={loading}
+        isTransitioning={isFilterTransitioning}
+        remaining={remaining}
+        openMenuId={openMenuId}
+        onToggleMenu={handleToggleMenu}
+        onOpenDetail={handleCardOpenDetail}
+        onQuickStatusChange={handleQuickStatusChange}
+        onLoadMore={handleLoadMore}
+      />
 
       {/* ═══ ADVANCED FILTER DRAWER ═══ */}
       {isFilterOpen && (
