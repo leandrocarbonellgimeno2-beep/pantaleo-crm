@@ -2,22 +2,14 @@
 import NextImage from "next/image";
 import Link from "next/link";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { useImmobili } from "@/hooks/useImmobili";
-import { useDebounce } from "@/hooks/useDebounce";
+import { useState, useEffect, useRef } from "react";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 import { useIdealistaActions } from "@/hooks/useIdealistaActions";
 import { useInverseMatching } from "@/hooks/useInverseMatching";
 import { usePropertyImages } from "@/hooks/usePropertyImages";
+import { useImmobiliFilters } from "@/hooks/useImmobiliFilters";
 import { extractImageUrls } from "@/lib/imageUtils";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
-import {
-  type AdvFilters,
-  applyAdvancedFilters,
-  countActiveFilters,
-  createEmptyAdvFilters,
-  NON_RESIDENTIAL_TYPES,
-} from "@/lib/immobili/filters";
 import {
   buildPropertyWhatsAppMessage,
   normalizeWhatsAppPhone,
@@ -78,7 +70,19 @@ const PhotoViewer = ({ images, toggler, sourceIndex }: { images: string[], toggl
 
 export default function ImmobiliPage() {
   const confirm = useConfirm();
-  const [searchTerm, setSearchTerm] = useState("");
+  // Busqueda, filtros, catalogo y paginacion visual. Se desestructura con los
+  // mismos nombres para no tocar el JSX. Ver src/hooks/useImmobiliFilters.ts.
+  const {
+    searchTerm, setSearchTerm,
+    filterType, setFilterType,
+    filterStato, setFilterStato,
+    isFilterOpen, setIsFilterOpen,
+    advFilters, setAdvFilters, resetAdvFilters,
+    filteredImmobili, activeFilterCount, hasActiveSearch,
+    totalCount, loading, isFilterTransitioning, refresh,
+    visibleCount, setVisibleCount, displayedCount, remaining, PAGE_SIZE,
+  } = useImmobiliFilters();
+
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -87,58 +91,8 @@ export default function ImmobiliPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [ownerData, setOwnerData] = useState<any>(null);
   const [isSchedaGenerating, setIsSchedaGenerating] = useState(false);
-  const [filterType, setFilterType] = useState<"Tutti" | "Vendita" | "Affitto">("Tutti");
-  const [filterStato, setFilterStato] = useState<"Attivi" | "Sospesi" | "Tutti">("Attivi");
   const [isMapOpen, setIsMapOpen] = useState(false);
-
-  // Quick action dropdown & toast
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-
-  // Advanced Filter Drawer
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [advFilters, setAdvFilters] = useState<AdvFilters>(createEmptyAdvFilters);
-  const resetAdvFilters = () => setAdvFilters(createEmptyAdvFilters());
-
-  // Auto-reset camere/bagni/superficie when selecting non-residential tipologie
-  useEffect(() => {
-    if (NON_RESIDENTIAL_TYPES.includes(advFilters.tipologia)) {
-      setAdvFilters(p => ({ ...p, camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '' }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [advFilters.tipologia]);
-
-  // Debounced search — input updates instantly, filtering waits 300ms
-  const debouncedSearch = useDebounce(searchTerm, 300);
-
-  // SWR — fetches FULL catalogue once (status + type + search only)
-  // Advanced filters + visual pagination happen entirely client-side
-  const {
-    immobiliData,
-    totalCount,
-    loading,
-    isValidating,
-    refresh,
-  } = useImmobili({
-    searchTerm: debouncedSearch,
-    filterStato,
-    filterType,
-    codice: advFilters.codice.trim(),
-  });
-
-  // True when a filter/search changed and SWR is fetching new data while still
-  // serving stale results from the previous key. We use this to hide the old
-  // list immediately instead of letting the user see wrong data.
-  const isFilterTransitioning = isValidating && !loading;
-
-  // Visual pagination — render 15 at a time, no network on "load more"
-  const PAGE_SIZE = 15;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-
-  // Reset visibleCount when filters or search change
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [debouncedSearch, filterStato, filterType, advFilters]);
 
 
   
@@ -268,19 +222,6 @@ export default function ImmobiliPage() {
   const handleLoadMore = () => setVisibleCount(prev => prev + PAGE_SIZE);
 
 
-  // ═══ CLIENT-SIDE ADVANCED FILTERING — instant, zero network requests ═══
-  const filteredImmobili = useMemo(
-    () => applyAdvancedFilters(immobiliData, advFilters),
-    [immobiliData, advFilters],
-  );
-
-  // Contatore filtri attivi per badge
-  const activeFilterCount = useMemo(() => countActiveFilters(advFilters), [advFilters]);
-
-  // Pagination display values
-  const hasActiveSearch = searchTerm.trim() !== "" || activeFilterCount > 0;
-  const displayedCount = Math.min(visibleCount, filteredImmobili.length);
-  const remaining = Math.max(0, filteredImmobili.length - visibleCount);
 
 
 
