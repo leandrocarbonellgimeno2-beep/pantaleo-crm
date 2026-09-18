@@ -510,8 +510,6 @@ export default function ImmobiliPage() {
   // Visual "load more" — no network, just show 15 more cards
   const handleLoadMore = () => setVisibleCount(prev => prev + PAGE_SIZE);
 
-  // Legacy fetchData wrapper (used by save/delete handlers)
-  const fetchData = useCallback(() => refresh(), [refresh]);
 
   // ═══ CLIENT-SIDE ADVANCED FILTERING — instant, zero network requests ═══
   const filteredImmobili = useMemo(() => {
@@ -624,7 +622,6 @@ export default function ImmobiliPage() {
 
   // Pagination display values
   const hasActiveSearch = searchTerm.trim() !== "" || activeFilterCount > 0;
-  const displayTotal = hasActiveSearch ? totalCount : totalCount;
   const displayedCount = Math.min(visibleCount, filteredImmobili.length);
   const remaining = Math.max(0, filteredImmobili.length - visibleCount);
 
@@ -2128,11 +2125,11 @@ export default function ImmobiliPage() {
                                      <Home className="h-3.5 w-3.5" />
                                      {ownerProperties.length > 0 ? (
                                        <>
-                                         Vedi altre {ownerProperties.length} proprietÃ 
+                                         Vedi altre {ownerProperties.length} proprietà
                                          <span className="ml-auto h-5 w-5 rounded-full bg-indigo-600 text-white text-[10px] font-black flex items-center justify-center shadow-sm">{ownerProperties.length}</span>
                                        </>
                                      ) : (
-                                       "Unica proprietÃ "
+                                       "Unica proprietà"
                                      )}
                                    </button>
                                    </>
@@ -2921,107 +2918,6 @@ export default function ImmobiliPage() {
              </div>
              )}
 
-             {/* Stampa Cartello (Only visible on Print) */}
-             {viewMode && (
-               <div className="hidden print:flex print:flex-col print:relative print:overflow-hidden print:w-[210mm] print:h-[297mm] print:bg-white print:z-50 [&]:print:color-adjust-exact [print-color-adjust:exact] bg-white z-50 overflow-hidden">
-                  {/* Foto Hero */}
-                  {selectedPrintPhotos.length > 0 ? (
-                    <div className={cn(
-                      "w-full relative",
-                      selectedPrintPhotos.length === 1 ? "h-[50%]" : "h-[50%] flex flex-col gap-2"
-                    )}>
-                       
-                       {selectedPrintPhotos.length === 1 && (
-                          <img src={selectedPrintPhotos[0]} className="w-full h-full object-cover rounded-none" />
-                       )}
-                       
-                       {selectedPrintPhotos.length > 1 && (
-                         <>
-                           <img src={selectedPrintPhotos[0]} className="w-full h-[65%] object-cover rounded-none" />
-                           <div className={cn(
-                              "grid gap-2 w-full h-[35%]",
-                              selectedPrintPhotos.length === 2 ? "grid-cols-1" : (selectedPrintPhotos.length === 3 ? "grid-cols-2" : "grid-cols-3")
-                           )}>
-                              {selectedPrintPhotos.slice(1).map((img, i) => (
-                                 <img key={i} src={img} className="w-full h-full object-cover rounded-none" />
-                              ))}
-                           </div>
-                         </>
-                       )}
-                    </div>
-                  ) : (
-                    <div className="w-full h-[50%] bg-slate-100 flex items-center justify-center relative">
-                      <span className="text-slate-400 font-bold uppercase tracking-widest">Nessuna Immagine Selezionata</span>
-                    </div>
-                  )}
-                  
-                  {/* Cuerpo (Datos) */}
-                  <div className="p-10 pb-32 flex flex-col items-center flex-grow min-h-[50%] w-full">
-                     
-                     {/* Ubicación y Tipo */}
-                     <div className="text-lg font-bold text-slate-500 uppercase tracking-widest text-center w-full truncate">
-                        {selectedProperty?.DatiBase?.Tipologia || "IMMOBILE"} - {selectedProperty?.DatiBase?.Citta?.toUpperCase() || ""}
-                     </div>
-                     
-                     {/* Precio */}
-                     <div className="text-6xl font-black text-slate-900 mt-4 mb-2 text-center tracking-tight">
-                        € {selectedProperty?.GestioneCommerciale?.InVendita 
-                             ? Number(selectedProperty.GestioneCommerciale.PrezzoVendita || 0).toLocaleString() 
-                             : Number(selectedProperty.GestioneCommerciale?.PrezzoAffitto || 0).toLocaleString()
-                          }
-                     </div>
-                     
-                     {/* Rif Badge */}
-                     <span className="bg-slate-200 text-slate-800 px-4 py-1.5 rounded-md text-xl font-black uppercase tracking-widest mt-2 mb-6 mx-auto">
-                        Rif: {selectedProperty?.DatiBase?.Codice || "N/A"}
-                     </span>
-                     
-                     {/* Línea Separadora */}
-                     <hr className="w-1/3 border-slate-300 mb-8" />
-                     
-                     {/* Specs (Grid) */}
-                     <div className="flex flex-wrap items-center justify-center gap-0 text-2xl font-bold text-slate-800 mb-10 w-full text-center divide-x-2 divide-slate-300">
-                        <div className="px-6 uppercase tracking-wider">{selectedProperty?.DettagliFisici?.MetriCommerciali || "--"} m²</div>
-                        <div className="px-6 uppercase tracking-wider">{selectedProperty?.DettagliFisici?.Locali || selectedProperty?.DettagliFisici?.Vani || "--"} Vani</div>
-                        <div className="px-6 uppercase tracking-wider">{selectedProperty?.DettagliFisici?.Bagni || "--"} Bagni</div>
-                        <div className="px-6 uppercase tracking-wider flex items-center justify-center gap-2 truncate">
-                           <span>Classe</span>
-                           <span className={cn(
-                             "inline-flex items-center justify-center w-9 h-9 text-white font-black text-xl shadow-sm rounded-sm",
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'A' ? "bg-green-600" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'B' ? "bg-green-500" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'C' ? "bg-lime-500" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'D' ? "bg-yellow-400" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'E' ? "bg-orange-400" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'F' ? "bg-orange-500" :
-                             selectedProperty?.DettagliFisici?.ClasseEnergetica?.toUpperCase() === 'G' ? "bg-red-600" : "bg-slate-400"
-                           )}>
-                              {selectedProperty?.DettagliFisici?.ClasseEnergetica || "-"}
-                           </span>
-                        </div>
-                     </div>
-                     
-                     {/* Descrizione */}
-                     <div className="text-lg text-slate-800 leading-relaxed font-medium mx-auto text-center w-full flex-grow mb-6 whitespace-pre-wrap line-clamp-6 overflow-hidden text-ellipsis">
-                        {customPrintText}
-                     </div>
-
-                  </div>
-                  
-                  {/* Logo en zona blanca */}
-                  <div className="absolute bottom-12 left-0 w-full flex justify-center z-20 bg-white pt-2 pb-4">
-                     <img src="/logo-transparent.png" className="h-14 w-auto object-contain" alt="Pantaleo Real Estate" />
-                  </div>
-
-                  {/* Footer (Barra Inferior) */}
-                  <div className="absolute bottom-0 left-0 w-full h-12 bg-slate-900 flex items-center justify-center z-10 px-8">
-                     <div className="text-white text-[13px] font-bold tracking-widest text-center w-full truncate">
-                        📞 +39 0923 123 4567 • ✉️ info@pantaleorealestate.it • 📍 Via Marsala, TP
-                     </div>
-                  </div>
-
-               </div>
-             )}
 
            </div>
         </div>
