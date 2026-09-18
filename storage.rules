@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Todo el acceso a Cloud Storage del CRM Pantaleo pasa por el Admin SDK, desde
+// las route handlers de Vercel (src/app/api/upload/route.ts y
+// src/app/api/cron/purge-deleted/route.ts). El Admin SDK ignora estas reglas
+// por diseño, así que denegar todo el acceso de cliente no rompe nada:
+// verificado que el SDK cliente de Firebase no se importa en ninguna parte del
+// proyecto, ni de forma estática ni dinámica, y que no existe ninguna variable
+// NEXT_PUBLIC_FIREBASE_* con la que pudiera inicializarse en el navegador.
+//
+// Misma postura que firestore.rules.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// LO QUE ESTAS REGLAS NO PROTEGEN
+//
+// src/app/api/upload/route.ts estampa un `firebaseStorageDownloadTokens` en
+// cada fichero que sube y devuelve una URL del tipo
+//   https://firebasestorage.googleapis.com/v0/b/<bucket>/o/<path>?alt=media&token=<uuid>
+//
+// Esa URL es el mecanismo de "cualquiera con el enlace" de Firebase: NO pasa
+// por estas reglas. Mientras el token exista, el fichero es legible por
+// cualquiera que tenga la URL, sin sesión y sin caducidad. Y esas URLs se
+// guardan en Firestore (campo urlDownload) y viajan en cada listado.
+//
+// Es decir: estas reglas cierran una puerta que hoy nadie usa, no la que está
+// abierta. Cerrar la que está abierta exige dejar de emitir tokens y servir los
+// ficheros a través de un proxy autenticado — un cambio de mayor calado, con el
+// añadido de que las fotos de los inmuebles SÍ tienen que ser públicas para que
+// Idealista pueda descargarlas.
+// ─────────────────────────────────────────────────────────────────────────────
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
