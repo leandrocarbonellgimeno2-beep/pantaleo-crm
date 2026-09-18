@@ -1,28 +1,49 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase-admin';
+import { extractImageUrls } from '@/lib/imageUtils';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // 1. Obtiene los documentos
-    const snapshot = await db.collection('immobili').get();
-    
+    // Proyección a los campos que este informe usa de verdad. Antes traía los
+    // documentos COMPLETOS: ~877 inmuebles con sus arrays de imágenes, textos y
+    // documentación, para acabar leyendo tres cosas. Firestore cobra por
+    // documento leído igual, pero el ancho de banda y la memoria de la función
+    // caen muchísimo, que es lo que hacía lenta la descarga.
+    const snapshot = await db.collection('immobili')
+      .select(
+        '_status',
+        'GestioneCommerciale.Sospeso',
+        'DatiBase.Codice',
+        // Los seis campos donde pueden vivir las fotos, ver lib/imageUtils.
+        'images', 'Media.Immagini', 'Immagini', 'DatiBase.Foto', 'Media.Urls', 'thumbnail',
+      )
+      .get();
+
     // Lista para almacenar inmuebles filtrados mapeados
     const mappedItems: { codeNum: number; visualCode: string }[] = [];
 
     // 2. Filtra e itera sobre los documentos
     for (const doc of snapshot.docs) {
       const data = doc.data();
-      
+
+      // Nivel 0: fuera los que están en cola de borrado, como en todos los
+      // demás listados. Antes salían en el informe como si siguieran activos.
+      if (data._status === 'pendente_cancellazione') {
+        continue;
+      }
+
       // Nivel 1: Filtro de activas
       if (data.GestioneCommerciale?.Sospeso) {
         continue; // Ignorar suspendidas
       }
 
-      // Nivel 2: Filtro de sin imágenes (array inexistente o vacío)
-      const hasImages = data.images && Array.isArray(data.images) && data.images.length > 0;
-      if (hasImages) {
+      // Nivel 2: filtro de sin imágenes. Se usa extractImageUrls y no
+      // `data.images` a secas: había inmuebles migrados con las fotos solo en
+      // campos legacy que salían en el informe "Urgente: faltan fotos"
+      // teniéndolas.
+      if (extractImageUrls(data).length > 0) {
         continue; // Ignorar si tiene imágenes
       }
 

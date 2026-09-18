@@ -6,8 +6,17 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const limitParams = searchParams.get('limit'); 
-    const limitCount = limitParams ? parseInt(limitParams) : 50;
+    const limitParams = searchParams.get('limit');
+
+    // `parseInt` sin validar era un 500 y un full-scan a petición: ?limit=abc
+    // da NaN y ?limit=-1 un negativo, y Firestore lanza con ambos; ?limit=99999
+    // traía la colección entera. Se acota a un rango sensato.
+    const DEFAULT_LIMIT = 50;
+    const MAX_LIMIT = 200;
+    const parsed = limitParams ? Number.parseInt(limitParams, 10) : DEFAULT_LIMIT;
+    const limitCount = Number.isFinite(parsed) && parsed > 0
+      ? Math.min(parsed, MAX_LIMIT)
+      : DEFAULT_LIMIT;
 
     // List all richieste order by createdAt desc
     const snapshot = await db.collection('richieste')
