@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { signSession } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import { hashPassword, verifyPassword, burnPasswordTime } from '@/lib/password';
+import { normalizeRole } from '@/lib/roles';
+import { buscarUsuario, migrarUsuarioDesdeLegacy } from '@/lib/services/users';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +48,48 @@ async function safeCompare(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
+function emitirSesion(datos: { email: string; nome: string; ruolo: unknown }) {
+  // El rol se normaliza AL FIRMAR, no al leerlo, para que lo que viaje en la
+  // cookie sea siempre uno de los cuatro canonicos y requireRole no tenga que
+  // adivinar. normalizeRole deja ademas un aviso en los logs si el valor no se
+  // reconoce, que es como iremos descubriendo los roles reales.
+  return signSession({
+    email: datos.email,
+    nome: datos.nome,
+    ruolo: normalizeRole(datos.ruolo),
+  });
+}
+
+function respuestaConCookie(token: string, user: { email: string; nome: string; ruolo: string }) {
+  const response = NextResponse.json({ success: true, user });
+  response.cookies.set('pantaleo_session', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  return response;
+}
+
+/**
+ * Login con DOBLE LECTURA durante la migracion de contrasenas.
+ *
+ *   1. Se busca al usuario en la coleccion _users. Si esta, su hash manda y el
+ *      JSON ni se mira.
+ *   2. Si no esta, se valida contra AUTH_USERS_JSON como siempre y, si la
+ *      contrasena es correcta, se crea el registro en _users con el hash. El
+ *      usuario no percibe nada.
+ *   3. Cuando todo el mundo haya entrado una vez, se retira el paso 2 y se
+ *      borra la variable de entorno.
+ *
+ * EL ORDEN DE LOS FALLOS ES LO QUE EVITA UN BLOQUEO TOTAL. Si Firestore no
+ * responde, la busqueda devuelve 'error' y NO 'no existe', y entonces se
+ * degrada al JSON en vez de rechazar el login. Tratar los dos casos igual seria
+ * dejar a la agencia entera fuera el dia que Firestore tenga un mal minuto.
+ * Es una concesion consciente y temporal: mientras el JSON siga existiendo, es
+ * una fuente de credenciales tan valida como la otra.
+ */
 export async function POST(request: Request) {
   try {
     // Rate limit per-IP: 7 tentativi ogni 15 minuti. Previene brute-force
@@ -68,48 +113,87 @@ export async function POST(request: Request) {
       );
     }
 
-    const users = getUsers();
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: 'Servizio di autenticazione non configurato. Contattare l\'amministratore.' },
-        { status: 503 },
-      );
+    // ── 1. Fuente principal: _users ──────────────────────────────────────────
+    const busqueda = await buscarUsuario(email);
+
+    if (busqueda.estado === 'encontrado') {
+      const u = busqueda.usuario;
+
+      if (!(await verifyPassword(password, u.passwordHash))) {
+        // Ya migrado: aqui NO se cae al JSON. Si se cayera, cambiar la
+        // contrasena desde el panel no serviria de nada mientras la vieja
+        // siguiera en la variable de entorno.
+        return NextResponse.json({ error: 'Credenziali non valide. Riprova.' }, { status: 401 });
+      }
+
+      if (u.status === 'bloccato') {
+        console.warn('[Auth] login rechazado, usuario bloqueado:', u.email);
+        return NextResponse.json(
+          { error: 'Account disattivato. Contattare l\'amministratore.' },
+          { status: 403 },
+        );
+      }
+
+      const token = await emitirSesion({ email: u.email, nome: u.nome, ruolo: u.role });
+      return respuestaConCookie(token, { email: u.email, nome: u.nome, ruolo: u.role });
     }
 
-    const candidate = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-    // Always run safeCompare even if user not found (prevents timing-based user enumeration)
-    const sentPassword = password;
-    const storedPassword = candidate?.password ?? 'dummy-to-prevent-timing-leak';
-    const passwordMatch = await safeCompare(sentPassword, storedPassword);
+    // ── 2. Fallback: AUTH_USERS_JSON ─────────────────────────────────────────
+    // Se llega aqui tanto si el usuario no esta migrado como si Firestore no
+    // contesto.
+    const users = getUsers();
+    const candidate = users.find(u => u.email.toLowerCase() === String(email).toLowerCase());
+    const passwordMatch = candidate ? await safeCompare(password, candidate.password) : false;
 
     if (!candidate || !passwordMatch) {
-      return NextResponse.json(
-        { error: 'Credenziali non valide. Riprova.' },
-        { status: 401 },
-      );
+      // Iguala el coste con la rama de _users, que gasta un scrypt. Sin esto,
+      // un email que no existe responderia mucho antes que uno migrado con la
+      // contrasena mal, y esa diferencia se mide desde fuera.
+      await burnPasswordTime(password);
+
+      // El aviso de "no configurado" va AQUI y no antes de mirar nada. Si
+      // siguiera al principio, el dia que se borre AUTH_USERS_JSON nadie
+      // entraria aunque _users estuviese poblada.
+      if (users.length === 0) {
+        return NextResponse.json(
+          { error: 'Servizio di autenticazione non configurato. Contattare l\'amministratore.' },
+          { status: 503 },
+        );
+      }
+
+      return NextResponse.json({ error: 'Credenziali non valide. Riprova.' }, { status: 401 });
     }
 
-    const token = await signSession({
+    // ── 3. Migracion invisible ───────────────────────────────────────────────
+    // Solo si Firestore dijo explicitamente que el usuario NO existe. Si la
+    // busqueda fallo, no se escribe: no sabemos si ya hay un documento, y
+    // podriamos pisar un hash mas nuevo con la contrasena vieja del JSON.
+    if (busqueda.estado === 'no-existe') {
+      try {
+        const passwordHash = await hashPassword(candidate.password);
+        await migrarUsuarioDesdeLegacy({
+          email: candidate.email,
+          nome: candidate.nome,
+          ruolo: candidate.ruolo,
+          passwordHash,
+        });
+      } catch (e: any) {
+        // El usuario ya ha demostrado quien es: entra igual. La migracion se
+        // reintentara sola en el siguiente login.
+        console.error('[Auth] migracion a _users fallida (el login continua):', e?.message);
+      }
+    }
+
+    const token = await emitirSesion({
       email: candidate.email,
       nome: candidate.nome,
       ruolo: candidate.ruolo,
     });
-
-    const response = NextResponse.json({
-      success: true,
-      user: { email: candidate.email, nome: candidate.nome, ruolo: candidate.ruolo },
+    return respuestaConCookie(token, {
+      email: candidate.email,
+      nome: candidate.nome,
+      ruolo: normalizeRole(candidate.ruolo),
     });
-
-    response.cookies.set('pantaleo_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 * 7,
-    });
-
-    return response;
   } catch (error: any) {
     console.error('Login error:', error);
     return NextResponse.json(
