@@ -537,9 +537,20 @@ export function calculateMatch(richiesta: Richiesta, immobile: any): MatchResult
 
   // ── GATE 2: Caratteristiche obbligatorie (hard filter) ──────────
   // Solo le caratteristiche esplicitamente richieste (true) sono gate.
-  // Campi assenti → trattati come false (sicuro per doc legacy).
+  //
+  // Il gate si applica SOLO se il documento ha davvero la mappa
+  // Caratteristiche. La distinzione e fra due cose molto diverse:
+  //
+  //   - la mappa esiste e la chiave manca o e false → il dato SI conosce:
+  //     quella caratteristica non ce, ed escludere e corretto.
+  //   - la mappa non esiste affatto → il dato NON si conosce: nessuno ha
+  //     compilato la scheda. Escludere significa trattare "non lo so" come
+  //     "non ce l ha", e un immobile che magari ha ascensore e giardino
+  //     sparisce da OGNI matching in cui il cliente chieda una qualsiasi
+  //     caratteristica. Era il caso degli immobili importati.
   const carRichieste = richiesta.Caratteristiche;
-  if (carRichieste) {
+  const carConosciute = Object.keys(car).length > 0;
+  if (carRichieste && carConosciute) {
     for (const key of Object.keys(carRichieste)) {
       if (carRichieste[key] === true && !car[key]) return null;
     }
