@@ -7,6 +7,7 @@ import {
   FileText, CheckCircle2, Sparkles, Building2, MapPin, Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { listaDeRespuesta } from "@/lib/lista-respuesta";
 import { useDialog } from '@/hooks/useDialog';
 import SignaturePad from '@/components/ui/SignaturePad';
 
@@ -102,7 +103,7 @@ export default function IncaricoEsclusivaForm({ onClose, sezione, azione, initia
   const searchImmobili = useCallback(async (q: string) => {
     setISearch(q);
     if (q.length < 2) { setIResults([]); setIOpen(false); return; }
-    try { const r = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); const items = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []); setIResults(items); setIOpen(true); } catch { setIResults([]); }
+    try { const r = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); const items = listaDeRespuesta(d); setIResults(items); setIOpen(true); } catch { setIResults([]); }
   }, []);
 
   const selectImmobile = (i: any) => {

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { listaDeRespuesta } from "@/lib/lista-respuesta";
 import { useDialog } from "@/hooks/useDialog";
 import {
   X, Search, User, Home, Percent, ShieldCheck, Printer, Send, Save, Loader2,
@@ -106,7 +107,7 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
   const searchImmobili = useCallback(async (q: string) => {
     setISearch(q);
     if (q.length < 2) { setIResults([]); setIOpen(false); return; }
-    try { const r = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); const items = Array.isArray(d) ? d : (Array.isArray(d?.data) ? d.data : []); setIResults(items); setIOpen(true); } catch { setIResults([]); }
+    try { const r = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`); const d = await r.json(); const items = listaDeRespuesta(d); setIResults(items); setIOpen(true); } catch { setIResults([]); }
   }, []);
 
   const selectImmobile = (i: any) => {

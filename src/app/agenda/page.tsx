@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useDialog } from "@/hooks/useDialog";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { listaDeRespuesta } from "@/lib/lista-respuesta";
 import {
   format,
   addDays,
@@ -176,15 +178,27 @@ export default function AgendaPage() {
     if (q.length < 2) { setPersonResults([]); return; }
     const endpoint = profileMode === "cliente" ? "clienti" : "proprietari";
     const res = await fetch(`/api/${endpoint}?q=${encodeURIComponent(q)}&limit=5`);
-    const data = await res.json();
-    setPersonResults(Array.isArray(data) ? data : []);
+    setPersonResults(listaDeRespuesta(await res.json()));
   };
-  const searchImmobili = async (q: string) => {
+  // DOS fallos en cuatro lineas, y los dos invisibles desde la interfaz:
+  //
+  //  1. /api/immobili con `q` devuelve { data, totalCount }, no un array, asi
+  //     que el Array.isArray de antes era falso SIEMPRE y el desplegable se
+  //     rellenaba con []. Este buscador no encontraba nada, nunca.
+  //  2. Sin debounce, y como la busqueda por texto se resuelve en memoria, el
+  //     servidor escanea la coleccion entera: eran ~870 lecturas POR TECLA
+  //     para tirar el resultado a la basura.
+  //
+  // El de documentos ya iba con 300 ms; este era el unico de los seis sin el.
+  const fetchImmobili = useDebouncedCallback(async (q: string) => {
+    const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=5`);
+    setImmResults(listaDeRespuesta(await res.json()));
+  }, 300);
+
+  const searchImmobili = (q: string) => {
     setImmSearch(q);
     if (q.length < 2) { setImmResults([]); return; }
-    const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=5`);
-    const data = await res.json();
-    setImmResults(Array.isArray(data) ? data : []);
+    fetchImmobili(q);
   };
 
   // Reset person search when switching profile mode

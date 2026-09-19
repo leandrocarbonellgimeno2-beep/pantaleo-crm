@@ -7,6 +7,7 @@ import {
   Printer, Send, Save, Loader2, FileText, Sparkles, CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { listaDeRespuesta } from "@/lib/lista-respuesta";
 import { useDialog } from '@/hooks/useDialog';
 import SignaturePad from '@/components/ui/SignaturePad';
 
@@ -157,7 +158,7 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
     try {
       const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=6`);
       const json = await res.json();
-      const items = Array.isArray(json) ? json : (Array.isArray(json?.data) ? json.data : []);
+      const items = listaDeRespuesta(json);
       setImmobileResults(items);
       setShowImmobileDropdown(true);
     } catch { setImmobileResults([]); }

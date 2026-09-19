@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { useDialog } from "@/hooks/useDialog";
+import { listaDeRespuesta } from "@/lib/lista-respuesta";
 import dynamic from 'next/dynamic';
 import {
   FileText, Search, Plus, Printer, Download, Share2,
@@ -205,10 +206,12 @@ export default function DocumentiPage() {
     fetchPeople(q);
   };
 
+  // /api/immobili con `q` devuelve { data, totalCount }, no un array: el
+  // Array.isArray de antes era falso siempre y este desplegable no mostraba un
+  // solo inmueble. Se pagaban las lecturas y se tiraba el resultado.
   const fetchImmobili = useDebouncedCallback(async (q: string) => {
     const res = await fetch(`/api/immobili?q=${encodeURIComponent(q)}&limit=5`);
-    const data = await res.json();
-    setImmResults(Array.isArray(data) ? data : []);
+    setImmResults(listaDeRespuesta(await res.json()));
   }, 300);
 
   const searchImmobili = (q: string) => {
