@@ -3,24 +3,17 @@ import { db, admin } from '@/lib/firebase-admin';
 import { recountManyProprietari } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
 import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
+import { extraerRutaDeUrl } from '@/lib/storage-urls';
 
 export const dynamic = 'force-dynamic';
 
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 
-function extractStoragePath(url: string, bucketName: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname === 'storage.googleapis.com') {
-      return decodeURIComponent(u.pathname.replace(`/${bucketName}/`, '').split('?')[0]);
-    }
-    if (u.hostname === 'firebasestorage.googleapis.com') {
-      const part = u.pathname.split('/o/')[1];
-      return part ? decodeURIComponent(part.split('?')[0]) : null;
-    }
-    return null;
-  } catch { return null; }
-}
+// La lectura de rutas vive ahora en lib/storage-urls.ts y entiende tambien la
+// forma privada /api/files?path=. Es imprescindible aqui: esta funcion es la
+// que decide que fichero se borra del bucket al purgar un inmueble, y una URL
+// que no sepa leer deja el fichero huerfano para siempre.
+const extractStoragePath = extraerRutaDeUrl;
 
 export async function GET(request: Request) {
   // Esta ruta está exenta del middleware de sesión (el cron de Vercel llega sin
