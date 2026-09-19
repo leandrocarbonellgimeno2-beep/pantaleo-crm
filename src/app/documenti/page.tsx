@@ -513,10 +513,10 @@ export default function DocumentiPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                        <div className="flex items-center justify-end gap-2">
-                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" className="h-9 px-3 inline-flex items-center justify-center rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-emerald-600 border border-emerald-200 gap-1.5 text-xs font-bold" title="Scarica PDF">
+                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" className="h-11 md:h-9 px-3 inline-flex items-center justify-center rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-emerald-600 border border-emerald-200 gap-1.5 text-xs font-bold" title="Scarica PDF">
                             <Download className="h-3.5 w-3.5" /> Scarica
                           </a>
-                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri in nuova scheda">
+                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-11 w-11 md:h-9 md:w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri in nuova scheda">
                             <Eye className="h-4 w-4" />
                           </a>
                           {doc.categoria && FORM_TYPE_BY_CATEGORIA[doc.categoria as string] && (
@@ -623,7 +623,7 @@ export default function DocumentiPage() {
                           <button onClick={() => { setDocToCompile(doc); setShowCreator(false); setShowCompiler(true); }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors text-indigo-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200" aria-label="Compila il modello con i dati del cliente" title="🪄 Compila Smart">
                             <Wand2 className="h-4 w-4" />
                           </button>
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label="Apri o scarica il modello" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri / Scarica">
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label="Apri o scarica il modello" className="h-11 w-11 md:h-9 md:w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri / Scarica">
                             <Eye className="h-4 w-4" />
                           </a>
                           <button onClick={() => handleDelete(doc)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" aria-label="Elimina il modello" title="Elimina defintivamente">
@@ -661,7 +661,7 @@ export default function DocumentiPage() {
               <button
                 onClick={cerrarCreator}
                 aria-label="Chiudi"
-                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
+                className="h-11 w-11 md:h-10 md:w-10 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
                 disabled={uploading}
               >
                 <Plus className="h-5 w-5 rotate-45" />

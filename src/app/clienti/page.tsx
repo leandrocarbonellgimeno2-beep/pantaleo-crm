@@ -670,10 +670,10 @@ export default function ClientiPage() {
                  </div>
                </div>
                <div className="flex items-center gap-3">
-                 <button onClick={handlePrintPDF} className="h-10 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center gap-2 transition-colors text-sm font-bold border border-indigo-100" title="Stampa Scheda Incarico">
+                 <button onClick={handlePrintPDF} className="h-11 md:h-10 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center gap-2 transition-colors text-sm font-bold border border-indigo-100" title="Stampa Scheda Incarico">
                    <Printer className="h-4 w-4" /> Stampa Scheda
                  </button>
-                 <button onClick={handleCloseModal} aria-label="Chiudi scheda cliente" className="h-10 w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
+                 <button onClick={handleCloseModal} aria-label="Chiudi scheda cliente" className="h-11 w-11 md:h-10 md:w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
                    <X className="h-5 w-5" />
                  </button>
                </div>
@@ -1248,7 +1248,7 @@ export default function ClientiPage() {
                                    <span className="text-sm font-medium text-slate-700 truncate">{name.substring(name.indexOf('_') + 1)}</span>
                                  </div>
                                  <div className="flex gap-2 flex-shrink-0">
-                                   <a href={url} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-9 w-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
+                                   <a href={url} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-11 w-11 md:h-9 md:w-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
                                    <button onClick={() => handleDocDelete(url)} aria-label="Elimina documento" className="h-9 w-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 className="h-4 w-4" /></button>
                                  </div>
                                </div>

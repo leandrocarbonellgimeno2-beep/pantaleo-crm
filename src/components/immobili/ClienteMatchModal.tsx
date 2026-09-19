@@ -53,7 +53,7 @@ export function ClienteMatchModal({ cliente, onClose, onWhatsApp }: ClienteMatch
           <button
             onClick={onClose}
             aria-label="Chiudi scheda cliente"
-            className="h-9 w-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+            className="h-11 w-11 md:h-9 md:w-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -130,7 +130,7 @@ export function ClienteMatchModal({ cliente, onClose, onWhatsApp }: ClienteMatch
               href={`/clienti?id=${cliente.clienteId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="h-9 px-4 rounded-xl bg-violet-100 text-violet-700 text-sm font-bold flex items-center gap-2 hover:bg-violet-200 transition-colors"
+              className="h-11 md:h-9 px-4 rounded-xl bg-violet-100 text-violet-700 text-sm font-bold flex items-center gap-2 hover:bg-violet-200 transition-colors"
             >
               <ExternalLink className="h-4 w-4" /> Apri Profilo
             </a>

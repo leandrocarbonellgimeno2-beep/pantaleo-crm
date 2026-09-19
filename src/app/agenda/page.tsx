@@ -310,7 +310,7 @@ export default function AgendaPage() {
             <button
               onClick={handleSync}
               disabled={isSyncing}
-              className="h-10 px-4 inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors shadow-sm font-bold text-sm disabled:opacity-50"
+              className="h-11 md:h-10 px-4 inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors shadow-sm font-bold text-sm disabled:opacity-50"
             >
               {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
               {isSyncing ? "Sincronizzando..." : "Sincronizza Google"}

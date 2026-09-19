@@ -61,7 +61,7 @@ export function OwnerPropertiesModal({
               <p className="text-[11px] text-slate-400 font-medium">{properties.length} immobil{properties.length === 1 ? 'e' : 'i'} trovati</p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Chiudi elenco proprietà" className="h-9 w-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all shadow-sm">
+          <button onClick={onClose} aria-label="Chiudi elenco proprietà" className="h-11 w-11 md:h-9 md:w-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:border-slate-300 transition-all shadow-sm">
             <X className="h-4 w-4" />
           </button>
         </div>

@@ -160,7 +160,7 @@ export default function IncaricoAcquistoForm({ onClose, sezione, azione, initial
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Incarico per acquisto immobile — Immobiliare Pantaleo</p>
             </div>
           </div>
-          <button onClick={onClose} aria-label="Chiudi il modulo" className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} aria-label="Chiudi il modulo" className="h-11 w-11 md:h-10 md:w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
         </div>
       </div>
 

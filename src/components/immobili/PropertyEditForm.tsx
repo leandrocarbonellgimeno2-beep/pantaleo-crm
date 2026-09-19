@@ -435,7 +435,7 @@ export function PropertyEditForm({
               <option value="Disponibile">Disponibile</option>
               <option value="Da Richiedere">Da Richiedere</option>
            </select>
-           <label htmlFor="edit-file-planimetria" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+           <label htmlFor="edit-file-planimetria" className="w-full h-11 md:h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
               <UploadCloud className="h-3 w-3 mr-1.5" />
               {property.Documentazione?.UrlPlanimetria ? "Aggiorna File Planimetria" : "Carica File Planimetria"}
               <input id="edit-file-planimetria" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlPlanimetria')} />
@@ -456,7 +456,7 @@ export function PropertyEditForm({
               <option value="Disponibile">Disponibile</option>
               <option value="Da Richiedere">Da Richiedere</option>
            </select>
-           <label htmlFor="edit-file-atto" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+           <label htmlFor="edit-file-atto" className="w-full h-11 md:h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
               <UploadCloud className="h-3 w-3 mr-1.5" />
               {property.Documentazione?.UrlAttoImmobile ? "Aggiorna File Atto" : "Carica File Atto"}
               <input id="edit-file-atto" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAttoImmobile')} />
@@ -480,7 +480,7 @@ export function PropertyEditForm({
            </select>
            <div className="mt-auto">
              <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Vari</span>
-             <label htmlFor="edit-file-altri" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+             <label htmlFor="edit-file-altri" className="w-full h-11 md:h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
                 <UploadCloud className="h-3 w-3 mr-1.5" />
                 {property.Documentazione?.UrlAltriDocumenti ? "Aggiorna Altri Documenti" : "Altri Documenti"}
                 <input id="edit-file-altri" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAltriDocumenti')} />

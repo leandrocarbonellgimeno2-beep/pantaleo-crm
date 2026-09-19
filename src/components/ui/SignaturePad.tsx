@@ -127,7 +127,7 @@ export default function SignaturePadComponent({
             <button
               type="button"
               onClick={handleClear}
-              className="h-9 px-3 rounded-lg bg-red-100 text-red-600 text-[10px] font-black uppercase hover:bg-red-200 transition-colors flex items-center gap-1"
+              className="h-11 md:h-9 px-3 rounded-lg bg-red-100 text-red-600 text-[10px] font-black uppercase hover:bg-red-200 transition-colors flex items-center gap-1"
             >
               <Trash2 className="h-3 w-3" /> Cancella
             </button>

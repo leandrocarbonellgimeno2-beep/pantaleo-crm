@@ -74,7 +74,7 @@ export function PrintSelectorModal({
               Scegli da 1 a {MAX_PRINT_PHOTOS} foto. Selezionate: {selected.length}/{MAX_PRINT_PHOTOS}
             </p>
           </div>
-          <button onClick={onClose} aria-label="Chiudi selezione immagini" className="h-10 w-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center transition-colors">
+          <button onClick={onClose} aria-label="Chiudi selezione immagini" className="h-11 w-11 md:h-10 md:w-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
