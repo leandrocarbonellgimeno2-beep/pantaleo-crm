@@ -38,6 +38,11 @@ export function useImmobiliFilters() {
 
   // El input responde al instante; el filtrado espera 300 ms.
   const debouncedSearch = useDebounce(searchTerm, 300);
+  // El codigo TAMBIEN, y le faltaba. Entra en la clave de SWR igual que la
+  // busqueda de texto, asi que escribir «10047» disparaba cinco peticiones a
+  // /api/immobili y cuatro abortos del AbortController. El cuidado que se puso
+  // con searchTerm no se habia extendido aqui.
+  const debouncedCodice = useDebounce(advFilters.codice.trim(), 300);
 
   const {
     immobiliData,
@@ -49,7 +54,7 @@ export function useImmobiliFilters() {
     searchTerm: debouncedSearch,
     filterStato,
     filterType,
-    codice: advFilters.codice.trim(),
+    codice: debouncedCodice,
   });
 
   // true cuando cambió un filtro y SWR está trayendo datos nuevos mientras aún
