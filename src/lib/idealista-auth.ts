@@ -66,17 +66,44 @@ export async function getIdealistaToken(): Promise<string> {
  * Makes an authenticated request to the Idealista API with exponential backoff.
  *
  * Retry policy:
- *  - Retry su errori di rete (fetch throw) e su 5xx (errori server transienti)
- *  - NON ritentare su 4xx (errori client permanenti)
  *  - Max 3 tentativi totali con backoff 500ms → 1500ms → 4500ms
+ *  - NON ritentare su 4xx (errori client permanenti)
  *  - Su 429 (rate limit) usa Retry-After se presente, altrimenti backoff standard
+ *  - I 5xx e gli errori di rete si ritentano SOLO sui metodi idempotenti:
+ *    vedi la nota qui sotto, e la ragione per cui si duplicavano annunci.
  */
 const MAX_ATTEMPTS = 3;
 const BASE_BACKOFF_MS = 500;
 
-function shouldRetry(status: number): boolean {
+/**
+ * Metodi che si possono ripetere senza creare niente due volte.
+ *
+ * POST non e qui, ed e il punto di tutto questo. Su /v1/properties e
+ * /v1/contacts un POST CREA un annuncio o un contatto: ripeterlo crea un
+ * duplicato. PUT e DELETE invece descrivono uno stato finale, ripeterli
+ * porta allo stesso risultato.
+ */
+const METODI_IDEMPOTENTI = new Set(['GET', 'HEAD', 'PUT', 'DELETE', 'OPTIONS']);
+
+export function isIdempotentMethod(method: string | undefined): boolean {
+  return METODI_IDEMPOTENTI.has((method || 'GET').toUpperCase());
+}
+
+/**
+ * Decide se una risposta fallita si puo ritentare.
+ *
+ * 429 si ritenta SEMPRE, anche su POST: un rate limit significa che il
+ * server ha RIFIUTATO la richiesta senza elaborarla, quindi non ha creato
+ * niente e ripeterla e sicuro.
+ *
+ * 5xx su POST NON si ritenta, ed e la correzione. Un 502 o un 504 arrivano
+ * da un gateway e possono benissimo significare che il backend HA elaborato
+ * la richiesta e si e persa solo la risposta. Ritentare li raddoppiava
+ * annunci e contatti a pagamento.
+ */
+export function shouldRetryStatus(status: number, idempotente: boolean): boolean {
   if (status === 429) return true;
-  return status >= 500 && status < 600;
+  return idempotente && status >= 500 && status < 600;
 }
 
 async function sleep(ms: number) {
@@ -102,12 +129,22 @@ export async function idealistaFetch(
     headers['Content-Type'] = 'application/json';
   }
 
+  const idempotente = isIdempotentMethod(options.method as string | undefined);
+
   let lastError: any = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const res = await fetch(`${baseUrl}${path}`, { ...options, headers });
 
-      if (res.ok || !shouldRetry(res.status)) return res;
+      if (res.ok || !shouldRetryStatus(res.status, idempotente)) {
+        if (!res.ok && !idempotente && res.status >= 500) {
+          console.warn(
+            `[Idealista] ${path} → HTTP ${res.status} su metodo non idempotente: ` +
+            'NON si ritenta, la richiesta potrebbe essere gia stata elaborata',
+          );
+        }
+        return res;
+      }
 
       // Server error o rate limit → retry
       if (attempt < MAX_ATTEMPTS) {
@@ -122,11 +159,21 @@ export async function idealistaFetch(
       return res; // ultimo tentativo: ritorna la response anche se fallita
     } catch (err: any) {
       lastError = err;
-      if (attempt < MAX_ATTEMPTS) {
+      // Un errore di rete su POST e il caso piu insidioso: la richiesta puo
+      // essere arrivata e aver creato l annuncio senza che noi abbiamo mai
+      // visto la risposta. Ritentare qui era la fonte principale dei
+      // duplicati. Meglio un errore visibile che un annuncio pagato due volte.
+      if (attempt < MAX_ATTEMPTS && idempotente) {
         const backoff = BASE_BACKOFF_MS * Math.pow(3, attempt - 1);
         console.warn(`[Idealista] ${path} → network error "${err.message}", retry ${attempt}/${MAX_ATTEMPTS - 1} in ${backoff}ms`);
         await sleep(backoff);
         continue;
+      }
+      if (!idempotente) {
+        console.warn(
+          `[Idealista] ${path} → network error "${err.message}" su metodo non ` +
+          'idempotente: NON si ritenta',
+        );
       }
       throw err;
     }
