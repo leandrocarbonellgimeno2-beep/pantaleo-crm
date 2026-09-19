@@ -22,7 +22,15 @@ export async function GET(request: Request) {
       query = query.where('date', '>=', dateFrom).where('date', '<=', dateTo);
     }
 
-    const snapshot = await query.limit(limitCount).get();
+    // Ocho campos y el id. Hasta 500 documentos completos por cada cambio de
+    // mes en la agenda es lo que costaba antes.
+    const snapshot = await query
+      .select(
+        'clientName', 'propertyAddress', 'date', 'time',
+        'duration', 'tipo', 'status', 'googleEventLink',
+      )
+      .limit(limitCount)
+      .get();
     const data = snapshot.docs.map((doc: any) => ({
       id: doc.id,
       ...doc.data()

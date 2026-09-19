@@ -109,7 +109,9 @@ export async function GET(request: Request) {
     // Idempotente: si no hay cambios, no se escribe.
     if (expiredIds.size > 0) {
       try {
-        const clientiSnap = await db.collection('clienti').get();
+        // Solo se toca Matching: traer el padron completo para eso costaba
+        // 453 documentos con firmas y documentacion incluidas.
+        const clientiSnap = await db.collection('clienti').select('Matching').get();
         const matchingUpdates: Promise<any>[] = [];
         for (const c of clientiSnap.docs) {
           const m = c.data().Matching ?? {};

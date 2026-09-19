@@ -17,8 +17,33 @@ export async function POST(request: Request) {
     //    `where('Sospeso','==',false)` EXCLUYE todo doc sin el campo, ocultando
     //    inmuebles activos creados sin él. Ausente/false = activo. Los soft-deleted
     //    también se descartan en el loop.
+    // Traia los 806 documentos COMPLETOS, con los cuatro arrays de fotos
+    // legacy incluidos, para leer una veintena de campos. El ahorro es de
+    // Firestore a la lambda: el documento entero nunca salia al navegador.
+    //
+    // DOS COSAS QUE ES FACIL DEJARSE Y ROMPEN LA PANTALLA EN SILENCIO:
+    //  - `images` es de primer nivel y en la salida se llama mainImage. Sin el,
+    //    todas las tarjetas de matching pierden la foto.
+    //  - `Caratteristiche` va ENTERO, nunca por subcampos: smart-matching lo
+    //    recorre con car[clave] y la clave la elige el cliente en su peticion.
+    //    Proyectar subcampos sueltos haria desaparecer inmuebles de cualquier
+    //    busqueda que pidiera una caracteristica no proyectada.
     const snapshot = await db
       .collection('immobili')
+      .select(
+        'DatiBase.Codice', 'DatiBase.Zona', 'DatiBase.Tipologia',
+        'DatiBase.Citta', 'DatiBase.Indirizzo',
+        'GestioneCommerciale.InVendita', 'GestioneCommerciale.InAffitto',
+        'GestioneCommerciale.PrezzoVendita', 'GestioneCommerciale.PrezzoAffitto',
+        'GestioneCommerciale.Sospeso',
+        'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto',
+        'DettagliFisici.StatoFiniture', 'DettagliFisici.Bagni',
+        'DettagliFisici.Vani', 'DettagliFisici.Piano',
+        'Caratteristiche',
+        'Textos.Descrizione',
+        'images',
+        '_status',
+      )
       .limit(1000)
       .get();
 

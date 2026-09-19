@@ -25,8 +25,23 @@ export async function POST(request: Request) {
     // Hard cap: ~470 clienti oggi, 2000 lascia margine 4x prima di toccare
     // questo limite. Se viene superato significa che bisogna migrare a una query
     // pre-filtrata (es. solo clienti con Richiesta non vuota).
+    // Traia el padron entero completo, con firmas en base64 y documentacion,
+    // para leer siete raices. Richiesta va ENTERA por el mismo motivo que
+    // Caratteristiche en /api/match: se recorre con clave dinamica.
+    //
+    // Las tres variantes de fecha son las tres necesarias: el codigo hace
+    // dataCreazione || createdAt || DataCreazione, y hay documentos de cada
+    // epoca. Dejarse una pierde la fecha de parte del padron, y con ella el
+    // distintivo de cliente reciente y el desempate de la ordenacion.
     const snapshot = await db
       .collection('clienti')
+      .select(
+        'Richiesta',
+        'DatiPersonali',
+        'status',
+        '_status',
+        'dataCreazione', 'createdAt', 'DataCreazione',
+      )
       .limit(2000)
       .get();
     const allClients = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];

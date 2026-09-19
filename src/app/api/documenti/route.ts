@@ -7,7 +7,20 @@ const COLLECTION_NAME = 'documenti_template';
 
 export async function GET(request: Request) {
   try {
-    const snapshot = await db.collection(COLLECTION_NAME).orderBy('dataCreazione', 'desc').limit(200).get();
+    // OJO CON _status: el filtro de la linea siguiente lo compara. Si no entra
+    // en la proyeccion llega como undefined, la comparacion da cierto para
+    // todos y los documentos borrados en blando REAPARECEN en la lista.
+    const snapshot = await db.collection(COLLECTION_NAME)
+      .orderBy('dataCreazione', 'desc')
+      .select(
+        'titolo', 'categoria', 'url', 'dataCreazione', 'fileName', 'size',
+        '_status',
+        // El map hace { id: doc.id, ...doc.data() }: un campo `id` guardado
+        // pisa a doc.id. Se proyecta para no cambiar ese comportamiento.
+        'id',
+      )
+      .limit(200)
+      .get();
     // Esclude i soft-deleted per coerenza con immobili/clienti/proprietari.
     const data = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')

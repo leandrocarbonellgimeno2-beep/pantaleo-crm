@@ -121,15 +121,20 @@ export default function DashboardPage() {
     });
   });
 
+  // ESTOS CAMPOS ESTABAN MAL. Se leian ev.start.dateTime, ev.summary y
+  // ev.location, que es la forma CRUDA de Google Calendar y no existe en los
+  // documentos de Firestore: el importador los aplana a clientName,
+  // propertyAddress, date y time antes de guardarlos. El resultado es que
+  // este bloque lleva pintando "Appuntamento" y "Nessuna sede" en todas las
+  // filas desde siempre, sin dar ningun error.
   todayAppointments.slice(0, 2).forEach((ev: any) => {
-    const startTime = ev.start?.dateTime ? new Date(ev.start.dateTime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
     activityFeed.push({
       icon: CalendarDays,
       iconBg: 'bg-violet-100',
       iconColor: 'text-violet-600',
-      title: ev.summary || 'Appuntamento',
-      subtitle: ev.location || 'Nessuna sede',
-      time: startTime || 'Oggi',
+      title: ev.clientName || 'Appuntamento',
+      subtitle: ev.propertyAddress || 'Nessuna sede',
+      time: ev.time || 'Oggi',
     });
   });
 
@@ -389,20 +394,20 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-3 space-y-1">
                   {todayAppointments.map((ev, i) => {
-                    const startTime = ev.start?.dateTime
-                      ? new Date(ev.start.dateTime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
-                      : '';
+                    // Mismo arreglo que en el feed: la hora esta en `time`,
+                    // un string "HH:MM", no en un objeto de Google Calendar.
+                    const startTime = ev.time || '';
                     return (
                       <div key={ev.id || i} className="rounded-2xl px-4 py-3 flex items-center gap-3 hover:bg-violet-50/40 transition-colors">
                         <div className="text-xs font-black text-violet-600 bg-violet-50 px-2.5 py-1.5 rounded-xl border border-violet-100 flex-shrink-0 min-w-[48px] text-center">
                           {startTime || '—'}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-700 truncate">{ev.summary || 'Senza titolo'}</p>
-                          {ev.location && (
+                          <p className="text-sm font-semibold text-slate-700 truncate">{ev.clientName || 'Senza titolo'}</p>
+                          {ev.propertyAddress && (
                             <p className="text-[11px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
                               <MapPin className="h-3 w-3 flex-shrink-0" />
-                              {ev.location}
+                              {ev.propertyAddress}
                             </p>
                           )}
                         </div>

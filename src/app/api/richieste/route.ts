@@ -19,8 +19,12 @@ export async function GET(request: Request) {
       : DEFAULT_LIMIT;
 
     // List all richieste order by createdAt desc
+    // NOTA: esta ruta no tiene hoy ningun consumidor en el repositorio; su
+    // ultimo llamador era el dashboard viejo. Se proyecta igualmente por
+    // coherencia, pero es candidata a eliminarse.
     const snapshot = await db.collection('richieste')
       .orderBy('createdAt', 'desc')
+      .select('nome', 'cognome', 'telefono', 'immobileCodice', 'createdAt')
       .limit(limitCount)
       .get();
       

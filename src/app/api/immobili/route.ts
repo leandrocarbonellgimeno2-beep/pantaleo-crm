@@ -52,7 +52,20 @@ export async function GET(request: Request) {
 
     // 2. Fetch by Owner
     if (proprietarioId) {
-      const snapshot = await db.collection('immobili').where('proprietarioId', '==', proprietarioId).get();
+      // Traia documentos COMPLETOS y sin tope. Lo unico que se pinta con esto es
+      // el modal "otros inmuebles del propietario", y al elegir uno se recarga
+      // la ficha entera por id, asi que un documento parcial basta de sobra.
+      const snapshot = await db.collection('immobili')
+        .where('proprietarioId', '==', proprietarioId)
+        .select(
+          'DatiBase.Codice', 'DatiBase.Tipologia', 'DatiBase.Citta', 'DatiBase.Zona',
+          'GestioneCommerciale.InVendita', 'GestioneCommerciale.InAffitto',
+          'GestioneCommerciale.PrezzoVendita', 'GestioneCommerciale.PrezzoAffitto',
+          'DettagliFisici.MetriCommerciali',
+          'images', '_status',
+        )
+        .limit(100)
+        .get();
       return NextResponse.json(
         snapshot.docs
           .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
@@ -95,6 +108,18 @@ export async function GET(request: Request) {
         'DettagliFisici.MetriCommerciali', 'DettagliFisici.CamereLetto', 'DettagliFisici.Bagni', 'DettagliFisici.Vani',
         'images', '_status', 'proprietarioId', 'createdAt',
         'Idealista.idealistaStatus',
+
+        // ESTOS CUATRO FALTABAN, y no es una mejora futura: es un fallo vivo.
+        // applyAdvancedFilters (lib/immobili/filters.ts) los lee para filtrar por
+        // piano, clase energetica, estado y caracteristicas. Al no venir en la
+        // proyeccion llegaban como undefined, y el filtro no fallaba: devolvia
+        // CERO resultados en silencio. Son doce filtros avanzados que hoy no
+        // encuentran nada.
+        'DettagliFisici.Piano',
+        'DettagliFisici.ClasseEnergetica',
+        'DettagliFisici.StatoFiniture',
+        // El mapa ENTERO, no por subcampos: se recorre con clave dinamica.
+        'Caratteristiche',
       )
       .limit(scanLimit)
       .get();
