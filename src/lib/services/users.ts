@@ -257,3 +257,110 @@ export async function crearUsuario(params: {
   const { passwordHash: _omitido, ...publico } = doc;
   return { ok: true, usuario: { id: userDocId(params.email), ...publico } };
 }
+
+// ── Modificacion de usuarios ─────────────────────────────────────────────────
+
+export interface CambiosUsuario {
+  role?: Role;
+  status?: 'attivo' | 'bloccato';
+  passwordHash?: string;
+  mustResetPassword?: boolean;
+}
+
+export type ResultadoEdicion =
+  | { ok: true; usuario: UserPublic }
+  | { ok: false; motivo: 'no-existe' };
+
+/**
+ * Cuenta los propietarios activos.
+ *
+ * Existe para una sola cosa: impedir que se quede la agencia sin nadie que
+ * pueda administrar. Degradar o bloquear al ultimo propietario deja el panel
+ * inaccesible para todos, y recuperarlo exigiria editar Firestore a mano.
+ *
+ * Son dos filtros de igualdad sin orderBy, asi que Firestore los resuelve
+ * fusionando indices automaticos: no hace falta declarar ninguno.
+ */
+export async function contarPropietariosActivos(): Promise<number> {
+  const { db } = await import('@/lib/firebase-admin');
+  const snap = await db
+    .collection(COLLECTION)
+    .where('role', '==', 'propietario')
+    .where('status', '==', 'attivo')
+    .count()
+    .get();
+  return snap.data().count;
+}
+
+/**
+ * Aplica cambios a un usuario.
+ *
+ * SUBE tokenVersion cuando cambia el rol, el estado o la contrasena. Ese
+ * numero es lo que permite invalidar una sesion ya emitida: la cookie lleva
+ * dentro el rol y dura ocho horas, asi que sin esto degradar a alguien no
+ * tendria efecto hasta que su sesion caducara.
+ *
+ * Va en una transaccion para que el incremento no se pierda si dos
+ * administradores tocan al mismo usuario a la vez.
+ */
+export async function actualizarUsuario(
+  email: string,
+  cambios: CambiosUsuario,
+): Promise<ResultadoEdicion> {
+  const { db } = await import('@/lib/firebase-admin');
+  const ref = db.collection(COLLECTION).doc(userDocId(email));
+
+  const invalidaSesion =
+    cambios.role !== undefined ||
+    cambios.status !== undefined ||
+    cambios.passwordHash !== undefined;
+
+  const actualizado = await db.runTransaction(async (tx: any) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) return null;
+
+    const actual = snap.data();
+    const nuevo: any = { updatedAt: Date.now() };
+
+    if (cambios.role !== undefined) nuevo.role = cambios.role;
+    if (cambios.status !== undefined) nuevo.status = cambios.status;
+    if (cambios.passwordHash !== undefined) nuevo.passwordHash = cambios.passwordHash;
+    if (cambios.mustResetPassword !== undefined) nuevo.mustResetPassword = cambios.mustResetPassword;
+
+    if (invalidaSesion) {
+      const version = typeof actual.tokenVersion === 'number' ? actual.tokenVersion : 1;
+      nuevo.tokenVersion = version + 1;
+    }
+
+    tx.update(ref, nuevo);
+    return { ...actual, ...nuevo };
+  });
+
+  if (!actualizado) return { ok: false, motivo: 'no-existe' };
+  return { ok: true, usuario: aPublico(userDocId(email), actualizado) };
+}
+
+/** Lee un usuario sin la semantica de tres estados del login. Null si no esta. */
+export async function obtenerUsuario(email: string): Promise<UserPublic | null> {
+  const { db } = await import('@/lib/firebase-admin');
+  const snap = await db.collection(COLLECTION).doc(userDocId(email)).get();
+  return snap.exists ? aPublico(snap.id, snap.data()) : null;
+}
+
+/** Comprueba la contrasena actual. Devuelve el hash guardado o null. */
+export async function hashActualDe(email: string): Promise<string | null> {
+  const r = await buscarUsuario(email);
+  return r.estado === 'encontrado' ? r.usuario.passwordHash : null;
+}
+
+export type ValidacionPassword = { ok: true; password: string } | { ok: false; error: string };
+
+/** Misma regla de longitud que en el alta, reutilizable desde varias rutas. */
+export function validarPassword(raw: unknown): ValidacionPassword {
+  const password = typeof raw === 'string' ? raw : '';
+  if (password.length < PASSWORD_MIN) {
+    return { ok: false, error: `La password deve avere almeno ${PASSWORD_MIN} caratteri` };
+  }
+  if (password.length > 200) return { ok: false, error: 'Password troppo lunga' };
+  return { ok: true, password };
+}

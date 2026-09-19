@@ -5,7 +5,9 @@
  *
  * El acceso lo decide el middleware, que redirige a la portada a cualquiera
  * por debajo de secretaria. Lo de aqui es la experiencia, no la barrera: el
- * backend vuelve a comprobarlo todo en /api/admin/users.
+ * backend vuelve a comprobarlo todo en /api/admin/users, incluidas las cuatro
+ * salvaguardas (no tocar propietarios sin serlo, no degradarse a uno mismo, no
+ * dejar la agencia sin propietarios, y no bloquearse solo).
  */
 
 import { useState } from "react";
@@ -21,6 +23,9 @@ import {
   ClipboardList,
   Briefcase,
   Eye,
+  KeyRound,
+  Ban,
+  CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasAtLeast, ROLES, type Role } from "@/lib/roles";
@@ -31,13 +36,13 @@ interface UsuarioFila {
   nome: string;
   role: Role;
   status: "attivo" | "bloccato";
+  mustResetPassword: boolean;
   createdAt: number;
   createdBy: string;
 }
 
 const PASSWORD_MIN = 10;
 
-// Etiqueta y aspecto de cada rol. El orden es el de la jerarquia.
 const ROL_INFO: Record<Role, { etiqueta: string; descripcion: string; icon: React.ElementType; clase: string }> = {
   propietario: {
     etiqueta: "Propietario",
@@ -74,9 +79,13 @@ const jsonFetcher = async (url: string) => {
 const formatearFecha = (ms: number) =>
   ms ? new Date(ms).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
+const campoClase =
+  "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+
 export default function AdminPage() {
   const { user } = useAuth();
   const esPropietario = hasAtLeast(user?.ruolo, "propietario");
+  const miEmail = (user?.email ?? "").trim().toLowerCase();
 
   const { data, isLoading, error, mutate } = useSWR<{ data: UsuarioFila[] }>(
     "/api/admin/users",
@@ -87,17 +96,43 @@ export default function AdminPage() {
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [form, setForm] = useState({ nome: "", email: "", password: "", role: "vendedor" as Role });
+  const [ocupado, setOcupado] = useState<string | null>(null);
+  const [reset, setReset] = useState<{ email: string; password: string } | null>(null);
+  const [miPassword, setMiPassword] = useState({ actual: "", nueva: "" });
+  const [cambiandoMia, setCambiandoMia] = useState(false);
 
   const usuarios = data?.data ?? [];
 
-  // Un propietario puede crear cualquier rol; una secretaria, todos menos
-  // propietario. Es el espejo de la regla que aplica el backend: aqui solo se
-  // evita ofrecer una opcion que acabaria en un 403.
   const rolesDisponibles = (ROLES as readonly Role[]).filter(
     (r) => r !== "propietario" || esPropietario,
   );
 
-  const enviar = async (e: React.FormEvent) => {
+  /** Llama al PATCH y refresca. Centraliza el manejo de errores del servidor. */
+  const modificar = async (email: string, cambios: Record<string, unknown>, exito: string) => {
+    setOcupado(email);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, ...cambios }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(body?.error || "Operazione non riuscita.");
+        return false;
+      }
+      toast.success(exito);
+      mutate();
+      return true;
+    } catch {
+      toast.error("Errore di rete. Riprova.");
+      return false;
+    } finally {
+      setOcupado(null);
+    }
+  };
+
+  const crear = async (e: React.FormEvent) => {
     e.preventDefault();
     setGuardando(true);
     try {
@@ -107,12 +142,10 @@ export default function AdminPage() {
         body: JSON.stringify(form),
       });
       const body = await res.json().catch(() => ({}));
-
       if (!res.ok) {
         toast.error(body?.error || "Impossibile creare l'utente.");
         return;
       }
-
       toast.success(`Utente ${form.email} creato.`);
       setForm({ nome: "", email: "", password: "", role: "vendedor" });
       setAbierto(false);
@@ -121,6 +154,32 @@ export default function AdminPage() {
       toast.error("Errore di rete. Riprova.");
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const cambiarMiPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCambiandoMia(true);
+    try {
+      const res = await fetch("/api/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          passwordActual: miPassword.actual,
+          nuevaPassword: miPassword.nueva,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(body?.error || "Impossibile cambiare la password.");
+        return;
+      }
+      toast.success("Password aggiornata.");
+      setMiPassword({ actual: "", nueva: "" });
+    } catch {
+      toast.error("Errore di rete. Riprova.");
+    } finally {
+      setCambiandoMia(false);
     }
   };
 
@@ -205,11 +264,25 @@ export default function AdminPage() {
         <div className="divide-y divide-slate-100">
           {usuarios.map((u) => {
             const info = ROL_INFO[u.role] ?? ROL_INFO.agente;
+            const esYo = u.email.trim().toLowerCase() === miEmail;
+            // Espejo de lo que aplica el backend: la secretaria no toca a un
+            // propietario, y nadie se degrada ni se bloquea a si mismo.
+            const puedeEditar = (u.role !== "propietario" || esPropietario) && !esYo;
+            const trabajando = ocupado === u.email;
+
             return (
-              <div key={u.id} className="px-6 py-4 flex flex-wrap items-center gap-x-4 gap-y-2 hover:bg-slate-50/60 transition-colors">
-                <div className="min-w-0 flex-1">
+              <div
+                key={u.id}
+                className="px-6 py-4 flex flex-wrap items-center gap-x-4 gap-y-3 hover:bg-slate-50/60 transition-colors"
+              >
+                <div className="min-w-0 flex-1 basis-56">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-slate-800 truncate">{u.nome || "—"}</span>
+                    {esYo && (
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-200">
+                        Tu
+                      </span>
+                    )}
                     {u.status === "bloccato" && (
                       <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-50 text-rose-600 border border-rose-200">
                         Disattivato
@@ -220,16 +293,82 @@ export default function AdminPage() {
                     <Mail className="h-3 w-3 flex-shrink-0" />
                     {u.email}
                   </p>
+                  <p className="text-[11px] text-slate-300 font-medium mt-0.5">
+                    Creato il {formatearFecha(u.createdAt)}
+                    {u.createdBy ? ` da ${u.createdBy}` : ""}
+                  </p>
                 </div>
 
-                <span className={`inline-flex items-center gap-1.5 text-[11px] font-black px-2.5 py-1 rounded-lg border ${info.clase}`}>
-                  <info.icon className="h-3 w-3" />
-                  {info.etiqueta}
-                </span>
+                {/* Rol: select si se puede editar, insignia si no */}
+                {puedeEditar ? (
+                  <div className="flex items-center gap-2">
+                    <label htmlFor={`role-${u.id}`} className="sr-only">
+                      Ruolo di {u.email}
+                    </label>
+                    <select
+                      id={`role-${u.id}`}
+                      value={u.role}
+                      disabled={trabajando}
+                      onChange={(e) =>
+                        modificar(u.email, { role: e.target.value }, `Ruolo di ${u.email} aggiornato.`)
+                      }
+                      className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white disabled:opacity-50"
+                    >
+                      {rolesDisponibles.map((r) => (
+                        <option key={r} value={r}>
+                          {ROL_INFO[r].etiqueta}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-black px-2.5 py-1 rounded-lg border ${info.clase}`}
+                    title={esYo ? "Non puoi cambiare il tuo stesso ruolo" : undefined}
+                  >
+                    <info.icon className="h-3 w-3" />
+                    {info.etiqueta}
+                  </span>
+                )}
 
-                <div className="text-right text-[11px] text-slate-400 font-medium w-full sm:w-auto">
-                  <p>Creato il {formatearFecha(u.createdAt)}</p>
-                  {u.createdBy && <p className="truncate">da {u.createdBy}</p>}
+                {/* Acciones */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setReset({ email: u.email, password: "" })}
+                    disabled={!puedeEditar || trabajando}
+                    title="Imposta una nuova password"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Password
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      modificar(
+                        u.email,
+                        { status: u.status === "attivo" ? "bloccato" : "attivo" },
+                        u.status === "attivo"
+                          ? `${u.email} disattivato.`
+                          : `${u.email} riattivato.`,
+                      )
+                    }
+                    disabled={!puedeEditar || trabajando}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                      u.status === "attivo"
+                        ? "border-rose-200 text-rose-600 hover:bg-rose-50"
+                        : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                  >
+                    {trabajando ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : u.status === "attivo" ? (
+                      <Ban className="h-3.5 w-3.5" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    )}
+                    {u.status === "attivo" ? "Disattiva" : "Riattiva"}
+                  </button>
                 </div>
               </div>
             );
@@ -237,7 +376,56 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* ── Alta ── */}
+      {/* ── Mi cuenta ── */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100/80">
+          <h2 className="font-bold text-slate-800">La mia password</h2>
+          <p className="text-xs text-slate-400 font-medium mt-0.5">
+            Cambia la password del tuo account: {user?.email}
+          </p>
+        </div>
+        <form onSubmit={cambiarMiPassword} className="p-6 grid gap-4 sm:grid-cols-3 sm:items-end">
+          <div>
+            <label htmlFor="pwd-actual" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
+              Password attuale
+            </label>
+            <input
+              id="pwd-actual"
+              type="password"
+              required
+              autoComplete="current-password"
+              value={miPassword.actual}
+              onChange={(e) => setMiPassword({ ...miPassword, actual: e.target.value })}
+              className={campoClase}
+            />
+          </div>
+          <div>
+            <label htmlFor="pwd-nueva" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
+              Nuova password
+            </label>
+            <input
+              id="pwd-nueva"
+              type="password"
+              required
+              minLength={PASSWORD_MIN}
+              autoComplete="new-password"
+              value={miPassword.nueva}
+              onChange={(e) => setMiPassword({ ...miPassword, nueva: e.target.value })}
+              className={campoClase}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={cambiandoMia}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-900 disabled:opacity-60"
+          >
+            {cambiandoMia && <Loader2 className="h-4 w-4 animate-spin" />}
+            Aggiorna
+          </button>
+        </form>
+      </div>
+
+      {/* ── Modal: nuevo usuario ── */}
       {abierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -252,7 +440,7 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <form onSubmit={enviar} className="p-6 space-y-4">
+            <form onSubmit={crear} className="p-6 space-y-4">
               <div>
                 <label htmlFor="nuevo-nome" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
                   Nome
@@ -264,7 +452,7 @@ export default function AdminPage() {
                   maxLength={120}
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  className={campoClase}
                 />
               </div>
 
@@ -279,7 +467,7 @@ export default function AdminPage() {
                   autoComplete="off"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  className={campoClase}
                 />
               </div>
 
@@ -295,11 +483,11 @@ export default function AdminPage() {
                   autoComplete="new-password"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                  className={`${campoClase} font-mono`}
                 />
                 {/* Visible a proposito: quien da de alta tiene que poder leerla
-                    para comunicarsela a la persona. El campo se envia una sola
-                    vez y despues solo queda el hash. */}
+                    para comunicarsela a la persona. Se envia una sola vez y
+                    despues solo queda el hash. */}
                 <p className="text-[11px] text-slate-400 mt-1.5 font-medium">
                   Minimo {PASSWORD_MIN} caratteri. Comunicala all&apos;utente: non sarà più visibile.
                 </p>
@@ -313,7 +501,7 @@ export default function AdminPage() {
                   id="nuevo-role"
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value as Role })}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 bg-white"
+                  className={`${campoClase} bg-white`}
                 >
                   {rolesDisponibles.map((r) => (
                     <option key={r} value={r}>
@@ -343,6 +531,76 @@ export default function AdminPage() {
                 >
                   {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
                   {guardando ? "Creazione..." : "Crea utente"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: nueva contrasena para otro usuario ── */}
+      {reset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+              <h2 className="font-black text-slate-800 text-lg">Nuova password</h2>
+              <button
+                onClick={() => setReset(null)}
+                aria-label="Chiudi"
+                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const ok = await modificar(
+                  reset.email,
+                  { password: reset.password },
+                  `Password di ${reset.email} aggiornata.`,
+                );
+                if (ok) setReset(null);
+              }}
+              className="p-6 space-y-4"
+            >
+              <p className="text-sm text-slate-500 font-medium">
+                Stai impostando una nuova password per <strong className="text-slate-700">{reset.email}</strong>.
+                La sua sessione attuale verrà chiusa.
+              </p>
+              <div>
+                <label htmlFor="reset-password" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
+                  Password
+                </label>
+                <input
+                  id="reset-password"
+                  type="text"
+                  required
+                  minLength={PASSWORD_MIN}
+                  autoComplete="new-password"
+                  value={reset.password}
+                  onChange={(e) => setReset({ ...reset, password: e.target.value })}
+                  className={`${campoClase} font-mono`}
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5 font-medium">
+                  Minimo {PASSWORD_MIN} caratteri. Comunicala all&apos;utente: non sarà più visibile.
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReset(null)}
+                  className="flex-1 rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  disabled={ocupado === reset.email}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-indigo-500/25 transition-all hover:bg-indigo-700 disabled:opacity-60"
+                >
+                  {ocupado === reset.email && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Imposta
                 </button>
               </div>
             </form>
