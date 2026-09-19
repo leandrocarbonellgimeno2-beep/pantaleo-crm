@@ -13,8 +13,11 @@ import {
   ChevronRight,
   Loader2,
   CalendarDays,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasAtLeast } from "@/lib/roles";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -25,11 +28,21 @@ const navigation = [
   { name: "Documenti", href: "/documenti", icon: FileText },
 ];
 
+// Solo para secretaria y propietario. Es comodidad, no seguridad: quien
+// escriba /admin a mano se topa igualmente con el middleware, que es donde
+// se decide de verdad. Aqui solo se evita ensenar una puerta que no abre.
+const adminItem = { name: "Admin", href: "/admin", icon: ShieldCheck };
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const { user } = useAuth();
+
+  const items = hasAtLeast(user?.ruolo, "secretaria")
+    ? [...navigation, adminItem]
+    : navigation;
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -80,7 +93,7 @@ export default function Sidebar() {
 
         {/* ── Navigation ── */}
         <nav className="flex-1 px-3 py-4 space-y-1.5">
-          {navigation.map((item) => {
+          {items.map((item) => {
             const isActive = item.href === "/"
               ? pathname === "/"
               : pathname.startsWith(item.href);
@@ -151,7 +164,7 @@ export default function Sidebar() {
 
       {/* ═══ MOBILE BOTTOM NAVIGATION (below md) ═══ */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 flex items-center justify-around px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        {navigation.map((item) => {
+        {items.map((item) => {
           const isActive = item.href === "/"
             ? pathname === "/"
             : pathname.startsWith(item.href);
