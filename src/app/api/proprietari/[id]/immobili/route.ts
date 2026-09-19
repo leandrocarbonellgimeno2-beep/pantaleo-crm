@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db, admin } from '@/lib/firebase-admin';
+import { belongsToProprietario } from '@/lib/ownership';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -124,6 +125,21 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
 
     if (!propDoc.exists) {
       return NextResponse.json({ error: 'Immobile non trovato' }, { status: 404 });
+    }
+
+    // Comprobacion de pertenencia. Sin ella, un DELETE contra
+    // /api/proprietari/A/immobili con el propertyId de B desvinculaba el
+    // inmueble de su dueno real (borra proprietarioId y proprietarioId_real)
+    // y ademas descuadraba los contadores de los DOS propietarios: restaba
+    // uno a A, que no tenia ese inmueble, y dejaba intacto el de B, que se
+    // quedaba contando uno que ya no le apunta.
+    if (!belongsToProprietario(propDoc.data() as any, clientId)) {
+      // 404 en vez de 403: el mensaje no confirma de quien es el inmueble, y
+      // "no encontrado PARA ESTE propietario" es literalmente cierto.
+      return NextResponse.json(
+        { error: 'Immobile non trovato per questo proprietario' },
+        { status: 404 },
+      );
     }
 
     const batch = db.batch();
