@@ -1,4 +1,6 @@
 // Web Crypto API session utilities — compatible with both Edge (middleware) and Node.js runtimes.
+import { hasAtLeast, type Role } from './roles';
+
 // Uses HMAC-SHA256 to sign and verify session tokens, preventing cookie forgery.
 
 export interface SessionPayload {
@@ -110,5 +112,33 @@ export async function requireAuth(cookieHeader: string | null | undefined): Prom
   if (!token) throw new AuthError(401, 'Unauthorized');
   const payload = await verifySession(token);
   if (!payload) throw new AuthError(401, 'Invalid or expired session');
+  return payload;
+}
+
+/**
+ * Como requireAuth, pero ademas exige un nivel minimo de rol.
+ *
+ * Se compara por NIVEL y no por lista de roles: una ruta declara el minimo
+ * que necesita y cualquiera por encima pasa. Escribir listas en cada ruta es
+ * la forma segura de que alguien se deje un rol fuera y rompa algo.
+ *
+ * Va aqui y no en un modulo aparte porque es la extension natural de
+ * requireAuth, que ya existia y solo usaba backup-db, y porque AuthError ya
+ * estaba disenada para llevar el codigo HTTP.
+ *
+ * Esta comprobacion vive en las RUTAS, no en el middleware, y no es un
+ * capricho: el middleware corre en Edge, donde firebase-admin no funciona,
+ * asi que alli no se puede consultar nada de la base de datos.
+ *
+ * Uso:  const sesion = await requireRole(request, 'admin');
+ */
+export async function requireRole(
+  request: Request,
+  minimo: Role,
+): Promise<SessionPayload> {
+  const payload = await requireAuth(request.headers.get('cookie'));
+  if (!hasAtLeast(payload.ruolo, minimo)) {
+    throw new AuthError(403, 'Permessi insufficienti');
+  }
   return payload;
 }
