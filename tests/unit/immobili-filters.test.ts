@@ -4,6 +4,7 @@ import {
   countActiveFilters,
   createEmptyAdvFilters,
   NON_RESIDENTIAL_TYPES,
+  ZONA_SIN_ASIGNAR,
 } from '@/lib/immobili/filters';
 
 const base = createEmptyAdvFilters;
@@ -74,6 +75,40 @@ describe('applyAdvancedFilters', () => {
   it('la clase energetica SI es un vocabulario cerrado y sigue siendo exacta', () => {
     expect(ids(applyAdvancedFilters(immobili, { ...base(), classeEnergetica: 'A' }))).toEqual(['a']);
     expect(ids(applyAdvancedFilters(immobili, { ...base(), classeEnergetica: 'G' }))).toEqual([]);
+  });
+
+  it('la opcion «sin zona» encuentra los que no la tienen', () => {
+    // Antes esta opcion valia la cadena literal «Nessuna Zona» y el filtro la
+    // comparaba por SUBCADENA contra DatiBase.Zona. Como ningun inmueble tiene
+    // una zona que contenga ese texto, devolvia CERO resultados SIEMPRE, y los
+    // 11 inmuebles sin zona de la base no se podian encontrar por ninguna via.
+    const conYSin = [
+      { id: 'con', DatiBase: { Zona: 'Centro' } },
+      { id: 'vacia', DatiBase: { Zona: '' } },
+      { id: 'espacios', DatiBase: { Zona: '   ' } },
+      { id: 'ausente', DatiBase: {} },
+    ];
+    expect(ids(applyAdvancedFilters(conYSin, { ...base(), zona: ZONA_SIN_ASIGNAR })))
+      .toEqual(['vacia', 'espacios', 'ausente']);
+  });
+
+  it('el centinela no puede confundirse con una zona de verdad', () => {
+    const trampa = [{ id: 'x', DatiBase: { Zona: 'Nessuna Zona' } }];
+    // Una zona que se llamara literalmente asi NO se cuela en «sin zona».
+    expect(ids(applyAdvancedFilters(trampa, { ...base(), zona: ZONA_SIN_ASIGNAR }))).toEqual([]);
+    // Y se sigue encontrando por su nombre, como cualquier otra.
+    expect(ids(applyAdvancedFilters(trampa, { ...base(), zona: 'Nessuna Zona' }))).toEqual(['x']);
+  });
+
+  it('la zona sigue casando por subcadena y sin acentos', () => {
+    // Los valores reales son «Rif. A1 Centro Storico», «Rif. A2 Centro»,
+    // «Marsala Centro»... Buscar «Centro» tiene que encontrarlos todos.
+    const reales = [
+      { id: 'a', DatiBase: { Zona: 'Rif. A1 Centro Storico' } },
+      { id: 'b', DatiBase: { Zona: 'Marsala Centro' } },
+      { id: 'c', DatiBase: { Zona: 'Periferia' } },
+    ];
+    expect(ids(applyAdvancedFilters(reales, { ...base(), zona: 'Centro' }))).toEqual(['a', 'b']);
   });
 
   it('un inmueble en varias plantas aparece en todas', () => {

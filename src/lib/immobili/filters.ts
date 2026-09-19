@@ -8,6 +8,38 @@
  *
  * OJO: `codice` y `proprietario` NO se aplican en cliente. Viajan a la API
  * como parte de la consulta; se cuentan como activos, pero no filtran aquí.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * AUDITORÍA CONTRA LOS 870 INMUEBLES REALES (2026-09-20)
+ *
+ * Se midió cada filtro contra producción en vez de suponer. La herramienta es
+ * `scripts/auditar-filtros.cjs`, que solo lee y se puede relanzar.
+ *
+ *   tipologia ........ SANO. El desplegable cubre los 10 valores que existen.
+ *   provincia ........ SANO. Compara por subcadena normalizada contra Citta,
+ *                      así que absorbe los 53 «MARSALA» y los 3 «marsala».
+ *   zona ............. SANO, 857 de 859 alcanzables. Los dos huérfanos son
+ *                      «Zona Tribunale» y «Stadio». Su opción «sin zona» SÍ
+ *                      estaba rota: ver ZONA_SIN_ASIGNAR más abajo.
+ *   prezzo min/max ... SANOS. Se temía que `Number()` devolviera NaN sobre
+ *                      precios guardados como texto: son 337 y 394 cadenas,
+ *                      y las dos listas dan CERO NaN.
+ *   camere, bagni,
+ *   superficie ....... SANOS, por lo mismo. 344, 642 y 730 cadenas, cero NaN.
+ *   classeEnergetica . SANO. Vocabulario cerrado de verdad: 864 de 870 «G».
+ *   piano ............ ESTABA ROTO, arreglado en el bucle anterior.
+ *   statoFiniture .... ESTABA ROTO, arreglado en el bucle anterior.
+ *   9 caracteristiche  SANAS. Las nueve claves existen y son booleanas en los
+ *                      865-866 documentos que las llevan. No hay cadenas
+ *                      «true» ni variantes de nombre.
+ *
+ * LO QUE LA AUDITORÍA ENCONTRÓ Y NO SE ARREGLA AQUÍ, porque es funcionalidad
+ * que falta y no un fallo: en `Caratteristiche` hay once claves pobladas que
+ * la interfaz no ofrece filtrar. Tres tienen volumen de verdad —PostoAuto
+ * (413 en cierto), CucinaAbitabile (171) y PostoAutoScoperto (103)— y son
+ * criterios de búsqueda que un agente pediría. Las otras ocho están por debajo
+ * de 12, y Mansarda está en cero.
+ * ─────────────────────────────────────────────────────────────────────────
  */
 
 import { estaEnLaPlanta, tieneElEstado } from "@/lib/immobili/clasificacion";
@@ -50,6 +82,19 @@ const EMPTY_ADV_FILTERS: AdvFilters = {
 /** Siempre una copia nueva: el objeto no debe compartirse entre estados. */
 export const createEmptyAdvFilters = (): AdvFilters => ({ ...EMPTY_ADV_FILTERS });
 
+/**
+ * Valor del desplegable de zona que significa «los que no tienen zona».
+ *
+ * Es un centinela y no un texto normal a propósito: la opción existía con el
+ * valor literal «Nessuna Zona», y el filtro la comparaba por SUBCADENA contra
+ * DatiBase.Zona. Como ningún inmueble tiene una zona que contenga ese texto, la
+ * opción devolvía CERO resultados siempre, y los 11 inmuebles sin zona no se
+ * podían encontrar por ninguna vía. Con un centinela no hay forma de que se
+ * confunda con una zona real, ni siquiera si algún día alguien da de alta una
+ * zona que se llame así.
+ */
+export const ZONA_SIN_ASIGNAR = "__sin-zona__";
+
 /** Tipologías sin camere/bagni/superficie: al elegirlas esos filtros se limpian. */
 export const NON_RESIDENTIAL_TYPES = [
   'Terreni', 'Locale o Capannone', 'Garage o Posto auto', 'Ufficio',
@@ -77,7 +122,9 @@ export function applyAdvancedFilters<T = any>(items: T[], af: AdvFilters): T[] {
   // Tipologia (coincidencia exacta — la BBDD está normalizada)
   if (af.tipologia) result = result.filter(d => d.DatiBase?.Tipologia === af.tipologia);
 
-  if (af.zona) {
+  if (af.zona === ZONA_SIN_ASIGNAR) {
+    result = result.filter(d => !String(d.DatiBase?.Zona || '').trim());
+  } else if (af.zona) {
     const z = nfd(af.zona);
     result = result.filter(d => nfd(d.DatiBase?.Zona || '').includes(z));
   }

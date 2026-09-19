@@ -5,6 +5,7 @@ import { SlidersHorizontal, X, Tag, Euro, Maximize2, CheckCircle2, Zap, RotateCc
 import { cn } from "@/lib/utils";
 import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import zonasData from "@/lib/zonas.json";
+import { ZONA_SIN_ASIGNAR } from "@/lib/immobili/filters";
 import type { AdvFilters } from "@/lib/immobili/filters";
 import { TIPOLOGIE, CLASSI_ENERGETICHE } from "@/lib/immobili/options";
 // Las listas de plantas y de estado NO salen de options.ts: salen de los
@@ -98,7 +99,7 @@ export function AdvancedFiltersDrawer({
                 <label htmlFor="adv-zona" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Zona</label>
                 <select id="adv-zona" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.zona} onChange={e => onChange(p => ({...p, zona: e.target.value}))}>
                   <option value="">Tutte le Zone</option>
-                  <option value="Nessuna Zona">Nessuna Zona</option>
+                  <option value={ZONA_SIN_ASIGNAR}>Nessuna Zona</option>
                   {zonasData.filter((z: string) => z !== "-").map((z: string) => <option key={z} value={z}>{z}</option>)}
                 </select>
               </div>
