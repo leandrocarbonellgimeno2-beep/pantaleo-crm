@@ -17,7 +17,13 @@ export class AuthError extends Error {
   }
 }
 
-const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+// 8 horas: una jornada de trabajo. Antes eran 7 dias, y con sesiones de una
+// semana la unica forma de echar a alguien era rotar SESSION_SECRET, que echa
+// a todo el equipo a la vez.
+//
+// Ojo: esto afecta a los tokens NUEVOS. Los ya emitidos llevan su propio exp
+// de 7 dias dentro y siguen siendo validos hasta que les toque.
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000;
 
 // ── base64url helpers (no Buffer dependency — Edge compatible) ──────────────
 function b64uEncode(bytes: Uint8Array): string {

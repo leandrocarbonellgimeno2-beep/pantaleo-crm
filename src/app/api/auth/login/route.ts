@@ -67,7 +67,10 @@ function respuestaConCookie(token: string, user: { email: string; nome: string; 
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    // Misma ventana que el exp del token (lib/auth.ts). Si la cookie durase
+    // mas, el navegador seguiria mandando un token ya caducado y el usuario
+    // veria un 401 en vez de que le lleven al login.
+    maxAge: 60 * 60 * 8,
   });
   return response;
 }
