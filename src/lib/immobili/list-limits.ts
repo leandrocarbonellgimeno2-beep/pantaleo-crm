@@ -15,11 +15,15 @@
  *    Los seis typeaheads del CRM pasan `?limit=` siempre junto a `?q=`, así que
  *    caen todos en este caso.
  *
- * 2. Sin búsqueda sí se empuja, pero con colchón: `status=attivi` y el descarte
- *    de los pendientes de cancelación también se aplican en JS después de la
- *    consulta, de modo que pedir exactamente N podría devolver menos de N. Se
- *    piden 3N+10. Si aun así no llegaran, se devuelven menos resultados; nunca
- *    resultados incorrectos.
+ * 2. Sin búsqueda sí se empuja, pero con colchón: el descarte de los pendientes
+ *    de cancelación se aplica en JS después de la consulta, de modo que pedir
+ *    exactamente N podría devolver menos de N. Se piden 3N+10. Si aun así no
+ *    llegaran, se devuelven menos resultados; nunca resultados incorrectos.
+ *
+ *    El colchón era antes para dos filtros en JS; `status=attivi` ya se empuja
+ *    a Firestore, así que hoy sobra holgura. Se deja como está a propósito:
+ *    apretarlo solo ahorraría unas pocas lecturas y volvería a quedarse corto
+ *    en cuanto reaparezca cualquier filtro posterior a la consulta.
  */
 
 /** Tope duro heredado: nadie escanea más de esto, pida lo que pida. */

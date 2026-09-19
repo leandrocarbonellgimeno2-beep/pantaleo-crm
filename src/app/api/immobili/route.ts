@@ -89,9 +89,21 @@ export async function GET(request: Request) {
     // 4. Build base Firestore query — ALL status+type filters pushed to DB level
     let baseQuery: any = db.collection('immobili');
     if (status === 'sospesi') baseQuery = baseQuery.where('GestioneCommerciale.Sospeso', '==', true);
-    // 'attivi' NO se filtra en Firestore: where('Sospeso','==',false) excluye los
-    // docs sin el campo, ocultando inmuebles activos. Se filtra en JS más abajo
-    // (ausente/false = attivo). 'sospesi' sí va a DB (ausente nunca es sospeso).
+    else if (status === 'attivi') baseQuery = baseQuery.where('GestioneCommerciale.Sospeso', '==', false);
+    // 'attivi' YA se empuja a Firestore. Antes no se podía: un documento sin el
+    // campo Sospeso no entra en el índice, así que where('==',false) lo habría
+    // excluido y habría escondido inmuebles activos de la pantalla principal.
+    //
+    // Comprobado sobre la base real antes de hacer el cambio, por dos vías:
+    //  - count() sobre el índice: 631 (false) + 239 (true) = 870 = total de la
+    //    colección. Si un solo documento careciera del campo, la suma no daría.
+    //  - comparación de conjuntos de ids entre la consulta vieja (escanear todo
+    //    y filtrar en JS) y esta: 631 y 631, sin un id de diferencia.
+    // El script que lo comprueba es scripts/verificar-sospeso.cjs, y se puede
+    // relanzar cuando se quiera: solo lee.
+    //
+    // Efecto: la vista por defecto del CRM deja de escanear la colección entera
+    // y pasa a servirse del índice (Sospeso ASC, DatiBase.Codice DESC).
     if (type === 'vendita') baseQuery = baseQuery.where('GestioneCommerciale.InVendita', '==', true);
     else if (type === 'affitto') baseQuery = baseQuery.where('GestioneCommerciale.InAffitto', '==', true);
 
@@ -126,7 +138,10 @@ export async function GET(request: Request) {
     const docs = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
       .map((doc: any) => stripToThumbnail({ id: doc.id, ...doc.data() }))
-      // 'attivi' filtrado en JS: ausente/false = activo (ver baseQuery arriba).
+      // Red de seguridad, ya redundante: desde que 'attivi' se filtra en
+      // Firestore (ver baseQuery arriba) esto no descarta nada. Se mantiene
+      // porque opera sobre un array que ya está en memoria —coste cero— y
+      // porque deja la pantalla correcta si alguien retira el where de arriba.
       .filter((d: any) => status !== 'attivi' || !d.GestioneCommerciale?.Sospeso);
 
     // Text search in-memory (Firestore doesn't support full-text natively)
