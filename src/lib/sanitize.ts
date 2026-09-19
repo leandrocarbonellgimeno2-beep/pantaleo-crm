@@ -138,6 +138,51 @@ export function sanitizeStoragePath(rawPath: string): string {
   return p;
 }
 
+/**
+ * Sanitizza un ID destinato a `.doc()` di Firestore.
+ *
+ * Il vettore vero e la barra. `collection("documenti_template").doc("a/b/c")`
+ * NON crea un documento chiamato "a/b/c": risolve a
+ * documenti_template/a/b/c, cioe un documento dentro una SOTTOCOLLEZIONE
+ * arbitraria, invisibile alla GET della rotta e fuori da qualunque
+ * aspettativa del resto del codice.
+ *
+ * Equivalente per Firestore di sanitizeStoragePath, che gia esisteva per
+ * Storage. Rilancia se trova:
+ *  - una barra (scrittura in sottocollezioni arbitrarie)
+ *  - "." o ".." come ID intero (path relativi, rifiutati da Firestore)
+ *  - il pattern riservato __...__
+ *  - null byte o caratteri di controllo (smuggling)
+ *  - piu di 1500 byte, che e il limite duro di Firestore
+ */
+export function sanitizeFirestoreId(rawId: unknown): string {
+  if (typeof rawId !== 'string') {
+    throw new Error('ID mancante o non valido');
+  }
+  if (rawId.length === 0) {
+    throw new Error('ID vuoto');
+  }
+  // Firestore limita a 1500 BYTE, non caratteri: un ID con accenti o emoji
+  // supera il limite con molti meno caratteri di quanti sembrino.
+  if (new TextEncoder().encode(rawId).length > 1500) {
+    throw new Error('ID troppo lungo');
+  }
+  if (rawId.includes('/')) {
+    throw new Error('ID non puo contenere "/"');
+  }
+  if (rawId === '.' || rawId === '..') {
+    throw new Error('ID non valido');
+  }
+  if (/^__.*__$/.test(rawId)) {
+    throw new Error('ID riservato non consentito');
+  }
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(rawId)) {
+    throw new Error('ID contiene caratteri non validi');
+  }
+  return rawId;
+}
+
 export const PROPRIETARI_ALLOWED = [
   // identità
   'nome', 'Nome', 'cognome', 'Cognome',

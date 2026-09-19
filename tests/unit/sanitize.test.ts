@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   sanitizeBody,
   sanitizeStoragePath,
+  sanitizeFirestoreId,
   IMMOBILI_ALLOWED,
   CLIENTI_ALLOWED,
   PROPRIETARI_ALLOWED,
@@ -189,5 +190,76 @@ describe('sanitizeBody — casing della firma digitale', () => {
   it('le due whitelist coprono la chiave usata dal rispettivo modulo', () => {
     expect(CLIENTI_ALLOWED).toContain('FirmaDigitale');
     expect(PROPRIETARI_ALLOWED).toContain('firmaDigitale');
+  });
+});
+
+// ── sanitizeFirestoreId ───────────────────────────────────────────────────────
+
+describe('sanitizeFirestoreId — ID validi', () => {
+  it('lascia passare gli ID normali', () => {
+    for (const id of [
+      'abc123',
+      'template_incarico_vendita',
+      'P001',
+      'a.b',            // il punto DENTRO l ID e valido
+      '...',            // solo '.' e '..' esatti sono vietati
+      '__solo_inizio',  // il pattern riservato richiede __ anche in fondo
+      'fine__',
+      'con spazi e accenti àèìòù',
+    ]) {
+      expect(sanitizeFirestoreId(id)).toBe(id);
+    }
+  });
+
+  it('accetta esattamente 1500 byte', () => {
+    const id = 'a'.repeat(1500);
+    expect(sanitizeFirestoreId(id)).toBe(id);
+  });
+});
+
+describe('sanitizeFirestoreId — attacchi bloccati', () => {
+  it('la barra: e il vettore vero, scriveva in sottocollezioni arbitrarie', () => {
+    // .doc("a/b/c") non crea un documento chiamato "a/b/c": risolve a
+    // documenti_template/a/b/c, cioe dentro una sottocollezione arbitraria,
+    // invisibile alla GET della rotta.
+    for (const id of ['a/b/c', 'abc/segreti/doc1', '/leading', 'trailing/', 'a//b']) {
+      expect(() => sanitizeFirestoreId(id)).toThrow();
+    }
+  });
+
+  it('path relativi', () => {
+    expect(() => sanitizeFirestoreId('.')).toThrow();
+    expect(() => sanitizeFirestoreId('..')).toThrow();
+  });
+
+  it('pattern riservato di Firestore', () => {
+    expect(() => sanitizeFirestoreId('__id__')).toThrow();
+    expect(() => sanitizeFirestoreId('__name__')).toThrow();
+  });
+
+  it('null byte e caratteri di controllo', () => {
+    const NUL = String.fromCharCode(0);
+    const LF = String.fromCharCode(10);
+    const DEL = String.fromCharCode(127);
+    expect(() => sanitizeFirestoreId('abc' + NUL + 'def')).toThrow();
+    expect(() => sanitizeFirestoreId('abc' + LF + 'def')).toThrow();
+    expect(() => sanitizeFirestoreId('abc' + DEL)).toThrow();
+  });
+
+  it('valori vuoti o non stringa', () => {
+    expect(() => sanitizeFirestoreId('')).toThrow();
+    expect(() => sanitizeFirestoreId(null)).toThrow();
+    expect(() => sanitizeFirestoreId(undefined)).toThrow();
+    expect(() => sanitizeFirestoreId(123)).toThrow();
+    expect(() => sanitizeFirestoreId({})).toThrow();
+    expect(() => sanitizeFirestoreId(['a'])).toThrow();
+  });
+
+  it('il limite e di BYTE, non di caratteri', () => {
+    // 500 emoji: 1000 unita UTF-16 di .length, ma 2000 byte reali, perche
+    // ogni emoji e un surrogate pair (2 di .length) e occupa 4 byte.
+    const id = '😀'.repeat(500);
+    expect(id.length).toBeLessThan(1500);
+    expect(() => sanitizeFirestoreId(id)).toThrow();
   });
 });
