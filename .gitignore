@@ -54,3 +54,6 @@ next-env.d.ts
 /backups/
 
 .vercel
+
+# Volcados de colecciones: datos reales, no van al repositorio.
+scripts/volcados/
