@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { db } from './firebase-admin';
+import { sumarMinutosAHoraDePared } from './wall-clock';
 
 export async function createCalendarEvent(agentId: string, appointment: any) {
   try {
@@ -46,23 +47,42 @@ export async function createCalendarEvent(agentId: string, appointment: any) {
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-    // Format start and end times (assuming date is YYYY-MM-DD and time is HH:MM)
-    const startDateTime = new Date(`${appointment.date}T${appointment.time}:00`);
-    
-    // Default duration to 60 minutes if not provided
+    // EL DESFASE DE 1-2 HORAS ESTABA AQUI.
+    //
+    // Antes: new Date(`${date}T${time}:00`) y luego .toISOString().
+    // Una cadena ISO SIN indicador de zona se interpreta como hora LOCAL DEL
+    // PROCESO, y el servidor de Vercel va en UTC. Una cita de las 10:00 se
+    // convertia asi en las 10:00 UTC. Y al mandar el dateTime terminado en
+    // "Z", Google IGNORA el campo timeZone que va al lado, porque la cadena
+    // ya lleva su propio offset. Resultado: la cita aparecia a las 12:00 en
+    // verano y a las 11:00 en invierno.
+    //
+    // Por eso el desfase no era fijo: seguia al horario de verano. Una
+    // constante de correccion habria acertado medio ano y fallado el otro.
+    //
+    // Ahora se manda la hora de pared SIN offset y se deja que Google la
+    // interprete en Europe/Rome, que es para lo que existe el campo timeZone.
+    // Los datos guardados en Firestore no se tocan: date y time siguen
+    // siendo exactamente lo que el agente escribio.
     const durationMinutes = appointment.duration || 60;
-    const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60000);
+    const startDateTime = `${appointment.date}T${appointment.time}:00`;
+    const endDateTime = sumarMinutosAHoraDePared(
+      appointment.date,
+      appointment.time,
+      durationMinutes,
+    );
 
     const event = {
       summary: `Appuntamento CRM: ${appointment.clientName || 'Cliente'}`,
       location: appointment.propertyAddress || '',
       description: `Agente: ${appointment.agentName || agentId}\nImmobile: ${appointment.propertyAddress || 'N/D'}\nTelefono: ${appointment.clientPhone || 'N/D'}`,
       start: {
-        dateTime: startDateTime.toISOString(),
-        timeZone: 'Europe/Rome', // Modify this if necessary based on your timezone
+        // Sin "Z" ni offset: es lo que hace que timeZone cuente.
+        dateTime: startDateTime,
+        timeZone: 'Europe/Rome',
       },
       end: {
-        dateTime: endDateTime.toISOString(),
+        dateTime: endDateTime,
         timeZone: 'Europe/Rome',
       },
       reminders: {
