@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -926,7 +927,7 @@ export default function ProprietariPage() {
                                 <div key={imm.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex gap-4 items-center hover:border-blue-200 transition-colors group">
                                    <div className="w-20 h-20 bg-slate-100 rounded-xl overflow-hidden flex-shrink-0 relative">
                                       {foto ? (
-                                        <NextImage src={foto} alt={tipologia} fill className="object-cover" sizes="80px" loading="lazy" unoptimized />
+                                        <NextImage src={foto} alt={tipologia} fill className="object-cover" sizes="80px" loading="lazy" unoptimized={esFuenteLocal(foto)} />
                                       ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-300">
                                           <Building2 className="w-6 h-6" />

@@ -1,6 +1,7 @@
 "use client";
 
 import NextImage from "next/image";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import { X, CheckCircle2, Loader2, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +82,7 @@ export function PrintSelectorModal({
                       isSelected ? "border-primary shadow-md scale-[0.98]" : "border-transparent",
                     )}
                   >
-                    <NextImage src={img} alt="" fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" loading="lazy" unoptimized />
+                    <NextImage src={img} alt="" fill className="object-cover" sizes="(max-width: 768px) 50vw, 25vw" loading="lazy" unoptimized={esFuenteLocal(img)} />
                     {isSelected && (
                       <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 shadow-sm">
                         <CheckCircle2 className="w-5 h-5" />

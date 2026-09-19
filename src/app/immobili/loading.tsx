@@ -13,8 +13,11 @@ export default function ImmobiliLoading() {
 
       {/* Filter chips */}
       <div className="px-4 pt-4 pb-2 flex gap-2">
-        {[80, 64, 72, 56].map((w, i) => (
-          <div key={i} className={`h-8 w-${w} bg-slate-200 rounded-full`} />
+        {/* Anchos como clases COMPLETAS. Tailwind genera su hoja leyendo el
+            codigo como texto, asi que `w-${w}` no es una clase que exista y
+            estos cuatro elementos salian sin ancho ninguno. */}
+        {['w-20', 'w-16', 'w-[72px]', 'w-14'].map((w, i) => (
+          <div key={i} className={`h-8 ${w} bg-slate-200 rounded-full`} />
         ))}
       </div>
 

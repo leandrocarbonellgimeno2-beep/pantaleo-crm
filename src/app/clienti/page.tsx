@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import {
   Search, User, Phone, Mail, Plus, Briefcase, MapPin, Home,
@@ -1045,7 +1046,7 @@ export default function ClientiPage() {
                                   {/* Photo */}
                                   <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 relative">
                                     {match.snippet?.mainImage ? (
-                                      <NextImage src={match.snippet.mainImage} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized />
+                                      <NextImage src={match.snippet.mainImage} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized={esFuenteLocal(match.snippet.mainImage)} />
                                     ) : (
                                       <Home className="w-8 h-8 text-slate-300 m-auto mt-4" />
                                     )}

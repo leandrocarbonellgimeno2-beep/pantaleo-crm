@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { CheckCircle2, Eye, Home, Camera, MapPin, Maximize2, BedDouble, Bath, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -90,7 +91,7 @@ function PropertyCardBase({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             loading={priority ? undefined : "lazy"}
             priority={priority}
-            unoptimized
+            unoptimized={esFuenteLocal(item.thumbnail || item.mainImage)}
           />
         ) : (
           <div className="flex flex-col items-center gap-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import NextImage from "next/image";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import { Home, X, MapPin, ChevronRight } from "lucide-react";
 
 interface OwnerPropertiesModalProps {
@@ -61,7 +62,7 @@ export function OwnerPropertiesModal({
               {/* Thumbnail */}
               <div className="relative w-16 h-16 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-200/80 group-hover:border-indigo-200 transition-colors">
                 {prop.images?.[0] ? (
-                  <NextImage src={prop.images[0]} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized />
+                  <NextImage src={prop.images[0]} alt="" fill className="object-cover" sizes="64px" loading="lazy" unoptimized={esFuenteLocal(prop.images[0])} />
                 ) : (
                   <Home className="w-6 h-6 text-slate-300" />
                 )}

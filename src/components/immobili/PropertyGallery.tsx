@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,7 +53,7 @@ export function PropertyGallery({ images, onOpenLightbox }: PropertyGalleryProps
         className="object-cover cursor-pointer transition-transform duration-500"
         sizes="(max-width: 768px) 100vw, 80vw"
         priority
-        unoptimized
+        unoptimized={esFuenteLocal(images[current])}
         onClick={() => onOpenLightbox(current)}
       />
       {/* Status Bar Top */}

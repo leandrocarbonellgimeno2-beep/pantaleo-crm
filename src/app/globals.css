@@ -163,3 +163,13 @@
   }
 }
 
+/* Se usa en la barra de pestanas de clientes (clienti/page.tsx) desde hace
+   tiempo y nunca se definio: la barra se desplazaba, pero ensenando la barra
+   de scroll del sistema por encima del contenido. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -1,5 +1,4 @@
 "use client";
-import NextImage from "next/image";
 import Link from "next/link";
 
 import { useCallback, useState } from "react";

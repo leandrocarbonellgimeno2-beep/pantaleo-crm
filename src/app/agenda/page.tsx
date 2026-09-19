@@ -379,7 +379,7 @@ export default function AgendaPage() {
         <div className="grid grid-cols-7 gap-px bg-border rounded-2xl overflow-hidden border border-border">
           {/* Weekday headers */}
           {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map(d => (
-            <div key={d} className="p-2 text-center text-xs font-black uppercase tracking-widest text-slate-400 bg-slate-50">
+            <div key={d} className="p-1.5 md:p-2 text-center text-[10px] md:text-xs font-black uppercase tracking-wider md:tracking-widest text-slate-400 bg-slate-50">
               {d}
             </div>
           ))}
@@ -388,32 +388,57 @@ export default function AgendaPage() {
             const dayStr = format(day, "yyyy-MM-dd");
             const dayAppts = filtered.filter((a: any) => a.date === dayStr);
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+            // Era un <div> con onClick: no se alcanzaba con el teclado ni lo
+            // anunciaba ningun lector de pantalla. Como boton, ademas, el
+            // aria-label dice el dia y cuantas citas hay.
             return (
-              <div 
+              <button
+                type="button"
                 key={dayStr}
                 onClick={() => { setCurrentDate(day); setViewMode("day"); }}
+                aria-label={`${format(day, "d MMMM")}, ${dayAppts.length} appuntamenti`}
                 className={cn(
-                  "min-h-[90px] p-1.5 bg-card cursor-pointer hover:bg-blue-50/50 transition-colors",
+                  "text-left w-full bg-card cursor-pointer hover:bg-blue-50/50 transition-colors",
+                  // La rejilla de siete columnas no tenia NINGUN breakpoint: en un
+                  // movil de 375 px son siete columnas de unos 50, y dentro iban
+                  // chips de texto a 9 px. Ahora la celda encoge y el contenido
+                  // cambia de forma, no solo de tamano.
+                  "min-h-[56px] sm:min-h-[72px] md:min-h-[90px] p-1 md:p-1.5",
                   !isCurrentMonth && "opacity-40"
                 )}
               >
                 <span className={cn(
-                  "inline-flex items-center justify-center h-6 w-6 text-xs font-bold rounded-full",
+                  "inline-flex items-center justify-center h-7 w-7 md:h-6 md:w-6 text-xs font-bold rounded-full",
                   isToday(day) ? "bg-primary text-white" : "text-slate-600"
                 )}>
                   {format(day, "d")}
                 </span>
-                <div className="mt-0.5 space-y-0.5">
+                {/* MOVIL: puntos de color. Dicen cuantas citas hay y de que tipo
+                    sin pedirle al ojo que lea nueve pixeles. */}
+                <div className="mt-1 flex flex-wrap gap-0.5 md:hidden">
+                  {dayAppts.slice(0, 4).map((a: any) => (
+                    <span
+                      key={a.id}
+                      className={cn("h-1.5 w-1.5 rounded-full", getTypeColor(a.tipo || "Altro"))}
+                    />
+                  ))}
+                  {dayAppts.length > 4 && (
+                    <span className="text-[10px] font-black text-slate-400 leading-none">+</span>
+                  )}
+                </div>
+
+                {/* ESCRITORIO: los chips de siempre, ahora a 10 px. */}
+                <div className="mt-0.5 space-y-0.5 hidden md:block">
                   {dayAppts.slice(0, 3).map((a: any) => (
-                    <div key={a.id} className={cn("text-[9px] font-bold text-white px-1 py-0.5 rounded truncate", getTypeColor(a.tipo || "Altro"))}>
+                    <div key={a.id} className={cn("text-[10px] font-bold text-white px-1 py-0.5 rounded truncate", getTypeColor(a.tipo || "Altro"))}>
                       {a.time} {a.clientName?.substring(0, 15)}
                     </div>
                   ))}
                   {dayAppts.length > 3 && (
-                    <span className="text-[9px] font-bold text-slate-400">+{dayAppts.length - 3} altri</span>
+                    <span className="text-[10px] font-bold text-slate-400">+{dayAppts.length - 3} altri</span>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>

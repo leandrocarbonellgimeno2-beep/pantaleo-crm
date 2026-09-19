@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from 'swr';
+import { esFuenteLocal } from '@/lib/image-optimizable';
 import {
   Users, Home as HomeIcon,
   Plus, MapPin, Loader2, Briefcase,
@@ -284,7 +285,7 @@ export default function DashboardPage() {
                         (stripToThumbnail en api/immobili/route.ts). Leer images[0]
                         daba siempre undefined y la foto no se pintaba nunca. */}
                     {imm.thumbnail ? (
-                      <NextImage src={imm.thumbnail} alt="Immobile" fill className="object-cover" sizes="44px" loading="lazy" unoptimized />
+                      <NextImage src={imm.thumbnail} alt="Immobile" fill className="object-cover" sizes="44px" loading="lazy" unoptimized={esFuenteLocal(imm.thumbnail)} />
                     ) : (
                       <HomeIcon className="w-5 h-5 text-slate-300" />
                     )}

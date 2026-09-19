@@ -17,7 +17,7 @@ export default function ProprietariLoading() {
       </div>
 
       {/* Owner cards — 2 columns on tablet, 3 on desktop */}
-      <div className="px-4 pb-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
+      <div className="px-4 pb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 mt-2">
         {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
             <div className="flex items-center gap-3 mb-3">
