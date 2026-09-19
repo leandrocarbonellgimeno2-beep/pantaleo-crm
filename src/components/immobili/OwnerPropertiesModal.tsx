@@ -2,6 +2,7 @@
 
 import NextImage from "next/image";
 import { esFuenteLocal } from "@/lib/image-optimizable";
+import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import { Home, X, MapPin, ChevronRight } from "lucide-react";
 
 interface OwnerPropertiesModalProps {
@@ -31,9 +32,22 @@ export function OwnerPropertiesModal({
   onSelect,
   onClose,
 }: OwnerPropertiesModalProps) {
+  // El padre monta este componente solo cuando el modal está abierto, así que
+  // mientras se renderiza está abierto por definición.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+  // Aquí no hay nada a medias que perder —es una lista—, y ya se cerraba al
+  // pinchar el fondo: se conserva ese comportamiento.
+  const fondo = useCierreAlPinchoFuera(onClose);
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
-      <div className="w-full max-w-lg mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" {...fondo}>
+      <div
+        ref={dialogo.ref}
+        {...dialogo.props}
+        aria-labelledby="titolo-altre-proprieta"
+        className="w-full max-w-lg mx-4 bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[80vh] flex flex-col outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-blue-50 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -41,7 +55,7 @@ export function OwnerPropertiesModal({
               <Home className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-sm">
+              <h3 id="titolo-altre-proprieta" className="font-bold text-slate-800 text-sm">
                 Altre proprietà di {ownerName}
               </h3>
               <p className="text-[11px] text-slate-400 font-medium">{properties.length} immobil{properties.length === 1 ? 'e' : 'i'} trovati</p>

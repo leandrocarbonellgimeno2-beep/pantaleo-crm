@@ -1,6 +1,7 @@
 "use client";
 
 import { Trash2, CheckCircle2, Loader2 } from "lucide-react";
+import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 
 interface DeleteConfirmModalProps {
   /** Código del inmueble, para que el usuario confirme que borra el correcto. */
@@ -29,14 +30,26 @@ export function DeleteConfirmModal({
   onConfirm,
   onClose,
 }: DeleteConfirmModalProps) {
+  // La página solo monta la confirmación cuando está abierta; además queda por
+  // encima de la ficha del inmueble, que sigue montada debajo, y de eso se
+  // ocupa la pila del hook.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+  const fondo = useCierreAlPinchoFuera(onClose);
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-200" onClick={onClose}>
-      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-rose-100" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-200" {...fondo}>
+      <div
+        ref={dialogo.ref}
+        {...dialogo.props}
+        aria-labelledby="titolo-elimina-immobile"
+        className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-rose-100 outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-8 text-center flex flex-col items-center">
           <div className="h-20 w-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 ring-8 ring-rose-50/50 shadow-inner">
             <Trash2 className="h-10 w-10 stroke-[1.5]" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
+          <h2 id="titolo-elimina-immobile" className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
             Sei sicuro di voler eliminare permanentemente la proprietà <span className="text-rose-600 block mt-1">#{codice || 'N/A'}?</span>
           </h2>
           <p className="text-slate-500 mt-4 leading-relaxed font-medium">
@@ -53,7 +66,10 @@ export function DeleteConfirmModal({
                   checked={confirmed}
                   onChange={(e) => onToggleConfirm(e.target.checked)}
                 />
-                <div className="h-6 w-6 rounded-md border-2 border-slate-300 bg-white group-hover:border-rose-400 peer-checked:bg-rose-500 peer-checked:border-rose-500 transition-all flex items-center justify-center">
+                {/* El checkbox real es sr-only, así que el anillo de foco tiene
+                    que pintarlo esta caja: si no, tabular hasta el guardarraíl
+                    deja el foco en un sitio que no se ve. */}
+                <div className="h-6 w-6 rounded-md border-2 border-slate-300 bg-white group-hover:border-rose-400 peer-checked:bg-rose-500 peer-checked:border-rose-500 peer-focus-visible:ring-2 peer-focus-visible:ring-rose-500 peer-focus-visible:ring-offset-2 transition-all flex items-center justify-center">
                   <CheckCircle2 className="h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
                 </div>
               </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useDialog } from "@/hooks/useDialog";
 import dynamic from 'next/dynamic';
 import {
   FileText, Search, Plus, Printer, Download, Share2,
@@ -94,6 +95,27 @@ export default function DocumentiPage() {
   const [editFormData, setEditFormData] = useState<Record<string, unknown> | null>(null);
   // Increments on every open so the same form type always remounts fresh
   const [formKey, setFormKey] = useState(0);
+
+  // Mientras el fichero viaja al Storage no hay marcha atrás: cerrar entonces
+  // dejaría la subida huérfana y el registro de la base de datos sin crear. Por
+  // eso el cierre se ignora con `uploading` puesto (la X ya está deshabilitada,
+  // pero Escape no pasa por ella).
+  const cerrarCreator = useCallback(() => {
+    if (uploading) return;
+    setShowCreator(false);
+    setNewDocTitolo("");
+    setNewDocCategoria("Modello Generico");
+  }, [uploading]);
+
+  const dialogoCreator = useDialog<HTMLDivElement>({
+    abierto: showCreator,
+    alCerrar: cerrarCreator,
+  });
+
+  const dialogoCompiler = useDialog<HTMLDivElement>({
+    abierto: showCompiler && !!docToCompile,
+    alCerrar: () => setShowCompiler(false),
+  });
 
   useEffect(() => {
     if (toast) { const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }
@@ -623,13 +645,18 @@ export default function DocumentiPage() {
       {/* Upload / Create Modal */}
       {showCreator && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div
+            ref={dialogoCreator.ref}
+            {...dialogoCreator.props}
+            aria-labelledby="titolo-carica-file-master"
+            className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 outline-none"
+          >
             <div className="px-8 py-6 border-b border-border flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-xl font-bold flex items-center gap-2">
+              <h3 id="titolo-carica-file-master" className="text-xl font-bold flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" /> Carica File Master
               </h3>
               <button
-                onClick={() => { setShowCreator(false); setNewDocTitolo(""); setNewDocCategoria("Modello Generico"); }}
+                onClick={cerrarCreator}
                 aria-label="Chiudi"
                 className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
                 disabled={uploading}
@@ -694,9 +721,14 @@ export default function DocumentiPage() {
       {/* Compile Smart Document Modal */}
       {showCompiler && docToCompile && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+          <div
+            ref={dialogoCompiler.ref}
+            {...dialogoCompiler.props}
+            aria-labelledby="titolo-compila-smart-document"
+            className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 outline-none"
+          >
             <div className="px-8 py-6 border-b border-border flex justify-between items-center bg-indigo-50">
-              <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-900">
+              <h3 id="titolo-compila-smart-document" className="text-xl font-bold flex items-center gap-2 text-indigo-900">
                 <Wand2 className="h-5 w-5 text-indigo-600" /> Compila Smart Document
               </h3>
               <button

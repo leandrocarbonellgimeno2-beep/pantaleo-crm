@@ -28,6 +28,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDialog } from "@/hooks/useDialog";
 import { hasAtLeast, ROLES, type Role } from "@/lib/roles";
 import PresenceSection from "./PresenceSection";
 import AuditSection from "./AuditSection";
@@ -102,6 +103,20 @@ export default function AdminPage() {
   const [reset, setReset] = useState<{ email: string; password: string } | null>(null);
   const [miPassword, setMiPassword] = useState({ actual: "", nueva: "" });
   const [cambiandoMia, setCambiandoMia] = useState(false);
+
+  // Un dialogo por modal, cada uno con su propio booleano: los dos pueden estar
+  // montados a la vez (se puede abrir el alta y, por debajo, seguir el reset),
+  // y compartir una sola llamada haria que Escape cerrase el que no toca.
+  // Ninguno de los dos se cierra al pinchar el fondo: son formularios con
+  // credenciales a medias y un clic despistado obligaria a reescribirlo todo.
+  const dialogoAlta = useDialog<HTMLDivElement>({
+    abierto,
+    alCerrar: () => setAbierto(false),
+  });
+  const dialogoReset = useDialog<HTMLDivElement>({
+    abierto: reset !== null,
+    alCerrar: () => setReset(null),
+  });
 
   const usuarios = data?.data ?? [];
 
@@ -436,9 +451,16 @@ export default function AdminPage() {
       {/* ── Modal: nuevo usuario ── */}
       {abierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div
+            ref={dialogoAlta.ref}
+            {...dialogoAlta.props}
+            aria-labelledby="titolo-nuovo-utente"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto outline-none"
+          >
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-black text-slate-800 text-lg">Nuovo utente</h2>
+              <h2 id="titolo-nuovo-utente" className="font-black text-slate-800 text-lg">
+                Nuovo utente
+              </h2>
               <button
                 onClick={() => setAbierto(false)}
                 aria-label="Chiudi"
@@ -549,9 +571,16 @@ export default function AdminPage() {
       {/* ── Modal: nueva contrasena para otro usuario ── */}
       {reset && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md">
+          <div
+            ref={dialogoReset.ref}
+            {...dialogoReset.props}
+            aria-labelledby="titolo-nuova-password"
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-md outline-none"
+          >
             <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="font-black text-slate-800 text-lg">Nuova password</h2>
+              <h2 id="titolo-nuova-password" className="font-black text-slate-800 text-lg">
+                Nuova password
+              </h2>
               <button
                 onClick={() => setReset(null)}
                 aria-label="Chiudi"

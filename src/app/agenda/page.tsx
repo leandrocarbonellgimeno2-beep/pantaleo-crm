@@ -23,9 +23,10 @@ import {
   Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { 
-  format, 
-  addDays, 
+import { useDialog } from "@/hooks/useDialog";
+import {
+  format,
+  addDays,
   subDays, 
   addWeeks, 
   subWeeks, 
@@ -94,6 +95,14 @@ export default function AgendaPage() {
   const [personResults, setPersonResults] = useState<any[]>([]);
   const [immSearch, setImmSearch] = useState("");
   const [immResults, setImmResults] = useState<any[]>([]);
+
+  // Sin cierre al pinchar el fondo a proposito: el formulario puede llevar media
+  // ficha de cliente nuevo escrita y un clic fuera se llevaria por delante el
+  // trabajo sin preguntar. Se sale por Escape, por la X o por Annulla.
+  const dialogoAppuntamento = useDialog<HTMLDivElement>({
+    abierto: isModalOpen,
+    alCerrar: () => setIsModalOpen(false),
+  });
 
   // Compute date range based on view
   const dateRange = useMemo(() => {
@@ -541,11 +550,16 @@ export default function AgendaPage() {
       {/* ===== PROFESSIONAL NEW APPOINTMENT MODAL ===== */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-2xl shadow-2xl">
+          <div
+            ref={dialogoAppuntamento.ref}
+            {...dialogoAppuntamento.props}
+            aria-labelledby="titolo-nuovo-appuntamento"
+            className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-card rounded-2xl shadow-2xl outline-none"
+          >
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-border bg-card/95 backdrop-blur-sm rounded-t-2xl">
               <div>
-                <h3 className="text-lg font-black">Nuovo Appuntamento</h3>
+                <h3 id="titolo-nuovo-appuntamento" className="text-lg font-black">Nuovo Appuntamento</h3>
                 <p className="text-xs text-muted-foreground font-medium">Compila i dettagli e sincronizza con Google Calendar</p>
               </div>
               <button

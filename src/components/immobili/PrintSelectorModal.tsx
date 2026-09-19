@@ -2,6 +2,7 @@
 
 import NextImage from "next/image";
 import { esFuenteLocal } from "@/lib/image-optimizable";
+import { useDialog } from "@/hooks/useDialog";
 import { X, CheckCircle2, Loader2, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,11 @@ export function PrintSelectorModal({
   onGenerate,
   onClose,
 }: PrintSelectorModalProps) {
+  // El padre lo monta solo cuando está abierto. No lleva cierre al pinchar el
+  // fondo porque nunca lo tuvo y aquí hay trabajo a medias: la selección de
+  // fotos y el texto del cartello se perderían con un clic despistado.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+
   const toggle = (img: string) => {
     if (selected.includes(img)) {
       onSelectedChange(selected.filter(p => p !== img));
@@ -55,10 +61,15 @@ export function PrintSelectorModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 print:hidden">
-      <div className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogo.ref}
+        {...dialogo.props}
+        aria-labelledby="titolo-selezione-immagini"
+        className="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] outline-none"
+      >
         <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
           <div>
-            <h2 className="text-xl font-black text-slate-800">Seleziona Immagini per il Cartello</h2>
+            <h2 id="titolo-selezione-immagini" className="text-xl font-black text-slate-800">Seleziona Immagini per il Cartello</h2>
             <p className="text-sm font-medium text-slate-500 mt-1">
               Scegli da 1 a {MAX_PRINT_PHOTOS} foto. Selezionate: {selected.length}/{MAX_PRINT_PHOTOS}
             </p>
@@ -74,9 +85,15 @@ export function PrintSelectorModal({
               {images.map((img: string, idx: number) => {
                 const isSelected = selected.includes(img);
                 return (
-                  <div
+                  // Botón y no <div>: elegir las fotos es lo único que hace este
+                  // diálogo, y con un div con onClick el usuario de teclado
+                  // queda atrapado dentro sin poder seleccionar ninguna.
+                  <button
                     key={idx}
+                    type="button"
                     onClick={() => toggle(img)}
+                    aria-pressed={isSelected}
+                    aria-label={`Seleziona foto ${idx + 1}`}
                     className={cn(
                       "relative aspect-video rounded-xl overflow-hidden cursor-pointer border-4 transition-all hover:opacity-90",
                       isSelected ? "border-primary shadow-md scale-[0.98]" : "border-transparent",
@@ -88,7 +105,7 @@ export function PrintSelectorModal({
                         <CheckCircle2 className="w-5 h-5" />
                       </div>
                     )}
-                  </div>
+                  </button>
                 );
               })}
             </div>

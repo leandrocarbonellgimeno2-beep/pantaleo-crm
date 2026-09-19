@@ -18,6 +18,7 @@ import { Cliente, generateEmptyCliente, TIPOLOGIE_IMMOBILE, ZONE_AGENCIA, STATI_
 import { hydrateCliente } from "@/lib/hydrate-cliente";
 import { useClienti } from "@/hooks/useClienti";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useDialog } from "@/hooks/useDialog";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 
 export default function ClientiPage() {
@@ -429,6 +430,16 @@ export default function ClientiPage() {
     });
   };
 
+  // La ficha no se cierra al pinchar el fondo: es un formulario de cinco
+  // pestanas que no se guarda solo, y un clic fuera al arrastrar una firma o
+  // al soltar un texto seleccionado borraria todo lo escrito.
+  // `abierto` repite la condicion del JSX para que el hook no se active
+  // mientras el panel todavia no existe y la ref esta vacia.
+  const dialogoScheda = useDialog<HTMLDivElement>({
+    abierto: isModalOpen && !!selectedCliente,
+    alCerrar: handleCloseModal,
+  });
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -628,7 +639,12 @@ export default function ClientiPage() {
       {/* --- MODAL FICHA CLIENTE --- */}
       {isModalOpen && selectedCliente && (
         <div className="fixed inset-0 z-50 flex flex-col p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col overflow-hidden bg-slate-50 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200">
+          <div
+            ref={dialogoScheda.ref}
+            {...dialogoScheda.props}
+            aria-labelledby="titolo-scheda-cliente"
+            className="w-full max-w-6xl mx-auto flex-1 flex flex-col overflow-hidden bg-slate-50 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 outline-none"
+          >
 
             {/* B5: Offline banner */}
             {!isOnline && (
@@ -644,7 +660,7 @@ export default function ClientiPage() {
                    {selectedCliente.DatiPersonali?.Nome?.[0] || (selectedCliente as any).nome?.[0] || 'N'}
                  </div>
                  <div>
-                   <h2 className="text-xl font-black text-slate-800">
+                   <h2 id="titolo-scheda-cliente" className="text-xl font-black text-slate-800">
                      {selectedCliente.id ? `${selectedCliente.DatiPersonali?.Nome || (selectedCliente as any).nome || ''} ${selectedCliente.DatiPersonali?.Cognome || (selectedCliente as any).cognome || ''}` : 'Nuovo Cliente'}
                    </h2>
                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-2">

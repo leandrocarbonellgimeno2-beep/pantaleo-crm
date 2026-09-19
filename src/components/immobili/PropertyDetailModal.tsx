@@ -2,6 +2,7 @@
 
 import { Home, Loader2, FileText, Printer, MessageCircle, Zap, X, Trash2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDialog } from "@/hooks/useDialog";
 import { Button } from "@/components/ui/Button";
 import { buildPropertyWhatsAppMessage, openWhatsApp } from "@/lib/immobili/whatsapp";
 import { PropertyDetailView } from "@/components/immobili/PropertyDetailView";
@@ -73,10 +74,23 @@ export function PropertyDetailModal({
   const { isSchedaGenerating, generateScheda: handleGenerateScheda, openPrintSelector: handleOpenPrintSelector } = printing;
   const getIdealistaStatus = () => selectedProperty?.Idealista?.idealistaStatus || 'none';
 
+  // La pagina monta este modal solo con isModalOpen, asi que si se esta
+  // renderizando es que esta abierto. Sin cierre al pinchar el fondo: en modo
+  // edicion la ficha lleva cambios sin guardar y un clic fuera los tiraria.
+  const dialogo = useDialog<HTMLDivElement>({
+    abierto: true,
+    alCerrar: () => setIsModalOpen(false),
+  });
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 print:bg-white print:p-0">
        {/* Modal Container */}
-       <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col overflow-hidden bg-slate-50 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 print:shadow-none print:bg-white print:w-full print:max-w-none print:h-auto print:overflow-visible">
+       <div
+         ref={dialogo.ref}
+         {...dialogo.props}
+         aria-labelledby="titolo-scheda-immobile"
+         className="w-full max-w-6xl mx-auto flex-1 flex flex-col overflow-hidden bg-slate-50 rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 print:shadow-none print:bg-white print:w-full print:max-w-none print:h-auto print:overflow-visible outline-none"
+       >
          
          {/* Header */}
          <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-white sticky top-0 z-10 print:hidden">
@@ -85,7 +99,7 @@ export function PropertyDetailModal({
                 <Home className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-slate-800">{viewMode ? "Dettaglio Immobile" : "Scheda Immobile"}</h2>
+                <h2 id="titolo-scheda-immobile" className="text-xl font-black text-slate-800">{viewMode ? "Dettaglio Immobile" : "Scheda Immobile"}</h2>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">{viewMode ? "Anteprima" : "Modifica e Gestione"}</p>
               </div>
             </div>

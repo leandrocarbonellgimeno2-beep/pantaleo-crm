@@ -7,6 +7,7 @@ import {
   Printer, Send, Save, Loader2, FileText, Sparkles, CheckCircle2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDialog } from '@/hooks/useDialog';
 import SignaturePad from '@/components/ui/SignaturePad';
 
 // ═══ Types ═══
@@ -223,9 +224,21 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
 
   const update = (field: keyof FoglioVisitaData, value: any) => setForm(p => ({ ...p, [field]: value }));
 
+  // La página solo monta este componente mientras el formulario está abierto,
+  // así que `abierto` no depende de ningún estado de aquí. Escape hace lo mismo
+  // que «Annulla». No hay cierre al pinchar fuera a propósito: el formulario
+  // ocupa la pantalla entera y un clic de más se llevaría por delante los datos
+  // y la firma ya trazada, que no se pueden recuperar.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+
   // ═══ RENDER ═══
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-indigo-50/30 overflow-y-auto">
+    <div
+      ref={dialogo.ref}
+      {...dialogo.props}
+      aria-labelledby="titolo-foglio-visita"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-indigo-50/30 overflow-y-auto outline-none"
+    >
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold bg-slate-900 text-white animate-in slide-in-from-right-5 fade-in duration-200">
@@ -241,7 +254,7 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-800 tracking-tight">Foglio di Visita</h1>
+              <h1 id="titolo-foglio-visita" className="text-lg font-black text-slate-800 tracking-tight">Foglio di Visita</h1>
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Verbale di presa visione immobiliare — Immobiliare Pantaleo</p>
             </div>
           </div>

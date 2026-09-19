@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useDialog } from "@/hooks/useDialog";
 import {
   X, Search, User, Home, Percent, ShieldCheck, Printer, Send, Save, Loader2,
   FileText, CheckCircle2, Sparkles, Building2, CreditCard, MapPin
@@ -77,6 +78,15 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
     import('@/lib/saveDocumentToCloud').catch(() => {});
   }, []);
 
+  // El padre solo monta este formulario cuando toca abrirlo, asi que estar
+  // renderizandose ya significa abierto. Sin cierre al pinchar fuera: es un
+  // formulario largo y un clic despistado se llevaria por delante todo lo
+  // escrito; Escape basta, y va al mismo `onClose` que el boton Annulla.
+  const dialogo = useDialog<HTMLDivElement>({
+    abierto: true,
+    alCerrar: onClose,
+  });
+
   // La peticion va con debounce: antes salia una por cada tecla, y una
   // busqueda de clientes escanea la coleccion entera.
   const fetchClienti = useDebouncedCallback(async (q: string) => {
@@ -141,7 +151,12 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
   ];
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/30 overflow-y-auto">
+    <div
+      ref={dialogo.ref}
+      {...dialogo.props}
+      aria-labelledby="titolo-incarico-locazione"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/30 overflow-y-auto outline-none"
+    >
       {toast && <div className="fixed top-4 right-4 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold bg-slate-900 text-white animate-in slide-in-from-right-5 fade-in duration-200">{toast}</div>}
 
       {/* Top Bar */}
@@ -152,7 +167,7 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-800 tracking-tight">Incarico di Locazione</h1>
+              <h1 id="titolo-incarico-locazione" className="text-lg font-black text-slate-800 tracking-tight">Incarico di Locazione</h1>
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Impegnativa d&apos;affitto — Immobiliare Pantaleo</p>
             </div>
           </div>

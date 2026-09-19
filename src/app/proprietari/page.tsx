@@ -11,6 +11,7 @@ import SignaturePad from "@/components/ui/SignaturePad";
 import { Proprietario } from "@/types/proprietario";
 import { useProprietari } from "@/hooks/useProprietari";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 
 export default function ProprietariPage() {
@@ -232,6 +233,15 @@ export default function ProprietariPage() {
   };
   
   const closeSlideOver = () => setIsSlideOverOpen(false);
+
+  const dialogoScheda = useDialog<HTMLDivElement>({
+    abierto: isSlideOverOpen,
+    alCerrar: closeSlideOver,
+  });
+  // Esta ficha ya se cerraba al pinchar el velo, así que el comportamiento se
+  // mantiene; el hook además exige que el clic empiece y acabe en el velo, de
+  // modo que arrastrar una selección de texto fuera del panel ya no la cierra.
+  const fondoScheda = useCierreAlPinchoFuera(closeSlideOver);
 
   // Search is now client-side via useMemo — no debounce/fetch needed
 
@@ -582,9 +592,14 @@ export default function ProprietariPage() {
       {/* MODAL CENTRAL */}
       {isSlideOverOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" onClick={closeSlideOver} />
-          
-          <div className="bg-slate-50 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden relative z-10 animate-in zoom-in-95 duration-200">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" {...fondoScheda} />
+
+          <div
+            ref={dialogoScheda.ref}
+            {...dialogoScheda.props}
+            aria-labelledby="titolo-scheda-proprietario"
+            className="bg-slate-50 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden relative z-10 animate-in zoom-in-95 duration-200 outline-none"
+          >
 
               {/* B5: Offline banner */}
               {!isOnline && (
@@ -600,7 +615,7 @@ export default function ProprietariPage() {
                       <User className="w-6 h-6" />
                    </div>
                    <div>
-                      <h2 className="text-2xl font-black text-slate-800">
+                      <h2 id="titolo-scheda-proprietario" className="text-2xl font-black text-slate-800">
                         {selectedProprietario ? "Scheda Cliente" : "Nuovo Proprietario"}
                       </h2>
                       <p className="text-slate-500 font-medium text-sm">

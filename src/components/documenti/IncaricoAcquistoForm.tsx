@@ -7,6 +7,7 @@ import {
   FileText, CheckCircle2, Sparkles, Building2, MapPin, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDialog } from '@/hooks/useDialog';
 import SignaturePad from '@/components/ui/SignaturePad';
 
 function SC({ icon: Icon, title, badge, children }: { icon: any; title: string; badge?: string; children: React.ReactNode }) {
@@ -126,8 +127,20 @@ export default function IncaricoAcquistoForm({ onClose, sezione, azione, initial
     finally { setGenerating(false); }
   };
 
+  // La pagina solo monta este componente mientras el formulario esta abierto,
+  // asi que `abierto` no depende de ningun estado de aqui. Escape hace lo mismo
+  // que «Annulla». No hay cierre al pinchar fuera a proposito: el formulario
+  // ocupa la pantalla entera y un clic de mas se llevaria por delante los datos
+  // y las firmas ya trazadas, que no se pueden recuperar.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/20 overflow-y-auto">
+    <div
+      ref={dialogo.ref}
+      {...dialogo.props}
+      aria-labelledby="titolo-incarico-acquisto"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-emerald-50/20 overflow-y-auto outline-none"
+    >
       {toast && <div className="fixed top-4 right-4 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold bg-slate-900 text-white animate-in slide-in-from-right-5 fade-in duration-200">{toast}</div>}
 
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
@@ -135,7 +148,7 @@ export default function IncaricoAcquistoForm({ onClose, sezione, azione, initial
           <div className="flex items-center gap-3.5">
             <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-lg shadow-emerald-600/30"><FileText className="h-5 w-5" /></div>
             <div>
-              <h1 className="text-lg font-black text-slate-800 tracking-tight">Impegnativa d&apos;Acquisto</h1>
+              <h1 id="titolo-incarico-acquisto" className="text-lg font-black text-slate-800 tracking-tight">Impegnativa d&apos;Acquisto</h1>
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Incarico per acquisto immobile — Immobiliare Pantaleo</p>
             </div>
           </div>

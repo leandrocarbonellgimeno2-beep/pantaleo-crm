@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+import { useDialog } from "@/hooks/useDialog";
 import {
   X, Search, User, Home, Percent, ShieldCheck, Printer, Send, Save, Loader2,
   FileText, CheckCircle2, Sparkles, Building2, Calendar, MapPin
@@ -73,6 +74,15 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
     import('@/lib/saveDocumentToCloud').catch(() => {});
   }, []);
 
+  // El padre solo monta este formulario cuando toca abrirlo, asi que estar
+  // renderizandose ya significa abierto. Sin cierre al pinchar fuera: es un
+  // formulario largo y un clic despistado se llevaria por delante todo lo
+  // escrito; Escape basta, y va al mismo `onClose` que el boton Annulla.
+  const dialogo = useDialog<HTMLDivElement>({
+    abierto: true,
+    alCerrar: onClose,
+  });
+
   // La peticion va con debounce: antes salia una por cada tecla, y una
   // busqueda de clientes escanea la coleccion entera.
   const fetchClienti = useDebouncedCallback(async (q: string) => {
@@ -132,7 +142,12 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-amber-50/30 overflow-y-auto">
+    <div
+      ref={dialogo.ref}
+      {...dialogo.props}
+      aria-labelledby="titolo-incarico-stagionale"
+      className="fixed inset-0 z-50 bg-gradient-to-br from-slate-100 via-slate-50 to-amber-50/30 overflow-y-auto outline-none"
+    >
       {toast && <div className="fixed top-4 right-4 z-[200] px-5 py-3 rounded-xl shadow-2xl text-sm font-bold bg-slate-900 text-white animate-in slide-in-from-right-5 fade-in duration-200">{toast}</div>}
 
       <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 shadow-sm">
@@ -140,7 +155,7 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
           <div className="flex items-center gap-3.5">
             <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-600/30"><FileText className="h-5 w-5" /></div>
             <div>
-              <h1 className="text-lg font-black text-slate-800 tracking-tight">Incarico Stagionale</h1>
+              <h1 id="titolo-incarico-stagionale" className="text-lg font-black text-slate-800 tracking-tight">Incarico Stagionale</h1>
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Impegnativa locazione stagionale — Immobiliare Pantaleo</p>
             </div>
           </div>

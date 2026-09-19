@@ -2,6 +2,7 @@
 
 import { X, Phone, Mail, MessageCircle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 
 interface ClienteMatchModalProps {
   /** Resultado del matching inverso: datos del cliente más su porcentaje. */
@@ -18,9 +19,21 @@ const URGENCY_STYLES: Record<string, string> = {
 
 /** Ficha resumida de un cliente candidato, desde el panel "Trova Acquirenti". */
 export function ClienteMatchModal({ cliente, onClose, onWhatsApp }: ClienteMatchModalProps) {
+  // La página solo monta la ficha cuando hay cliente seleccionado: si esto se
+  // renderiza, el diálogo está abierto.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+  // Aquí no se escribe nada, solo se consulta, así que cerrar por el fondo no
+  // puede hacer perder trabajo.
+  const fondo = useCierreAlPinchoFuera(onClose);
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-150" {...fondo}>
+      <div
+        ref={dialogo.ref}
+        {...dialogo.props}
+        aria-labelledby="titolo-cliente-match"
+        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 outline-none"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-violet-600 to-indigo-600">
           <div className="flex items-center gap-3">
@@ -28,7 +41,7 @@ export function ClienteMatchModal({ cliente, onClose, onWhatsApp }: ClienteMatch
               {(cliente.nome?.[0] || '?').toUpperCase()}
             </div>
             <div>
-              <h2 className="text-lg font-black text-white">
+              <h2 id="titolo-cliente-match" className="text-lg font-black text-white">
                 {cliente.nome} {cliente.cognome}
               </h2>
               <p className="text-violet-200 text-xs font-bold flex items-center gap-1.5 mt-0.5">

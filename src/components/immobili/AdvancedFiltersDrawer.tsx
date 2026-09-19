@@ -3,6 +3,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { SlidersHorizontal, X, Tag, Euro, Maximize2, CheckCircle2, Zap, RotateCcw, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import zonasData from "@/lib/zonas.json";
 import type { AdvFilters } from "@/lib/immobili/filters";
 import { TIPOLOGIE, PIANI, CLASSI_ENERGETICHE, STATI_FINITURE } from "@/lib/immobili/options";
@@ -32,9 +33,20 @@ export function AdvancedFiltersDrawer({
   activeCount,
   resultCount,
 }: AdvancedFiltersDrawerProps) {
+  // La página solo monta el cajón cuando está abierto, así que estar aquí ya
+  // significa estar abierto.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+  const fondo = useCierreAlPinchoFuera(onClose);
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => onClose()}>
-      <div className="w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200" {...fondo}>
+      <div
+        ref={dialogo.ref}
+        {...dialogo.props}
+        aria-labelledby="titolo-filtri-avanzati"
+        className="w-full max-w-lg bg-white h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-300 outline-none"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Drawer Header — Premium */}
         <div className="sticky top-0 z-10 bg-gradient-to-r from-slate-900 to-slate-800 px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -42,7 +54,7 @@ export function AdvancedFiltersDrawer({
               <SlidersHorizontal className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white">Filtri Avanzati</h3>
+              <h3 id="titolo-filtri-avanzati" className="text-lg font-black text-white">Filtri Avanzati</h3>
               <p className="text-xs text-slate-400 font-bold">
                 {activeCount > 0 ? `${activeCount} filtri attivi · ` : ''}
                 {resultCount} risultat{resultCount === 1 ? 'o' : 'i'}
