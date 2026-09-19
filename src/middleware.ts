@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth';
+import { hasAtLeast } from '@/lib/roles';
 
 const PUBLIC_PATHS = ['/login', '/api/auth'];
 
@@ -56,6 +57,22 @@ export async function middleware(request: NextRequest) {
       maxAge: 0,
     });
     return res;
+  }
+
+  // El panel de administracion se filtra AQUI, en la pagina, y no solo en
+  // sus rutas de API. Si solo se protegiera la API, un vendedor cargaria la
+  // pantalla entera y veria una tabla vacia con errores: parece un fallo del
+  // CRM en vez de una falta de permiso.
+  //
+  // Esto SI se puede hacer en el middleware aunque corra en Edge, porque el
+  // rol viaja firmado dentro de la propia cookie y no hay que consultar nada
+  // a Firestore. Los permisos que dependen de la base de datos siguen sin
+  // poder comprobarse aqui.
+  if (pathname.startsWith('/admin')) {
+    if (!hasAtLeast(payload.ruolo, 'secretaria')) {
+      console.warn(`[middleware] acceso a /admin denegado para rol "${payload.ruolo}"`);
+      return NextResponse.redirect(new URL('/', request.url));
+    }
   }
 
   return NextResponse.next();
