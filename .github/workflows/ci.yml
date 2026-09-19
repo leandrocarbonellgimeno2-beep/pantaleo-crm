@@ -1,0 +1,99 @@
+# Integración continua: comprueba cada push ANTES de que llegue a producción.
+#
+# POR QUÉ EXISTE
+# Vercel despliega solo en cada push a master. Hasta ahora no había ninguna
+# comprobación previa: un fallo de tipos o un test roto llegaba a producción y
+# solo se descubría allí. Este workflow ejecuta en cada push exactamente las
+# mismas cuatro órdenes que se ejecutan a mano antes de cada commit.
+#
+# POR QUÉ HAY CREDENCIALES FICTICIAS Y POR QUÉ NO SON UN ATAJO
+# `next build` no se limita a compilar: en la fase "Collecting page data"
+# importa cada route handler para leer su configuración, y
+# src/lib/firebase-admin.ts lanza en el propio import si faltan
+# FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL o FIREBASE_PRIVATE_KEY. Sin ellas
+# el build falla SIEMPRE. Comprobado antes de escribir esto: el build a ciegas
+# muere con "Failed to collect page data for /api/documenti-generati".
+#
+# Y no vale un texto cualquiera: admin.credential.cert() PARSEA la clave, así
+# que tiene que ser un PEM RSA válido. De ahí que se genere una clave de usar y
+# tirar con openssl en cada ejecución, en vez de guardar una en el repositorio
+# o en un secret. Esa clave nace y muere dentro del runner, no autentica contra
+# nada y no toca ningún dato: durante el build no se consulta Firestore, solo
+# se necesita que el módulo se importe sin lanzar.
+#
+# LO QUE ESTE WORKFLOW NO HACE
+# No ejecuta `npm run lint`. El proyecto arrastra cientos de avisos de ESLint y
+# añadirlo hoy dejaría el CI en rojo permanente, que es lo mismo que no tener
+# CI. Cuando se limpien, se añade como un paso más.
+
+name: CI
+
+on:
+  push:
+  # Para probarlo a mano desde la pestaña Actions sin esperar a un push.
+  workflow_dispatch:
+  # Si algún día se trabaja con pull requests, descomentar estas dos líneas:
+  # pull_request:
+
+# Dos pushes seguidos a la misma rama: se cancela la ejecución anterior. Lo que
+# importa es si el ÚLTIMO commit está sano, no los intermedios.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, tests y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Solo lee el repositorio: no publica, no comenta, no escribe nada.
+    permissions:
+      contents: read
+
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          # Misma versión mayor que la máquina donde se desarrolla (v24.x). Si
+          # se cambia allí, hay que cambiarlo aquí: validar en CI con un Node
+          # distinto del local es la forma más rápida de acabar con un
+          # "en mi máquina funciona".
+          node-version: '24'
+          cache: npm
+
+      - name: Instalar dependencias
+        id: deps
+        # `npm ci`, no `npm install`: instala exactamente lo que dice el
+        # lockfile y falla si package.json y package-lock.json se han
+        # desincronizado.
+        run: npm ci
+
+      # Los tres pasos siguientes se ejecutan aunque uno anterior haya fallado,
+      # para ver en UNA sola ejecución todo lo que está roto en vez de
+      # descubrirlo de uno en uno. Si la instalación falló, en cambio, no hay
+      # nada que comprobar y se saltan.
+      - name: Comprobar tipos
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npx tsc --noEmit
+
+      - name: Tests
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        run: npm test
+
+      - name: Build de producción
+        if: ${{ !cancelled() && steps.deps.outcome == 'success' }}
+        env:
+          FIREBASE_PROJECT_ID: ci-dummy
+          FIREBASE_CLIENT_EMAIL: ci@ci-dummy.iam.gserviceaccount.com
+        run: |
+          set -euo pipefail
+          # Fuera del repositorio, para que no pueda colarse en un commit.
+          KEY_FILE="$RUNNER_TEMP/firebase-ci-key.pem"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$KEY_FILE" 2>/dev/null
+          FIREBASE_PRIVATE_KEY="$(cat "$KEY_FILE")" npm run build
