@@ -5,7 +5,7 @@ import {
   Users, Home as HomeIcon,
   Plus, MapPin, Loader2, Briefcase,
   Building2, CalendarDays, FileText, ChevronRight,
-  Zap
+  Zap, Tag, KeyRound, PauseCircle
 } from "lucide-react";
 import Link from 'next/link';
 import NextImage from 'next/image';
@@ -26,15 +26,45 @@ const getGreeting = () => {
 
 const jsonFetcher = (url: string) => fetch(url).then(r => r.json());
 
+interface StatsResponse {
+  immobiliAttivi: number;
+  immobiliSospesi: number;
+  immobiliVendita: number;
+  immobiliAffitto: number;
+  clientiTotali: number;
+  proprietariTotali: number;
+}
+
 export default function DashboardPage() {
   // today must be inside the component so it refreshes if the tab stays open past midnight
   const today = new Date().toISOString().split('T')[0];
 
   // SWR cache: re-navigating to dashboard skips all 4 fetches for 30s
-  const { data: immData, isLoading: immLoading } = useSWR('/api/immobili?status=attivi&type=tutti', jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
-  const { data: cliData, isLoading: cliLoading } = useSWR('/api/clienti', jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
+  //
+  // Los dos listados van ahora con `limit`: el dashboard pinta 4 inmuebles y
+  // usa 2 clientes en el feed, y antes descargaba las colecciones enteras
+  // (hasta 1000 + 1500 documentos) para luego hacer .slice(0, 4). El limit se
+  // empuja a Firestore, no solo al recorte de salida.
+  //
+  // Contrapartida honesta: la clave anterior coincidia caracter por caracter
+  // con la que construye useImmobili con los filtros por defecto, asi que ir
+  // del dashboard a /immobili reaprovechaba esta misma respuesta desde la
+  // cache de SWR. Al anadir &limit=4 son claves distintas y /immobili vuelve a
+  // pedir su catalogo. Compensa igualmente: el caso normal es entrar al
+  // dashboard y quedarse, y ahi se pasa de ~1.260 lecturas a unas pocas decenas.
+  const { data: immData, isLoading: immLoading } = useSWR('/api/immobili?status=attivi&type=tutti&limit=4', jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
+  const { data: cliData, isLoading: cliLoading } = useSWR('/api/clienti?limit=4', jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
   const { data: agendaData, isLoading: agendaLoading } = useSWR(`/api/appointments?date=${today}`, jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
   const { data: sessionData } = useSWR('/api/auth/session', jsonFetcher, { revalidateOnFocus: false, dedupingInterval: 60_000 });
+
+  // Contadores por agregacion: 8 count() en el servidor (~16 lecturas) en vez
+  // de descargar las colecciones para contarlas en el navegador. La ruta ya
+  // existia, con Cache-Control s-maxage=60, y no la consumia nadie.
+  //
+  // Queda FUERA del gate de `loading` a proposito: las tarjetas se rellenan
+  // solas cuando llega la respuesta y mientras tanto muestran un guion. Meterla
+  // en el gate haria que una peticion mas retrasara la pagina entera.
+  const { data: stats } = useSWR<StatsResponse>('/api/stats', jsonFetcher, { dedupingInterval: 60_000, revalidateOnFocus: false });
 
   const loading = immLoading || cliLoading || agendaLoading;
 
@@ -139,6 +169,33 @@ export default function DashboardPage() {
 
 
         {/* ═══════════════════════════════════════════════════
+            2. I NUMERI DELL AGENZIA — da /api/stats
+        ═══════════════════════════════════════════════════ */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          {[
+            { label: 'Immobili attivi', value: stats?.immobiliAttivi,    icon: Building2,   bg: 'bg-indigo-50',  color: 'text-indigo-600'  },
+            { label: 'In vendita',      value: stats?.immobiliVendita,   icon: Tag,         bg: 'bg-blue-50',    color: 'text-blue-600'    },
+            { label: 'In affitto',      value: stats?.immobiliAffitto,   icon: KeyRound,    bg: 'bg-teal-50',    color: 'text-teal-600'    },
+            { label: 'Sospesi',         value: stats?.immobiliSospesi,   icon: PauseCircle, bg: 'bg-amber-50',   color: 'text-amber-600'   },
+            { label: 'Clienti',         value: stats?.clientiTotali,     icon: Users,       bg: 'bg-emerald-50', color: 'text-emerald-600' },
+            { label: 'Proprietari',     value: stats?.proprietariTotali, icon: Briefcase,   bg: 'bg-violet-50',  color: 'text-violet-600'  },
+          ].map((card) => (
+            <div key={card.label} className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-5 flex flex-col gap-3">
+              <div className={`h-9 w-9 rounded-xl ${card.bg} ${card.color} flex items-center justify-center`}>
+                <card.icon className="h-[18px] w-[18px]" />
+              </div>
+              <div>
+                {/* tabular-nums: al llegar los datos los digitos no bailan */}
+                <p className="text-2xl font-black text-slate-800 tabular-nums leading-none">
+                  {typeof card.value === 'number' ? card.value.toLocaleString('it-IT') : '—'}
+                </p>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1.5">{card.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ═══════════════════════════════════════════════════
             3. AZIONI RAPIDE — Cards Premium
         ═══════════════════════════════════════════════════ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -218,8 +275,11 @@ export default function DashboardPage() {
               {recentImmobili.map((imm: any, i: number) => (
                 <div key={imm.id || i} className="group rounded-2xl p-4 flex items-center gap-4 hover:bg-slate-50/80 transition-all border border-transparent hover:border-slate-100">
                   <div className="relative w-11 h-11 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200/80 flex-shrink-0 group-hover:border-indigo-200 transition-colors overflow-hidden">
-                    {imm.images?.[0] ? (
-                      <NextImage src={imm.images[0]} alt="Immobile" fill className="object-cover" sizes="44px" loading="lazy" unoptimized />
+                    {/* El listado no devuelve `images`: lo sustituye por `thumbnail`
+                        (stripToThumbnail en api/immobili/route.ts). Leer images[0]
+                        daba siempre undefined y la foto no se pintaba nunca. */}
+                    {imm.thumbnail ? (
+                      <NextImage src={imm.thumbnail} alt="Immobile" fill className="object-cover" sizes="44px" loading="lazy" unoptimized />
                     ) : (
                       <HomeIcon className="w-5 h-5 text-slate-300" />
                     )}
