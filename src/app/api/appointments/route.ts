@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
+import { buildUpdateArgs } from '@/lib/firestore-update';
+import { sanitizeFirestoreId } from '@/lib/sanitize';
 import { db, admin } from '@/lib/firebase-admin';
 import { createCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 import { sanitizeBody, APPOINTMENTS_ALLOWED } from '@/lib/sanitize';
@@ -90,10 +92,26 @@ export async function PATCH(request: Request) {
 
     const updates = sanitizeBody(raw, APPOINTMENTS_ALLOWED, 'appointments.PATCH');
 
-    await db.collection('appointments').doc(id).update({
-      ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    // `id` viene del cuerpo EN CRUDO, igual que pasaba en /api/documenti: sin
+    // sanear, un id con barras escribe en una subcoleccion arbitraria.
+    let idSeguro: string;
+    try {
+      idSeguro = sanitizeFirestoreId(id);
+    } catch (e: any) {
+      return NextResponse.json({ error: e.message }, { status: 400 });
+    }
+
+    // update({ ...updates }) REEMPLAZA cualquier mapa que venga en el payload,
+    // borrando los subcampos que no lleguen. Era la unica ruta de escritura sin
+    // migrar a rutas de campo, y es el mismo patron que ya causo tres perdidas
+    // de datos en inmuebles y clientes. buildUpdateArgs aplana a FieldPath, de
+    // modo que Firestore solo toca las hojas recibidas.
+    await (db.collection('appointments').doc(idSeguro).update as any)(
+      ...buildUpdateArgs({
+        ...updates,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }),
+    );
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

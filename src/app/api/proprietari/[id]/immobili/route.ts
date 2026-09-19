@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
 import { db, admin } from '@/lib/firebase-admin';
 import { belongsToProprietario } from '@/lib/ownership';
+import { recountProprietario } from '@/lib/services/proprietari-counter';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -94,16 +95,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     });
 
     // 2. Update Owner record
-    const ownerData = clientDoc.data() as any;
-    const currentImmobiliCount = ownerData.numero_immobili || 0;
-    
+    //
+    // El contador ya NO se calcula aqui. Antes era
+    // `numero_immobili: (ownerData.numero_immobili || 0) + 1`, un
+    // read-modify-write: dos agentes vinculando a la vez leen el mismo valor y
+    // uno de los dos incrementos se pierde. arrayUnion si es atomico y se queda.
     batch.update(clientRef, {
-      numero_immobili: currentImmobiliCount + 1,
       // Just in case we want an explicit array later
       immobili_collegati: admin.firestore.FieldValue.arrayUnion(propertyId)
     });
 
     await batch.commit();
+
+    // El recuento lo hace el servicio que ya existe para esto, que CUENTA de
+    // verdad en lugar de sumar a ciegas. Un FieldValue.increment habria
+    // arreglado la concurrencia pero no la deriva acumulada de un contador que
+    // lleva tiempo descuadrado; esto arregla las dos cosas de una vez.
+    await recountProprietario(clientId);
 
     return NextResponse.json({ success: true, message: 'Immobile collegato con successo!' });
   } catch (error: any) {
@@ -157,17 +165,17 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       proprietarioId: admin.firestore.FieldValue.delete()
     });
 
-    // 2. Update Owner record
+    // 2. Update Owner record — mismo criterio que en el POST: el contador no
+    // se calcula restando, se recuenta despues.
     if (clientDoc.exists) {
-      const ownerData = clientDoc.data() as any;
-      const currentImmobiliCount = Math.max((ownerData.numero_immobili || 1) - 1, 0);
       batch.update(clientRef, {
-        numero_immobili: currentImmobiliCount,
         immobili_collegati: admin.firestore.FieldValue.arrayRemove(propertyId)
       });
     }
 
     await batch.commit();
+
+    if (clientDoc.exists) await recountProprietario(clientId);
 
     return NextResponse.json({ success: true, message: 'Immobile scollegato.' });
   } catch (error: any) {
