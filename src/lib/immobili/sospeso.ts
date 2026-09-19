@@ -108,6 +108,20 @@ export function prepararImmobileParaCrear<T extends Payload>(
  */
 export function sanearImmobileParaEditar<T extends Payload>(payload: T): T {
   const gestion = payload.GestioneCommerciale;
+
+  // GestioneCommerciale presente pero NO es un mapa: una cadena, un número, un
+  // booleano. Hay que descartarlo entero, y no es un caso rebuscado, es el peor
+  // de todos. `buildUpdateArgs` trata cualquier cosa que no sea objeto plano
+  // como una HOJA, así que emitiría `FieldPath('GestioneCommerciale') = "texto"`
+  // y Firestore REEMPLAZARÍA el mapa completo: adiós Sospeso, InVendita,
+  // InAffitto, PrezzoVendita y Provvigioni en una sola escritura. `sanitizeBody`
+  // no lo frena porque solo mira que la clave esté permitida, nunca su tipo.
+  if (Object.prototype.hasOwnProperty.call(payload, 'GestioneCommerciale') && !esMapa(gestion)) {
+    const copia: Payload = { ...payload };
+    delete copia.GestioneCommerciale;
+    return copia as T;
+  }
+
   if (!esMapa(gestion) || !Object.prototype.hasOwnProperty.call(gestion, 'Sospeso')) {
     return payload;
   }

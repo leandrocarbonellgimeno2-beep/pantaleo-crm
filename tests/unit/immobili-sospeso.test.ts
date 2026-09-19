@@ -128,6 +128,28 @@ describe('sanearImmobileParaEditar — un PATCH no puede borrar ni corromper el 
     expect((sanearImmobileParaEditar({ GestioneCommerciale: { Sospeso: 0 } }).GestioneCommerciale as any).Sospeso).toBe(false);
   });
 
+  it('un GestioneCommerciale ESCALAR se descarta entero, que es el caso mas destructivo', () => {
+    // Sin esto, buildUpdateArgs lo trata como hoja y emite
+    // FieldPath('GestioneCommerciale') = "texto": Firestore REEMPLAZA el mapa
+    // completo y se lleva por delante Sospeso, InVendita, PrezzoVendita y
+    // Provvigioni en una sola escritura. sanitizeBody no lo frena porque solo
+    // comprueba que la clave este permitida, nunca su tipo.
+    for (const escalar of ['texto', 42, true, null]) {
+      const r = sanearImmobileParaEditar({ GestioneCommerciale: escalar, DatiBase: { Prezzo: 1 } });
+      expect(Object.prototype.hasOwnProperty.call(r, 'GestioneCommerciale')).toBe(false);
+      // Y lo que de verdad importa: ninguna escritura toca el mapa.
+      const rutas = toFieldPathEntries(r as any).map((e) => e.segments.join('.'));
+      expect(rutas.some((x) => x.startsWith('GestioneCommerciale'))).toBe(false);
+      // El resto del payload sobrevive intacto.
+      expect(rutas).toContain('DatiBase.Prezzo');
+    }
+  });
+
+  it('un array tampoco pasa: isPlainObject lo trata como hoja igual que una cadena', () => {
+    const r = sanearImmobileParaEditar({ GestioneCommerciale: [1, 2, 3] });
+    expect(Object.prototype.hasOwnProperty.call(r, 'GestioneCommerciale')).toBe(false);
+  });
+
   it('un mapa GestioneCommerciale vacio no genera ninguna escritura', () => {
     // buildUpdateArgs omite los mapas vacios a proposito: escribir {} habria
     // REEMPLAZADO el mapa entero y borrado precio, InVendita y Sospeso de golpe.
