@@ -51,9 +51,12 @@ const FsLightbox = dynamic(() => import("fslightbox-react"), { ssr: false });
 // non rompere i call sites esistenti.
 const extractImages = extractImageUrls;
 
-const PhotoViewer = ({ images, toggler, sourceIndex }: { images: string[], toggler: boolean, sourceIndex: number }) => {
+// El visor avisa de su apertura porque la ficha del inmueble necesita saberlo:
+// fslightbox escucha Escape en `document` en fase de BURBUJA y useDialog lo
+// hace en fase de CAPTURA, o sea que el dialogo se lo come antes. Ver abajo.
+const PhotoViewer = ({ images, toggler, sourceIndex, onOpen, onClose }: { images: string[], toggler: boolean, sourceIndex: number, onOpen: () => void, onClose: () => void }) => {
   if (!images || images.length === 0) return null;
-  
+
   return (
     <FsLightbox
       key={images.length}
@@ -61,6 +64,8 @@ const PhotoViewer = ({ images, toggler, sourceIndex }: { images: string[], toggl
       sources={images}
       types={images.map(() => 'image' as const)}
       slide={sourceIndex + 1}
+      onOpen={onOpen}
+      onClose={onClose}
     />
   );
 };
@@ -126,6 +131,9 @@ export default function ImmobiliPage() {
     toggler: false,
     sourceIndex: 0
   });
+  // Si el visor esta abierto, la ficha le cede Escape. El detalle de por que,
+  // en el comentario de PhotoViewer y en la prop sinEscape de la ficha.
+  const [lightboxAbierto, setLightboxAbierto] = useState(false);
 
   // Idealista Integration State
 
@@ -386,6 +394,7 @@ export default function ImmobiliPage() {
           idealista={idealista}
           inverse={inverse}
           onOpenLightbox={openLightboxOnSource}
+          lightboxAbierto={lightboxAbierto}
           onSelectCliente={setSelectedClienteModal}
           onWhatsAppCliente={handleInverseWhatsApp}
           onFileUpload={handleFileUpload}
@@ -411,10 +420,12 @@ export default function ImmobiliPage() {
 
       {/* Photo Viewer Isolated at the Root Level */}
       {validLightboxImages.length > 0 && (
-        <PhotoViewer 
+        <PhotoViewer
           images={validLightboxImages}
           toggler={lightboxController.toggler}
           sourceIndex={Math.min(lightboxController.sourceIndex, validLightboxImages.length - 1)}
+          onOpen={() => setLightboxAbierto(true)}
+          onClose={() => setLightboxAbierto(false)}
         />
       )}
 

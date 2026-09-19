@@ -133,7 +133,14 @@ export default function IncaricoAcquistoForm({ onClose, sezione, azione, initial
   // que «Annulla». No hay cierre al pinchar fuera a proposito: el formulario
   // ocupa la pantalla entera y un clic de mas se llevaria por delante los datos
   // y las firmas ya trazadas, que no se pueden recuperar.
-  const dialogo = useDialog<HTMLDivElement>({ abierto: true, alCerrar: onClose });
+  // sinEscape a proposito. Antes de este cambio, Escape no hacia nada aqui;
+  // con el hook pasaba a llamar a onClose, que desmonta el formulario SIN
+  // preguntar. O sea que una tecla de mas tiraba un incarico entero con las
+  // firmas ya trazadas, que no se pueden recuperar. Es justo el agujero que se
+  // evito no poniendo cierre al pinchar el fondo: no tiene sentido cerrar la
+  // puerta del raton y dejar abierta la del teclado. Se sale por Annulla o por
+  // la X, que estan dentro de la trampa de foco y se alcanzan tabulando.
+  const dialogo = useDialog<HTMLDivElement>({ abierto: true, sinEscape: true, alCerrar: onClose });
 
   return (
     <div

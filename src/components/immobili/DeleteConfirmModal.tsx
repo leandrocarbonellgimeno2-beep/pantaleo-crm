@@ -70,7 +70,11 @@ export function DeleteConfirmModal({
                     que pintarlo esta caja: si no, tabular hasta el guardarraíl
                     deja el foco en un sitio que no se ve. */}
                 <div className="h-6 w-6 rounded-md border-2 border-slate-300 bg-white group-hover:border-rose-400 peer-checked:bg-rose-500 peer-checked:border-rose-500 peer-focus-visible:ring-2 peer-focus-visible:ring-rose-500 peer-focus-visible:ring-offset-2 transition-all flex items-center justify-center">
-                  <CheckCircle2 className="h-4 w-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                  {/* peer-checked NO funcionaba aqui: la variante solo alcanza a
+                      los HERMANOS del .peer, y este icono es nieto. La marca no se
+                      ha visto nunca desde que existe el guardarrail; el usuario solo
+                      notaba que la caja se ponia roja. Se pinta desde el estado. */}
+                  <CheckCircle2 className={`h-4 w-4 text-white transition-opacity ${confirmed ? "opacity-100" : "opacity-0"}`} />
                 </div>
               </div>
               <span className="text-sm font-bold text-slate-700 leading-snug group-hover:text-slate-900 transition-colors">

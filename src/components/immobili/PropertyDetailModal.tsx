@@ -20,6 +20,8 @@ interface PropertyDetailModalProps {
   // `dropzone` ya no viaja por aqui: PropertyEditForm lo monta el mismo, de
   // forma perezosa, a partir del `photos` que ya se le pasa.
   onOpenLightbox: (index: number) => void;
+  /** El visor de fotos esta abierto encima: mientras tanto, Escape es suyo. */
+  lightboxAbierto?: boolean;
   onSelectCliente: (cliente: any) => void;
   onWhatsAppCliente: (cliente: any) => void;
   onFileUpload: (
@@ -48,6 +50,7 @@ export function PropertyDetailModal({
   idealista,
   inverse,
   onOpenLightbox,
+  lightboxAbierto = false,
   onSelectCliente,
   onWhatsAppCliente,
   onFileUpload,
@@ -77,8 +80,16 @@ export function PropertyDetailModal({
   // La pagina monta este modal solo con isModalOpen, asi que si se esta
   // renderizando es que esta abierto. Sin cierre al pinchar el fondo: en modo
   // edicion la ficha lleva cambios sin guardar y un clic fuera los tiraria.
+  // El visor de fotos (FsLightbox) se monta como HERMANO de esta ficha en la
+  // pagina, no dentro, asi que no entra en la pila de useDialog. Y escucha
+  // Escape en `document` en fase de burbuja, mientras que useDialog lo hace en
+  // fase de captura con stopPropagation: sin esto, abrir una foto y pulsar
+  // Escape cerraba LA FICHA —perdiendo los cambios sin guardar si estaba en
+  // modo edicion— y dejaba el visor a pantalla completa sobre una ficha que ya
+  // no existia. Mientras el visor este abierto, Escape es suyo.
   const dialogo = useDialog<HTMLDivElement>({
     abierto: true,
+    sinEscape: lightboxAbierto,
     alCerrar: () => setIsModalOpen(false),
   });
 
