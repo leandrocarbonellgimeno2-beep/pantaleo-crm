@@ -10,6 +10,8 @@
  * como parte de la consulta; se cuentan como activos, pero no filtran aquí.
  */
 
+import { estaEnLaPlanta, tieneElEstado } from "@/lib/immobili/clasificacion";
+
 export interface AdvFilters {
   codice: string;
   proprietario: string;
@@ -113,9 +115,22 @@ export function applyAdvancedFilters<T = any>(items: T[], af: AdvFilters): T[] {
     result = result.filter(d => Number(d.DettagliFisici?.MetriCommerciali || 0) <= max);
   }
 
-  if (af.piano) result = result.filter(d => d.DettagliFisici?.Piano === af.piano);
+  // Piano y StatoFiniture se comparaban con === contra un desplegable cerrado,
+  // pero los dos campos se rellenan con un input de texto libre. Medido sobre
+  // los 870 inmuebles reales: Piano tiene SETENTA valores distintos y el
+  // desplegable ofrecia ocho, asi que el filtro solo alcanzaba a ~231 —el 27%
+  // del catalogo—; el valor mas frecuente de todos, «Basso» con 341 inmuebles,
+  // no estaba en la lista. StatoFiniture llegaba al 22%, entre otras cosas
+  // porque el desplegable decia «Buono» y el dato dice «Buone».
+  //
+  // Ahora se clasifica el texto en vez de exigir que sea identico, y ademas el
+  // campo es legitimamente multivalor: «Piano Terra e Primo» sale en las dos
+  // plantas, que es lo que un agente espera. Ver lib/immobili/clasificacion.ts.
+  if (af.piano) result = result.filter(d => estaEnLaPlanta(d.DettagliFisici?.Piano, af.piano));
+  if (af.statoFiniture) result = result.filter(d => tieneElEstado(d.DettagliFisici?.StatoFiniture, af.statoFiniture));
+  // ClasseEnergetica si es un vocabulario cerrado de verdad: 864 de los 870
+  // dicen «G» y los demas usan una letra valida. Se queda con igualdad.
   if (af.classeEnergetica) result = result.filter(d => d.DettagliFisici?.ClasseEnergetica === af.classeEnergetica);
-  if (af.statoFiniture) result = result.filter(d => d.DettagliFisici?.StatoFiniture === af.statoFiniture);
 
   for (const [key, docKey] of Object.entries(CHARACTERISTIC_KEYS)) {
     if (af[key as keyof AdvFilters]) {

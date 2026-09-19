@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import zonasData from "@/lib/zonas.json";
 import type { AdvFilters } from "@/lib/immobili/filters";
-import { TIPOLOGIE, PIANI, CLASSI_ENERGETICHE, STATI_FINITURE } from "@/lib/immobili/options";
+import { TIPOLOGIE, CLASSI_ENERGETICHE } from "@/lib/immobili/options";
+// Las listas de plantas y de estado NO salen de options.ts: salen de los
+// valores que de verdad existen en los 870 inmuebles. Ver clasificacion.ts.
+import { PLANTAS, ESTADOS_ACABADO } from "@/lib/immobili/clasificacion";
 
 interface AdvancedFiltersDrawerProps {
   filters: AdvFilters;
@@ -156,7 +159,7 @@ export function AdvancedFiltersDrawer({
               <label htmlFor="adv-piano" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Piano</label>
               <select id="adv-piano" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.piano} onChange={e => onChange(p => ({...p, piano: e.target.value}))}>
                 <option value="">Qualsiasi piano</option>
-                {PIANI.map(p => <option key={p} value={p}>{p}</option>)}
+                {PLANTAS.map(p => <option key={p.clave} value={p.clave}>{p.etiqueta}</option>)}
               </select>
             </div>
           </div>
@@ -207,7 +210,7 @@ export function AdvancedFiltersDrawer({
                 <label htmlFor="adv-stato-finiture" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Stato Finiture</label>
                 <select id="adv-stato-finiture" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.statoFiniture} onChange={e => onChange(p => ({...p, statoFiniture: e.target.value}))}>
                   <option value="">Tutti</option>
-                  {STATI_FINITURE.map(s => <option key={s} value={s}>{s}</option>)}
+                  {ESTADOS_ACABADO.map(s => <option key={s.clave} value={s.clave}>{s.etiqueta}</option>)}
                 </select>
               </div>
             </div>

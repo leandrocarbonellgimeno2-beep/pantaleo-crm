@@ -61,10 +61,26 @@ describe('applyAdvancedFilters', () => {
     expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMax: '100' }))).toEqual(['a', 'c']);
   });
 
-  it('piano, clase energetica y estado son exactos', () => {
-    expect(ids(applyAdvancedFilters(immobili, { ...base(), piano: 'T' }))).toEqual(['b']);
+  it('piano y estado se CLASIFICAN, no se comparan letra a letra', () => {
+    // El fixture guarda Piano: 'T' y StatoFiniture: 'Da ristrutturare' (con erre
+    // minuscula). Con la comparacion estricta de antes, el desplegable ofrecia
+    // 'Piano Terra' y 'Da Ristrutturare' y ninguno de los dos encontraba nada.
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), piano: 'terra' }))).toEqual(['b']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), piano: '2' }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), statoFiniture: 'nuovo' }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), statoFiniture: 'da-ristrutturare' }))).toEqual(['b']);
+  });
+
+  it('la clase energetica SI es un vocabulario cerrado y sigue siendo exacta', () => {
     expect(ids(applyAdvancedFilters(immobili, { ...base(), classeEnergetica: 'A' }))).toEqual(['a']);
-    expect(ids(applyAdvancedFilters(immobili, { ...base(), statoFiniture: 'Nuovo' }))).toEqual(['a']);
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), classeEnergetica: 'G' }))).toEqual([]);
+  });
+
+  it('un inmueble en varias plantas aparece en todas', () => {
+    const local = [{ id: 'multi', DettagliFisici: { Piano: 'Piano Terra e Primo' } }];
+    expect(ids(applyAdvancedFilters(local, { ...base(), piano: 'terra' }))).toEqual(['multi']);
+    expect(ids(applyAdvancedFilters(local, { ...base(), piano: '1' }))).toEqual(['multi']);
+    expect(ids(applyAdvancedFilters(local, { ...base(), piano: '2' }))).toEqual([]);
   });
 
   it('las caracteristicas booleanas exigen el flag en el documento', () => {
