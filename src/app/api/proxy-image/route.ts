@@ -9,6 +9,7 @@
  * Sicurezza:
  *   - Whitelist dei domini accettati (solo Firebase/GCS)
  *   - Nessun SSRF possibile su IP locali o domini arbitrari
+ *   - Whitelist dei Content-Type: si servono SOLO immagini, mai HTML
  *   - Cache pubblica 1h per ridurre le richieste ripetute
  *
  * Uso:
@@ -17,6 +18,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { normalizeImageContentType } from '@/lib/image-content-type';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +63,23 @@ export async function GET(request: Request) {
       );
     }
 
-    const buffer      = await upstream.arrayBuffer();
-    const contentType = upstream.headers.get('content-type') || 'image/jpeg';
+    // ── Validazione del Content-Type ─────────────────────────────────────────
+    // Prima si copiava quello della sorgente tal quale. Un file caricato su
+    // Storage come text/html veniva quindi servito come HTML DAL DOMINIO DEL
+    // CRM: XSS di same-origin. Si valida PRIMA di leggere il corpo, cosi una
+    // risposta non valida non passa nemmeno per la memoria della lambda.
+    const contentType = normalizeImageContentType(upstream.headers.get('content-type'));
+
+    if (!contentType) {
+      const visto = upstream.headers.get('content-type') || '(assente)';
+      console.warn(`[proxy-image] Content-Type rifiutato: "${visto}" per ${parsed.pathname}`);
+      return NextResponse.json(
+        { error: 'Tipo di contenuto non consentito' },
+        { status: 415 },
+      );
+    }
+
+    const buffer = await upstream.arrayBuffer();
 
     return new NextResponse(buffer, {
       status: 200,
@@ -70,6 +87,13 @@ export async function GET(request: Request) {
         'Content-Type':  contentType,
         'Cache-Control': 'public, max-age=3600, s-maxage=3600',
         'Content-Length': String(buffer.byteLength),
+
+        // Difesa in profondita: anche se un tipo consentito venisse usato per
+        // servire altro, il browser non deve indovinare il formato ne
+        // eseguire nulla aprendo direttamente questa URL.
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'Content-Disposition': 'inline',
       },
     });
 
