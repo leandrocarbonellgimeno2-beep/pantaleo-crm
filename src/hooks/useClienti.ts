@@ -37,7 +37,17 @@ export function useClienti(params?: UseClientiParams) {
     fetcher,
     {
       keepPreviousData: true,
-      revalidateOnFocus: true,
+      // Alineado con useImmobili y useProprietari. Volver a la pestana
+      // revalidaba la lista entera de clientes: sin ?limit=, /api/clienti
+      // devuelve la coleccion proyectada completa, de modo que cada foco
+      // costaba del orden de 453 lecturas de Firestore.
+      //
+      // Lo que sigue refrescando la lista: el montaje de la pagina, cambiar
+      // el filtro vendita/affitto (cambia la clave SWR), reconectar la red, y
+      // el refresh() manual que ya se llama tras guardar y tras borrar.
+      // Queda un hueco reconocido: un cliente creado desde otra pestana no
+      // aparece hasta alguna de esas cuatro cosas.
+      revalidateOnFocus: false,
       dedupingInterval: 5000,
       errorRetryCount: 2,
     }
