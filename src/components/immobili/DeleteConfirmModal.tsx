@@ -44,9 +44,10 @@ export function DeleteConfirmModal({
           </p>
 
           <div className="mt-8 w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left">
-            <label className="flex items-start gap-4 cursor-pointer group">
+            <label htmlFor="delete-confirm-check" className="flex items-start gap-4 cursor-pointer group">
               <div className="relative flex items-center">
                 <input
+                  id="delete-confirm-check"
                   type="checkbox"
                   className="peer sr-only"
                   checked={confirmed}

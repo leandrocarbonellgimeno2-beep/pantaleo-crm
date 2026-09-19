@@ -49,7 +49,7 @@ export function AdvancedFiltersDrawer({
               </p>
             </div>
           </div>
-          <button onClick={() => onClose()} className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors">
+          <button onClick={() => onClose()} aria-label="Chiudi filtri" className="h-10 w-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -63,25 +63,25 @@ export function AdvancedFiltersDrawer({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Codice</label>
-                <input className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="es. 10047" value={filters.codice} onChange={e => onChange(p => ({...p, codice: e.target.value}))} />
+                <label htmlFor="adv-codice" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Codice</label>
+                <input id="adv-codice" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="es. 10047" value={filters.codice} onChange={e => onChange(p => ({...p, codice: e.target.value}))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Provincia / Città</label>
-                <input className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="Marsala" value={filters.provincia} onChange={e => onChange(p => ({...p, provincia: e.target.value}))} />
+                <label htmlFor="adv-provincia" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Provincia / Città</label>
+                <input id="adv-provincia" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="Marsala" value={filters.provincia} onChange={e => onChange(p => ({...p, provincia: e.target.value}))} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Tipologia</label>
-                <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.tipologia} onChange={e => onChange(p => ({...p, tipologia: e.target.value}))}>
+                <label htmlFor="adv-tipologia" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Tipologia</label>
+                <select id="adv-tipologia" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.tipologia} onChange={e => onChange(p => ({...p, tipologia: e.target.value}))}>
                   <option value="">Tutte le tipologie</option>
                   {TIPOLOGIE.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Zona</label>
-                <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.zona} onChange={e => onChange(p => ({...p, zona: e.target.value}))}>
+                <label htmlFor="adv-zona" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Zona</label>
+                <select id="adv-zona" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.zona} onChange={e => onChange(p => ({...p, zona: e.target.value}))}>
                   <option value="">Tutte le Zone</option>
                   <option value="Nessuna Zona">Nessuna Zona</option>
                   {zonasData.filter((z: string) => z !== "-").map((z: string) => <option key={z} value={z}>{z}</option>)}
@@ -99,17 +99,17 @@ export function AdvancedFiltersDrawer({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Da (Min)</label>
+                <label htmlFor="adv-prezzo-min" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Da (Min)</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">€</span>
-                  <input type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.prezzoMin} onChange={e => onChange(p => ({...p, prezzoMin: e.target.value}))} />
+                  <input id="adv-prezzo-min" type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.prezzoMin} onChange={e => onChange(p => ({...p, prezzoMin: e.target.value}))} />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">A (Max)</label>
+                <label htmlFor="adv-prezzo-max" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">A (Max)</label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">€</span>
-                  <input type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="1.000.000" value={filters.prezzoMax} onChange={e => onChange(p => ({...p, prezzoMax: e.target.value}))} />
+                  <input id="adv-prezzo-max" type="number" className="w-full pl-8 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="1.000.000" value={filters.prezzoMax} onChange={e => onChange(p => ({...p, prezzoMax: e.target.value}))} />
                 </div>
               </div>
             </div>
@@ -124,25 +124,25 @@ export function AdvancedFiltersDrawer({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Min (m²)</label>
-                <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.superficieMin} onChange={e => onChange(p => ({...p, superficieMin: e.target.value}))} />
+                <label htmlFor="adv-superficie-min" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Min (m²)</label>
+                <input id="adv-superficie-min" type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.superficieMin} onChange={e => onChange(p => ({...p, superficieMin: e.target.value}))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Max (m²)</label>
-                <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.superficieMax} onChange={e => onChange(p => ({...p, superficieMax: e.target.value}))} />
+                <label htmlFor="adv-superficie-max" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Sup. Max (m²)</label>
+                <input id="adv-superficie-max" type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.superficieMax} onChange={e => onChange(p => ({...p, superficieMax: e.target.value}))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Camere Min</label>
-                <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.camereMin} onChange={e => onChange(p => ({...p, camereMin: e.target.value}))} />
+                <label htmlFor="adv-camere-min" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Camere Min</label>
+                <input id="adv-camere-min" type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.camereMin} onChange={e => onChange(p => ({...p, camereMin: e.target.value}))} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Bagni Min</label>
-                <input type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.bagniMin} onChange={e => onChange(p => ({...p, bagniMin: e.target.value}))} />
+                <label htmlFor="adv-bagni-min" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Bagni Min</label>
+                <input id="adv-bagni-min" type="number" min="0" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" placeholder="0" value={filters.bagniMin} onChange={e => onChange(p => ({...p, bagniMin: e.target.value}))} />
               </div>
             </div>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Piano</label>
-              <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.piano} onChange={e => onChange(p => ({...p, piano: e.target.value}))}>
+              <label htmlFor="adv-piano" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Piano</label>
+              <select id="adv-piano" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.piano} onChange={e => onChange(p => ({...p, piano: e.target.value}))}>
                 <option value="">Qualsiasi piano</option>
                 {PIANI.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
@@ -162,13 +162,13 @@ export function AdvancedFiltersDrawer({
                 ['garage', 'Garage', '🚗'], ['giardino', 'Giardino', '🌳'], ['arredato', 'Arredato', '🛋️'],
                 ['vistaMare', 'Vista Mare', '🌊'], ['ariaCondizionata', 'Aria Cond.', '❄️'], ['riscaldamentoAutonomo', 'Risc. Autonomo', '🔥']
               ] as const).map(([key, label, emoji]) => (
-                <label key={key} className={cn(
+                <label key={key} htmlFor={`adv-${key}`} className={cn(
                   "flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-sm font-medium cursor-pointer transition-all duration-200",
                   filters[key]
                     ? 'bg-violet-50 border-violet-300 text-violet-700 font-bold shadow-sm shadow-violet-100'
                     : 'border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
                 )}>
-                  <input type="checkbox" className="sr-only" checked={filters[key] as boolean} onChange={() => onChange(p => ({...p, [key]: !p[key as keyof typeof p]}))} />
+                  <input id={`adv-${key}`} type="checkbox" className="sr-only" checked={filters[key] as boolean} onChange={() => onChange(p => ({...p, [key]: !p[key as keyof typeof p]}))} />
                   <span className="text-base leading-none">{emoji}</span>
                   {label}
                 </label>
@@ -185,15 +185,15 @@ export function AdvancedFiltersDrawer({
             </h4>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Classe Energetica</label>
-                <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.classeEnergetica} onChange={e => onChange(p => ({...p, classeEnergetica: e.target.value}))}>
+                <label htmlFor="adv-classe-energetica" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Classe Energetica</label>
+                <select id="adv-classe-energetica" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.classeEnergetica} onChange={e => onChange(p => ({...p, classeEnergetica: e.target.value}))}>
                   <option value="">Tutte</option>
                   {CLASSI_ENERGETICHE.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Stato Finiture</label>
-                <select className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.statoFiniture} onChange={e => onChange(p => ({...p, statoFiniture: e.target.value}))}>
+                <label htmlFor="adv-stato-finiture" className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Stato Finiture</label>
+                <select id="adv-stato-finiture" className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm font-medium focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 transition-all bg-slate-50/50 hover:bg-white" value={filters.statoFiniture} onChange={e => onChange(p => ({...p, statoFiniture: e.target.value}))}>
                   <option value="">Tutti</option>
                   {STATI_FINITURE.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
