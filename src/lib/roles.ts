@@ -4,70 +4,85 @@
  * Modulo PURO a proposito: lo importa src/lib/auth.ts, que a su vez lo importa
  * el middleware, y el middleware corre en Edge. Nada de Node aqui dentro.
  *
- * Hoy el rol viaja de AUTH_USERS_JSON a la cookie y de la cookie a React, y ahi
- * muere: no hay ni una sola comparacion de rol en todo el proyecto. Esto es la
- * base para que empiece a haberlas.
+ * ┌──────────────┬───────┬────────────────────────────────────────────────────┐
+ * │ propietario  │ nivel 4 │ control total                                    │
+ * │ secretaria   │ nivel 3 │ gestion de la agencia                            │
+ * │ vendedor     │ nivel 2 │ uso diario: crear inmuebles, clientes, citas     │
+ * │ agente       │ nivel 1 │ SOLO LECTURA                                     │
+ * └──────────────┴───────┴────────────────────────────────────────────────────┘
+ *
+ * ATENCION AL NOMBRE "agente". Aqui es el nivel MAS BAJO, el de solo lectura.
+ * Es contraintuitivo, porque en una inmobiliaria un agente es quien vende, y
+ * porque en la version anterior de este fichero "agente" era el nivel
+ * intermedio. Quien lea esto dentro de seis meses y asuma lo contrario le
+ * quitara permisos a alguien sin darse cuenta. El que vende es "vendedor".
  */
 
-export const ROLES = ['master', 'admin', 'agente', 'lectura'] as const;
+export const ROLES = ['propietario', 'secretaria', 'vendedor', 'agente'] as const;
 export type Role = (typeof ROLES)[number];
 
 /** Mayor numero, mas permisos. Comparar niveles evita listas de roles por ruta. */
 const NIVEL: Record<Role, number> = {
-  master: 4,
-  admin: 3,
-  agente: 2,
-  lectura: 1,
+  propietario: 4,
+  secretaria: 3,
+  vendedor: 2,
+  agente: 1,
 };
 
 /**
  * Rol de partida cuando el valor recibido no se reconoce.
  *
- * ES 'agente' Y NO 'lectura', y conviene entender por que. No puedo leer los
- * valores reales de AUTH_USERS_JSON: Vercel marca esa variable como Sensitive y
- * en local solo llega el texto [SENSITIVE]. Asi que la lista de alias de abajo
- * es lo mejor que puedo cubrir a ciegas.
+ * Es 'vendedor': puede trabajar, no puede administrar. Degradar a 'agente'
+ * dejaria a esa persona sin poder hacer nada en cuanto las rutas comprueban el
+ * rol, y subirla a 'secretaria' seria regalar permisos que nadie concedio.
  *
- * Si un valor no encaja, degradar a 'lectura' dejaria a esa persona sin poder
- * trabajar en cuanto las rutas empiecen a comprobar el rol. Degradar a 'agente'
- * le deja hacer su trabajo diario y le niega la administracion. Y no afloja
- * nada respecto a hoy: ahora mismo CUALQUIER usuario autenticado puede hacerlo
- * absolutamente todo, asi que esto solo quita permisos, nunca los anade.
- *
- * Cada vez que aparece un valor no reconocido se registra un aviso con el valor
- * concreto, de modo que los logs de produccion acaban diciendo exactamente que
- * roles hay sin necesidad de leer el secreto.
+ * Cada valor no reconocido deja un aviso con el valor concreto, de modo que los
+ * logs acaban diciendo que roles hay de verdad. Hace falta porque Vercel marca
+ * AUTH_USERS_JSON como Sensitive y su contenido no se puede leer desde aqui.
  */
-export const ROL_POR_DEFECTO: Role = 'agente';
+export const ROL_POR_DEFECTO: Role = 'vendedor';
 
 const ALIAS: Record<string, Role> = {
-  // master
-  master: 'master',
-  superadmin: 'master',
-  'super-admin': 'master',
-  owner: 'master',
-  propietario: 'master',
-  titolare: 'master',
-  // admin
-  admin: 'admin',
-  administrador: 'admin',
-  administrator: 'admin',
-  amministratore: 'admin',
-  // agente
+  // ── nivel 4 ──────────────────────────────────────────────────────────────
+  propietario: 'propietario',
+  proprietario: 'propietario',
+  titular: 'propietario',
+  titolare: 'propietario',
+  master: 'propietario',
+  superadmin: 'propietario',
+  'super-admin': 'propietario',
+  owner: 'propietario',
+
+  // ── nivel 3 ──────────────────────────────────────────────────────────────
+  secretaria: 'secretaria',
+  secretario: 'secretaria',
+  segretaria: 'secretaria',
+  admin: 'secretaria',
+  administrador: 'secretaria',
+  administrator: 'secretaria',
+  amministratore: 'secretaria',
+
+  // ── nivel 2 ──────────────────────────────────────────────────────────────
+  vendedor: 'vendedor',
+  vendedora: 'vendedor',
+  venditore: 'vendedor',
+  comercial: 'vendedor',
+  commerciale: 'vendedor',
+  'agente-comercial': 'vendedor',
+  user: 'vendedor',
+  usuario: 'vendedor',
+  utente: 'vendedor',
+
+  // ── nivel 1, solo lectura ────────────────────────────────────────────────
   agente: 'agente',
   agent: 'agente',
-  user: 'agente',
-  usuario: 'agente',
-  utente: 'agente',
-  commerciale: 'agente',
-  // lectura
-  lectura: 'lectura',
-  lector: 'lectura',
-  readonly: 'lectura',
-  'read-only': 'lectura',
-  viewer: 'lectura',
-  lettura: 'lectura',
-  'sola-lettura': 'lectura',
+  lectura: 'agente',
+  lector: 'agente',
+  readonly: 'agente',
+  'read-only': 'agente',
+  viewer: 'agente',
+  lettura: 'agente',
+  'sola-lettura': 'agente',
 };
 
 /**
@@ -83,8 +98,6 @@ export function normalizeRole(raw: unknown): Role {
   const conocido = ALIAS[limpio];
   if (conocido) return conocido;
 
-  // El aviso es la forma de descubrir que valores hay de verdad en produccion
-  // sin tener acceso a la variable de entorno.
   console.warn(`[roles] valor de rol no reconocido: "${raw}" → se trata como ${ROL_POR_DEFECTO}`);
   return ROL_POR_DEFECTO;
 }

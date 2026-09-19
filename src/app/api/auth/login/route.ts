@@ -2,10 +2,31 @@ import { NextResponse } from 'next/server';
 import { signSession } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { hashPassword, verifyPassword, burnPasswordTime } from '@/lib/password';
-import { normalizeRole } from '@/lib/roles';
+import { normalizeRole, type Role } from '@/lib/roles';
 import { buscarUsuario, migrarUsuarioDesdeLegacy } from '@/lib/services/users';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * TEMPORAL — SE ELIMINA AL CONSTRUIR EL PANEL DE ADMINISTRACION (Fase 4).
+ *
+ * Todo usuario que entre por el AUTH_USERS_JSON viejo asume el rol maximo.
+ * Es deliberado y tiene una razon concreta: los roles que hay en esa
+ * variable no se corresponden con la nomenclatura nueva (propietario /
+ * secretaria / vendedor / agente), y ademas no se pueden leer desde aqui,
+ * porque Vercel la marca como Sensitive. Traducirlos a ojo podria dejar al
+ * dueno de la agencia sin acceso a la administracion de su propio CRM justo
+ * cuando las rutas empiezan a comprobar el rol.
+ *
+ * No afloja nada respecto a hoy: ahora mismo cualquier usuario autenticado
+ * puede hacerlo absolutamente todo, porque no existe ni una comprobacion de
+ * rol. Esto mantiene ese statu quo SOLO para quien ya estaba en el JSON.
+ *
+ * COMO SE QUITA: cuando el panel permita crear los usuarios definitivos con
+ * su rol real, se borra AUTH_USERS_JSON de Vercel y con ella todo el bloque
+ * de fallback. Esta constante se va con el.
+ */
+const ROL_LEGACY: Role = 'propietario';
 
 interface UserRecord {
   email: string;
@@ -177,7 +198,9 @@ export async function POST(request: Request) {
         await migrarUsuarioDesdeLegacy({
           email: candidate.email,
           nome: candidate.nome,
-          ruolo: candidate.ruolo,
+          // Mismo criterio que la sesion: el documento migrado hereda el rol
+          // maximo, no el del JSON. Estos registros se borran en la Fase 4.
+          ruolo: ROL_LEGACY,
           passwordHash,
         });
       } catch (e: any) {
@@ -187,15 +210,16 @@ export async function POST(request: Request) {
       }
     }
 
+    // Ver ROL_LEGACY: el rol que traiga el JSON se ignora a proposito.
     const token = await emitirSesion({
       email: candidate.email,
       nome: candidate.nome,
-      ruolo: candidate.ruolo,
+      ruolo: ROL_LEGACY,
     });
     return respuestaConCookie(token, {
       email: candidate.email,
       nome: candidate.nome,
-      ruolo: normalizeRole(candidate.ruolo),
+      ruolo: ROL_LEGACY,
     });
   } catch (error: any) {
     console.error('Login error:', error);

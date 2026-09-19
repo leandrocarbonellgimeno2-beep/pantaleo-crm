@@ -58,7 +58,7 @@ describe('buscarUsuario — los TRES estados', () => {
     return buscarUsuario('mario@example.it').then((r) => {
       expect(r.estado).toBe('encontrado');
       if (r.estado !== 'encontrado') return;
-      expect(r.usuario.role).toBe('admin');
+      expect(r.usuario.role).toBe('secretaria');
       expect(r.usuario.status).toBe('attivo');
       expect(r.usuario.passwordHash).toBe(docValido.passwordHash);
     });
@@ -101,7 +101,7 @@ describe('buscarUsuario — los TRES estados', () => {
   it('un rol desconocido en el documento degrada, no rompe', async () => {
     mockGet.mockResolvedValue({ exists: true, data: () => ({ ...docValido, role: 'jefe-supremo' }) });
     const r = await buscarUsuario('mario@example.it');
-    expect(r.estado === 'encontrado' && r.usuario.role).toBe('agente');
+    expect(r.estado === 'encontrado' && r.usuario.role).toBe('vendedor');
   });
 });
 
@@ -119,7 +119,7 @@ describe('migrarUsuarioDesdeLegacy — nunca puede tumbar un login', () => {
     expect(mockCreate).toHaveBeenCalledTimes(1);
     const escrito = mockCreate.mock.calls[0][0];
     expect(escrito.email).toBe('mario@example.it');
-    expect(escrito.role).toBe('admin');
+    expect(escrito.role).toBe('secretaria');
     expect(escrito.status).toBe('attivo');
     expect(escrito.tokenVersion).toBe(1);
     expect(escrito.createdBy).toBe('migrazione-automatica');
