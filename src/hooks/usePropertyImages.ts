@@ -15,7 +15,8 @@ interface UsePropertyImagesOptions {
   /** Aplica la nueva lista de fotos al inmueble en memoria. */
   onImagesChange: (images: string[]) => void;
   /** Revalida el listado tras persistir. */
-  onSaved: () => void;
+  /** Recibe la lista ya persistida, para poder refrescar la tarjeta sin red. */
+  onSaved: (images: string[]) => void;
   confirm: (opts: ConfirmRequest) => Promise<boolean>;
 }
 
@@ -56,7 +57,7 @@ export function usePropertyImages({
         body: JSON.stringify({ id: propertyId, images }),
       });
       if (!res.ok) throw new Error('Errore backend');
-      onSaved();
+      onSaved(images);
       return true;
     } catch (err) {
       console.error('[immobili] errore salvataggio foto', err);

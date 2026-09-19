@@ -50,6 +50,9 @@ export function useImmobiliFilters() {
     loading,
     isValidating,
     refresh,
+    cambiarEstadoLocal,
+    quitarLocal,
+    fusionarLocal,
   } = useImmobili({
     searchTerm: debouncedSearch,
     filterStato,
@@ -87,6 +90,7 @@ export function useImmobiliFilters() {
     advFilters, setAdvFilters, resetAdvFilters,
     filteredImmobili, activeFilterCount, hasActiveSearch,
     totalCount, loading, isFilterTransitioning, refresh,
+    cambiarEstadoLocal, quitarLocal, fusionarLocal,
     visibleCount, setVisibleCount, displayedCount, remaining, showMore,
     PAGE_SIZE,
   };

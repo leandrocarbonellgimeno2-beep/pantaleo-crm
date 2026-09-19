@@ -83,12 +83,13 @@ export default function ImmobiliPage() {
     advFilters, setAdvFilters, resetAdvFilters,
     filteredImmobili, activeFilterCount, hasActiveSearch,
     totalCount, loading, isFilterTransitioning, refresh,
+    cambiarEstadoLocal, quitarLocal, fusionarLocal,
     visibleCount, setVisibleCount, displayedCount, remaining, PAGE_SIZE,
   } = useImmobiliFilters();
   // Ficha del inmueble: estado, carga diferida y acciones.
   // Ver src/hooks/usePropertyDetail.ts. Se renombra en la desestructuracion
   // para no tocar el JSX existente.
-  const detail = usePropertyDetail({ refresh });
+  const detail = usePropertyDetail({ refresh, fusionarLocal, quitarLocal });
   const {
     selectedProperty, setSelectedProperty,
     isLoadingDetail, detailError,
@@ -208,6 +209,20 @@ export default function ImmobiliPage() {
   const handleQuickStatusChange = useCallback(async (item: any, newSospeso: boolean) => {
     setOpenMenuId(null);
     const updatedGC = { ...item.GestioneCommerciale, Sospeso: newSospeso };
+
+    // El cambio se pinta YA, sobre el array que esta en memoria. Antes esto
+    // llamaba a refresh(), que ponia isValidating a true, la rejilla lo leia
+    // como transicion de filtro y sustituia la lista entera por esqueleto
+    // mientras redescargaba los 631 documentos activos. Suspender un inmueble
+    // costaba 631 lecturas y un parpadeo de toda la pantalla para acabar
+    // enseñando lo mismo menos una tarjeta.
+    //
+    // Y no es un parcheo del campo: con el filtro en «Attivi» la cache SOLO
+    // tiene activos, asi que suspender significa que el inmueble DEJA DE
+    // PERTENECER a la lista y hay que quitarlo. De eso se ocupa
+    // cambiarEstadoLocal. Ver lib/immobili/mutacion-local.ts.
+    const deshacer = cambiarEstadoLocal(item.id, newSospeso);
+
     try {
       const res = await fetch('/api/immobili', {
         method: 'PATCH',
@@ -215,17 +230,14 @@ export default function ImmobiliPage() {
         body: JSON.stringify({ id: item.id, GestioneCommerciale: updatedGC }),
       });
       if (!res.ok) throw new Error('Errore di rete');
-      // Revalidar DESPUES del PATCH. Antes se hacia antes, con el comentario
-      // "Optimistic local update": no actualizaba nada localmente y ademas
-      // refrescaba el catalogo entero trayendo el estado VIEJO, asi que la
-      // tarjeta seguia mostrando el estado anterior hasta el siguiente refetch.
-      refresh();
       toast.success(`Immobile ${item.DatiBase?.Codice || ''} → ${newSospeso ? 'Sospeso' : 'Attivo'}`);
     } catch {
-      refresh();
+      // Si la escritura fallo, la lista vuelve a como estaba. Tambien en local:
+      // castigar el error con 631 lecturas y otro parpadeo no arregla nada.
+      deshacer();
       toast.error('Errore durante il cambio stato');
     }
-  }, [refresh]);
+  }, [cambiarEstadoLocal]);
 
 
 
@@ -266,7 +278,15 @@ export default function ImmobiliPage() {
   const photos = usePropertyImages({
     property: selectedProperty,
     onImagesChange: (images) => setSelectedProperty((prev: any) => ({ ...prev, images })),
-    onSaved: refresh,
+    // La tarjeta del listado solo pinta thumbnail e imageCount, y los dos se
+    // derivan de la lista que acaba de guardarse: no hace falta releer los 631
+    // documentos para enseñar la foto nueva.
+    onSaved: (images: string[]) => fusionarLocal({
+      id: selectedProperty?.id,
+      images,
+      thumbnail: images[0] || null,
+      imageCount: images.length,
+    }),
     confirm,
   });
 

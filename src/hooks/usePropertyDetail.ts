@@ -7,8 +7,17 @@ import { createEmptyProperty } from '@/lib/immobili/emptyProperty';
 const DELETE_GUARD_SECONDS = 2;
 
 interface UsePropertyDetailOptions {
-  /** Revalida el listado tras crear, guardar o borrar. */
+  /**
+   * Relectura completa del listado. Se reserva para el ALTA: un inmueble nuevo
+   * llega con campos que calcula el listado (thumbnail, imageCount) y con el
+   * codigo definitivo del contador atomico, asi que insertarlo a mano seria
+   * adivinar. Dar de alta es ademas poco frecuente.
+   */
   refresh: () => void;
+  /** Mete la version editada en el listado sin volver a la red. */
+  fusionarLocal: (doc: any) => void;
+  /** Quita del listado el inmueble borrado sin volver a la red. */
+  quitarLocal: (id: string) => () => void;
 }
 
 /**
@@ -19,7 +28,7 @@ interface UsePropertyDetailOptions {
  * Los handlers van en useCallback porque llegan como props a componentes
  * memoizados: recrearlos en cada render anularía el memo.
  */
-export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
+export function usePropertyDetail({ refresh, fusionarLocal, quitarLocal }: UsePropertyDetailOptions) {
   const [selectedProperty, setSelectedProperty] = useState<any>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -128,7 +137,12 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
           body: JSON.stringify(selectedProperty),
         });
         if (res.ok) {
-          refresh();
+          // La ficha editada se mete en el listado tal cual, sin releer los 631
+          // documentos. fusionarEnCatalogo se encarga ademas de quitarla si la
+          // edicion la saco de la vista: guardar con «Sospeso» desde la pestaña
+          // «Attivi» tiene que hacerla desaparecer de la lista, no dejarla ahi
+          // con una insignia que contradice al filtro.
+          fusionarLocal(selectedProperty);
           setIsModalOpen(false);
         } else {
           toast.error('Errore durante il salvataggio delle modifiche.');
@@ -162,7 +176,7 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedProperty, refresh]);
+  }, [selectedProperty, refresh, fusionarLocal]);
 
   /** Abre el modal de borrado y arranca la cuenta atrás del guardarraíl. */
   const startDelete = useCallback(() => {
@@ -189,7 +203,9 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
     try {
       const res = await fetch(`/api/immobili?id=${selectedProperty.id}`, { method: 'DELETE' });
       if (res.ok) {
-        refresh();
+        // El documento ya no esta: quitarlo del array es trivialmente correcto y
+        // ahorra la relectura completa del catalogo.
+        quitarLocal(selectedProperty.id);
         setIsModalOpen(false);
         setDeleteModalOpen(false);
         toast.success('Immobile eliminato correttamente');
@@ -205,7 +221,7 @@ export function usePropertyDetail({ refresh }: UsePropertyDetailOptions) {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedProperty?.id, refresh]);
+  }, [selectedProperty?.id, quitarLocal]);
 
   const updateNested = useCallback((category: string, field: string, value: any) => {
     setSelectedProperty((prev: any) => ({
