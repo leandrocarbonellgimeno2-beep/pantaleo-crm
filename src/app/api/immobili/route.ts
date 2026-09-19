@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { guard } from '@/lib/api-guard';
+import { guard, sesionActual } from '@/lib/api-guard';
+import { getClientIp } from '@/lib/rate-limit';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
 import { buildUpdateArgs } from '@/lib/firestore-update';
@@ -281,7 +282,12 @@ export async function DELETE(request: Request) {
       console.error(`[immobili DELETE] Idealista no despublicó ${id}: ${idealista.reason}`);
     }
 
-    await markForSoftDelete('immobili', id);
+    const sesion = await sesionActual(request);
+    await markForSoftDelete('immobili', id, {
+      email: sesion?.email ?? 'sconosciuto',
+      role: sesion?.ruolo ?? 'sconosciuto',
+      ip: getClientIp(request),
+    });
     if (data.proprietarioId) await recountProprietario(data.proprietarioId);
 
     return NextResponse.json({

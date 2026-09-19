@@ -41,6 +41,31 @@
         { "fieldPath": "GestioneCommerciale.Sospeso", "order": "ASCENDING" },
         { "fieldPath": "DatiBase.Codice", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "_audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "actorEmail", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "_audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "action", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "_audit_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "target.collection", "order": "ASCENDING" },
+        { "fieldPath": "target.id", "order": "ASCENDING" },
+        { "fieldPath": "at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

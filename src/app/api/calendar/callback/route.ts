@@ -3,6 +3,7 @@ import { google } from 'googleapis';
 import { admin, db } from '@/lib/firebase-admin';
 import { verifyOAuthState, OAUTH_STATE_COOKIE } from '@/lib/oauth-state';
 import { CALENDAR_CONFIG_ID } from '@/lib/calendar-config';
+import { audit } from '@/lib/services/audit';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -74,6 +75,17 @@ export async function GET(request: Request) {
       },
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
+
+    // Esta ruta ESCRIBE en un GET, que es facil que se escape de cualquier
+    // inventario hecho filtrando por metodo HTTP. Y lo que escribe son los
+    // tokens de la cuenta de Google de la agencia: merece registro.
+    audit({
+      actorEmail: userInfo.data.email ?? 'sconosciuto',
+      actorRole: 'sistema',
+      action: 'calendar.link',
+      target: { collection: 'calendar_configs', id: CALENDAR_CONFIG_ID },
+      changedFields: ['tokens', 'email'],
+    });
 
     // Success - redirect back to the agenda with a success param
     const exito = NextResponse.redirect(`${origin}/agenda?calendar_connected=true`);

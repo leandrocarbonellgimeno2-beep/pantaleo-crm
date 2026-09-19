@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { guard } from '@/lib/api-guard';
+import { guard, sesionActual } from '@/lib/api-guard';
+import { getClientIp } from '@/lib/rate-limit';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, CLIENTI_ALLOWED } from '@/lib/sanitize';
 import { buildUpdateArgs } from '@/lib/firestore-update';
@@ -204,7 +205,12 @@ export async function DELETE(request: Request) {
       }, { status: 409 });
     }
 
-    await markForSoftDelete('clienti', id);
+    const sesion = await sesionActual(request);
+    await markForSoftDelete('clienti', id, {
+      email: sesion?.email ?? 'sconosciuto',
+      role: sesion?.ruolo ?? 'sconosciuto',
+      ip: getClientIp(request),
+    });
     return NextResponse.json({ success: true, message: 'Client marked for deletion.' });
   } catch (error: any) {
     console.error('[clienti DELETE]', error);

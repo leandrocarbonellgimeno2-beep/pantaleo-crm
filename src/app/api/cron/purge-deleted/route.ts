@@ -4,6 +4,7 @@ import { recountManyProprietari } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
 import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 import { extraerRutaDeUrl } from '@/lib/storage-urls';
+import { audit } from '@/lib/services/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -195,6 +196,23 @@ export async function GET(request: Request) {
       errorCount: errors.length,
     }),
   );
+
+  // El cron borra FISICAMENTE y lo hace en un GET: es una de las dos
+  // operaciones mas destructivas del sistema y no tiene sesion detras, asi
+  // que el actor es el propio cron. Sin este registro, un borrado
+  // irreversible no deja constancia en ninguna parte.
+  audit({
+    actorEmail: 'cron@sistema',
+    actorRole: 'sistema',
+    action: 'cron.purge',
+    changedFields: [
+      `immobili:${purged.immobili}`,
+      `proprietari:${purged.proprietari}`,
+      `clienti:${purged.clienti}`,
+      `skippedByIdealista:${skippedByIdealista}`,
+    ],
+    outcome: errors.length ? 'error' : 'ok',
+  });
 
   return NextResponse.json({
     purged,

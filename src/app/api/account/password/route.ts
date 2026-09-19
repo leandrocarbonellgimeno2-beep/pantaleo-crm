@@ -11,6 +11,7 @@ import { requireAuth, AuthError } from '@/lib/auth';
 import { hashPassword, verifyPassword } from '@/lib/password';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { actualizarUsuario, hashActualDe, validarPassword } from '@/lib/services/users';
+import { audit } from '@/lib/services/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,6 +71,14 @@ export async function POST(request: Request) {
     if (!resultado.ok) return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
 
     console.log('[account/password] cambio de contrasena de', sesion.email);
+    audit({
+      actorEmail: sesion.email,
+      actorRole: sesion.ruolo,
+      action: 'account.password',
+      target: { collection: '_users', id: sesion.email },
+      changedFields: ['password'],
+      ip: getClientIp(request),
+    });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[account/password]', error);

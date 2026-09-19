@@ -22,8 +22,25 @@
  * de infraestructura deja pasar (ver la nota de abajo).
  */
 import { NextResponse } from 'next/server';
-import { requireRole, AuthError } from '@/lib/auth';
+import { requireAuth, requireRole, AuthError, type SessionPayload } from '@/lib/auth';
 import type { Role } from '@/lib/roles';
+
+/**
+ * La sesion de quien hace la peticion, para las rutas que ademas de
+ * permitir o denegar necesitan saber QUIEN actua: el registro de auditoria
+ * lo necesita para dejar constancia.
+ *
+ * Devuelve null en vez de lanzar. Se llama despues de que guard() haya
+ * pasado, asi que en la practica nunca es null; devolverlo evita que un
+ * caso imposible tumbe una ruta.
+ */
+export async function sesionActual(request: Request): Promise<SessionPayload | null> {
+  try {
+    return await requireAuth(request.headers.get('cookie'));
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Cache en memoria del estado de cada usuario.

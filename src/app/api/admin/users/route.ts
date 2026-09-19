@@ -8,6 +8,8 @@
  */
 import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
+import { audit } from '@/lib/services/audit';
+import { getClientIp } from '@/lib/rate-limit';
 import { requireRole, AuthError } from '@/lib/auth';
 import { hashPassword } from '@/lib/password';
 import { hasAtLeast, ROLES, type Role } from '@/lib/roles';
@@ -90,6 +92,14 @@ export async function POST(request: Request) {
     }
 
     console.log(`[admin/users] ${sesion.email} ha creato l'utente ${email} con ruolo ${role}`);
+    audit({
+      actorEmail: sesion.email,
+      actorRole: sesion.ruolo,
+      action: 'user.create',
+      target: { collection: '_users', id: email, label: nome },
+      changedFields: ['role', 'passwordHash'],
+      ip: getClientIp(request),
+    });
     return NextResponse.json({ success: true, user: resultado.usuario }, { status: 201 });
   } catch (error: any) {
     console.error('[admin/users POST]', error);
@@ -211,11 +221,18 @@ export async function PATCH(request: Request) {
     const resultado = await actualizarUsuario(email, cambios);
     if (!resultado.ok) return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
 
-    console.log(
-      `[admin/users] ${sesion.email} ha modificato ${email}: ${JSON.stringify(
-        Object.keys(cambios).map((k) => (k === 'passwordHash' ? 'password' : k)),
-      )}`,
-    );
+    // Solo NOMBRES de campo, y passwordHash se renombra a 'password': ni el
+    // hash ni el valor nuevo tienen nada que hacer en un registro.
+    const camposTocados = Object.keys(cambios).map((k) => (k === 'passwordHash' ? 'password' : k));
+    console.log(`[admin/users] ${sesion.email} ha modificato ${email}: ${JSON.stringify(camposTocados)}`);
+    audit({
+      actorEmail: sesion.email,
+      actorRole: sesion.ruolo,
+      action: 'user.update',
+      target: { collection: '_users', id: email, label: objetivo.nome },
+      changedFields: camposTocados,
+      ip: getClientIp(request),
+    });
     return NextResponse.json({ success: true, user: resultado.usuario });
   } catch (error: any) {
     console.error('[admin/users PATCH]', error);

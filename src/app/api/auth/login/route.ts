@@ -4,6 +4,7 @@ import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { hashPassword, verifyPassword, burnPasswordTime } from '@/lib/password';
 import { normalizeRole, type Role } from '@/lib/roles';
 import { buscarUsuario, migrarUsuarioDesdeLegacy } from '@/lib/services/users';
+import { audit } from '@/lib/services/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -159,6 +160,7 @@ export async function POST(request: Request) {
       }
 
       const token = await emitirSesion({ email: u.email, nome: u.nome, ruolo: u.role });
+      audit({ actorEmail: u.email, actorRole: u.role, action: 'auth.login', ip });
       return respuestaConCookie(token, { email: u.email, nome: u.nome, ruolo: u.role });
     }
 
@@ -216,6 +218,7 @@ export async function POST(request: Request) {
       nome: candidate.nome,
       ruolo: ROL_LEGACY,
     });
+    audit({ actorEmail: candidate.email, actorRole: ROL_LEGACY, action: 'auth.login', ip });
     return respuestaConCookie(token, {
       email: candidate.email,
       nome: candidate.nome,
