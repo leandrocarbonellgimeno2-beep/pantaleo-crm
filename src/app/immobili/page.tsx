@@ -15,7 +15,6 @@ import {
   normalizeWhatsAppPhone,
   openWhatsApp,
 } from "@/lib/immobili/whatsapp";
-import { useDropzone } from 'react-dropzone';
 import { toast } from 'sonner';
 import { 
   Search, MapPin, Euro, Maximize2, BedDouble, Bath,  Tag, Filter,
@@ -39,6 +38,7 @@ import { PropertyGrid } from "@/components/immobili/PropertyGrid";
 import { PropertyGallery } from "@/components/immobili/PropertyGallery";
 import { PropertyDetailModal } from "@/components/immobili/PropertyDetailModal";
 import dynamic from "next/dynamic";
+import { useDropGuard } from "@/hooks/useDropGuard";
 
 // FsLightbox: caricato dinamicamente — riduce ~50KB dal bundle iniziale.
 const FsLightbox = dynamic(() => import("fslightbox-react"), { ssr: false });
@@ -266,7 +266,15 @@ export default function ImmobiliPage() {
   const printing = usePropertyPrinting({ property: selectedProperty, ownerData });
 
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop: photos.onDrop, accept: {'image/*': [], 'application/pdf': []} });
+  // El dropzone se monta dentro de la ficha, que es el unico sitio donde se
+  // usa, y ademas perezoso. Aqui arriba obligaba a cargar react-dropzone en el
+  // arranque de la pantalla aunque no se abriera ninguna ficha.
+  //
+  // Lo que SI tiene que seguir cubriendo la pantalla entera es la guarda de
+  // soltar ficheros: react-dropzone la instalaba de propina y se fue con el, de
+  // modo que sin esto soltar una foto sobre el listado sacaria al agente del
+  // CRM para abrir el fichero. Dos oyentes, cero dependencias.
+  useDropGuard();
 
 
   // Igual que el borrado: por URL, porque el índice de la galería no
@@ -377,7 +385,6 @@ export default function ImmobiliPage() {
           photos={photos}
           idealista={idealista}
           inverse={inverse}
-          dropzone={{ getRootProps, getInputProps, isDragActive }}
           onOpenLightbox={openLightboxOnSource}
           onSelectCliente={setSelectedClienteModal}
           onWhatsAppCliente={handleInverseWhatsApp}

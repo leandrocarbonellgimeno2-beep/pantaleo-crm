@@ -1,14 +1,31 @@
 "use client";
 
-import type { DropzoneRootProps, DropzoneInputProps } from "react-dropzone";
+import { lazy, Suspense } from "react";
 import {
   Tag, MapPin, Map, Home, CheckCircle2, Euro, Filter, UploadCloud,
   Image as ImageIcon, Trash2, Loader2,
 } from "lucide-react";
+import { AreaDeSubida } from "@/components/immobili/AreaDeSubida";
+
 import { cn } from "@/lib/utils";
 import { extractImageUrls as extractImages } from "@/lib/imageUtils";
 import zonasData from "@/lib/zonas.json";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
+
+// react-dropzone pesa y solo hace falta aquí dentro, o sea dentro de un modal.
+//
+// Se usa `lazy` y no `dynamic` por un motivo concreto: el sustituto que se
+// pinta mientras llega el chunk tiene que saber si el inmueble está guardado,
+// porque el rótulo del área cambia («Trascina le foto qui» / «Salva prima le
+// informazioni»). El `loading` de next/dynamic no recibe props, así que pintaba
+// siempre la versión habilitada y al llegar el chunk saltaba a deshabilitada
+// justo en el caso más frecuente de todos: dar de alta un inmueble nuevo, que
+// abre la ficha YA en modo edición. El `fallback` de Suspense sí recibe props.
+//
+// `AreaDeSubida` vive en su propio fichero, sin react-dropzone: importarla de
+// PhotoDropzone habría devuelto la librería al paquete inicial y la carga
+// perezosa no habría ahorrado ni un byte.
+const PhotoDropzone = lazy(() => import("@/components/immobili/PhotoDropzone"));
 
 interface PropertyEditFormProps {
   property: any;
@@ -23,9 +40,8 @@ interface PropertyEditFormProps {
   ) => void;
   /** Objeto que devuelve usePropertyImages. */
   photos: any;
-  getRootProps: () => DropzoneRootProps;
-  getInputProps: () => DropzoneInputProps;
-  isDragActive: boolean;
+  // El dropzone ya no llega por props: se monta aqui dentro, perezoso, y saca
+  // su onDrop del objeto `photos` que este componente ya recibia.
   onOpenLightbox: (index: number) => void;
   validLightboxImages: string[];
   /** Propietario ya cargado; null mientras se resuelve. */
@@ -47,9 +63,7 @@ export function PropertyEditForm({
   updateNested,
   onFileUpload,
   photos,
-  getRootProps,
-  getInputProps,
-  isDragActive,
+
   onOpenLightbox,
   validLightboxImages,
   ownerData,
@@ -493,14 +507,9 @@ export function PropertyEditForm({
    </div>
    <div className="p-5 space-y-6">
       {/* Dropzone */}
-      <div {...getRootProps()} className={cn("border-2 border-dashed rounded-xl p-8 text-center transition-colors", property?.id ? "cursor-pointer" : "opacity-50 cursor-not-allowed", isDragActive && property?.id ? "border-primary bg-primary/5" : "border-slate-300 bg-slate-50 hover:border-primary hover:bg-slate-50/80")}>
-        <input {...getInputProps()} aria-label="Carica foto dell'immobile" disabled={!property?.id} />
-        <UploadCloud className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-        <p className="font-bold text-slate-700 text-lg">
-          {property?.id ? "Trascina le foto qui o clicca per sfogliare" : "Salva prima le informazioni per caricare foto"}
-        </p>
-        <p className="text-sm text-slate-500 mt-1">Caricamento automatico su Firebase Storage e aggiornamento Firestore</p>
-      </div>
+      <Suspense fallback={<AreaDeSubida habilitado={Boolean(property?.id)} />}>
+        <PhotoDropzone onDrop={photos.onDrop} habilitado={Boolean(property?.id)} />
+      </Suspense>
 
       {/* Photo Grid Grid */}
       {property.images && property.images.length > 0 && (

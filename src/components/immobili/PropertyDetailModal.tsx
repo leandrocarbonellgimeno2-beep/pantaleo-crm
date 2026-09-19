@@ -1,6 +1,5 @@
 "use client";
 
-import type { DropzoneRootProps, DropzoneInputProps } from "react-dropzone";
 import { Home, Loader2, FileText, Printer, MessageCircle, Zap, X, Trash2, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
@@ -17,11 +16,8 @@ interface PropertyDetailModalProps {
   idealista: any;
   /** Objeto completo de useInverseMatching. */
   inverse: any;
-  dropzone: {
-    getRootProps: () => DropzoneRootProps;
-    getInputProps: () => DropzoneInputProps;
-    isDragActive: boolean;
-  };
+  // `dropzone` ya no viaja por aqui: PropertyEditForm lo monta el mismo, de
+  // forma perezosa, a partir del `photos` que ya se le pasa.
   onOpenLightbox: (index: number) => void;
   onSelectCliente: (cliente: any) => void;
   onWhatsAppCliente: (cliente: any) => void;
@@ -50,7 +46,6 @@ export function PropertyDetailModal({
   photos,
   idealista,
   inverse,
-  dropzone,
   onOpenLightbox,
   onSelectCliente,
   onWhatsAppCliente,
@@ -69,7 +64,6 @@ export function PropertyDetailModal({
     saveProperty: handleSaveProperty,
     startDelete: handleDeleteProperty,
   } = detail;
-  const { getRootProps, getInputProps, isDragActive } = dropzone;
 
   // Alias para que el JSX movido no cambie.
   const handleFileUpload = onFileUpload;
@@ -235,9 +229,7 @@ export function PropertyDetailModal({
                 updateNested={updateNested}
                 onFileUpload={handleFileUpload}
                 photos={photos}
-                getRootProps={getRootProps}
-                getInputProps={getInputProps}
-                isDragActive={isDragActive}
+
                 onOpenLightbox={openLightboxOnSource}
                 validLightboxImages={validLightboxImages}
                 ownerData={ownerData}
