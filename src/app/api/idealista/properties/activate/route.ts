@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { idealistaRequest } from '@/lib/idealista-auth';
 import { db, admin } from '@/lib/firebase-admin';
 
@@ -14,6 +15,9 @@ export const dynamic = 'force-dynamic';
  * Body: { propertyId: string (Firestore doc ID) }
  */
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId } = body;

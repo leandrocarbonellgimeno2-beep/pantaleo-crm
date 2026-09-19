@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 import { extractImageUrls } from '@/lib/imageUtils';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     // Proyección a los campos que este informe usa de verdad. Antes traía los
     // documentos COMPLETOS: ~877 inmuebles con sus arrays de imágenes, textos y

@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { idealistaRequest } from '@/lib/idealista-auth';
 import { mapPropertyToIdealista, mapProprietarioToContact, getAgencyFallbackContact } from '@/lib/idealista-mapper';
 import { db, admin } from '@/lib/firebase-admin';
@@ -74,6 +75,9 @@ function parseIdealistaError(data: any): string {
  * 5. Save idealistaPropertyId back to Firestore
  */
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId, scope, visibility } = body;
@@ -231,6 +235,9 @@ export async function POST(request: Request) {
  * Body: { propertyId: string (Firestore doc ID) }
  */
 export async function PUT(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId, scope, visibility } = body;

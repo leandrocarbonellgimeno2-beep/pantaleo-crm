@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { google } from 'googleapis';
 import { db, admin } from '@/lib/firebase-admin';
 
@@ -16,6 +17,9 @@ function getOAuth2Client() {
 
 // Import events FROM Google Calendar INTO our CRM (with pagination + upsert)
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const agentId = body.agentId || 'default_admin';

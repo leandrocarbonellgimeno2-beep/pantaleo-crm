@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     // Only fetch the Codice field — 95% less data than full documents
     const snapshot = await db.collection('immobili').select('DatiBase.Codice').get();

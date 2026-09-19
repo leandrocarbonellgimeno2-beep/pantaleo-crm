@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
  * de un inmueble y el cron de purga necesitan despublicar sin pasar por HTTP.
  */
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId } = body;

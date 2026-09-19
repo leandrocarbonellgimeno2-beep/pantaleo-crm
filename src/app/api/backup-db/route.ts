@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 import { requireAuth, AuthError } from '@/lib/auth';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
@@ -29,6 +30,9 @@ async function fetchAllPaginated(collectionName: string): Promise<any[]> {
 }
 
 export async function GET(request: Request) {
+  const denegado = await guard(request, 'propietario');
+  if (denegado) return denegado;
+
   let session: any;
   try {
     session = await requireAuth(request.headers.get('cookie'));

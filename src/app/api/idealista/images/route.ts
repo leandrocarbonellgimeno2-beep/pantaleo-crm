@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { idealistaRequest } from '@/lib/idealista-auth';
 import { mapImagesToIdealista } from '@/lib/idealista-mapper';
 import { db } from '@/lib/firebase-admin';
@@ -22,6 +23,9 @@ export const dynamic = 'force-dynamic';
  * If images array is not provided, uses the property's existing images from Firestore.
  */
 export async function PUT(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId, images, labels } = body;
@@ -116,6 +120,9 @@ export async function GET(request: Request) {
  * Body: { propertyId: string (Firestore doc ID) }
  */
 export async function DELETE(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { propertyId } = body;

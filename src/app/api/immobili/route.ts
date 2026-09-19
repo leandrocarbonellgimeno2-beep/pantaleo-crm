@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, IMMOBILI_ALLOWED } from '@/lib/sanitize';
 import { buildUpdateArgs } from '@/lib/firestore-update';
@@ -132,6 +133,9 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { id } = body;
@@ -171,6 +175,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const rawBody = await request.json();
     const body: any = sanitizeBody(rawBody, IMMOBILI_ALLOWED, 'immobili.POST');
@@ -245,6 +252,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

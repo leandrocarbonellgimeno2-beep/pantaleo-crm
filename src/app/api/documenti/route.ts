@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 import { sanitizeBody, sanitizeFirestoreId, DOCUMENTI_TEMPLATE_ALLOWED } from '@/lib/sanitize';
 
@@ -19,6 +20,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const raw = await request.json();
     const body = sanitizeBody(raw, DOCUMENTI_TEMPLATE_ALLOWED, 'documenti.POST');
@@ -52,6 +56,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

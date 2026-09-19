@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { guard } from '@/lib/api-guard';
 import { admin } from "@/lib/firebase-admin";
 import { v4 as uuidv4 } from "uuid";
 import { sanitizeStoragePath } from "@/lib/sanitize";
@@ -8,6 +9,9 @@ const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'app
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export async function POST(req: NextRequest) {
+  const denegado = await guard(req, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File;
@@ -98,6 +102,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const denegado = await guard(req, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { url } = await req.json();
     if (!url) return NextResponse.json({ error: "URL missing" }, { status: 400 });

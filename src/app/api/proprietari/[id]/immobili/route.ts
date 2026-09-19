@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db, admin } from '@/lib/firebase-admin';
 import { belongsToProprietario } from '@/lib/ownership';
 
@@ -41,6 +42,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const { id: clientId } = await params;
     const body = await request.json();
@@ -109,6 +113,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const { id: clientId } = await params;
     const body = await request.json();

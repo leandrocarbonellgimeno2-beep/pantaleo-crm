@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { idealistaRequest } from '@/lib/idealista-auth';
 import { mapProprietarioToContact, getAgencyFallbackContact } from '@/lib/idealista-mapper';
 import { db, admin } from '@/lib/firebase-admin';
@@ -16,6 +17,9 @@ export const dynamic = 'force-dynamic';
  * Body: { proprietarioId: string } OR { contact: { name, email, phone } }
  */
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     let contactPayload;
@@ -69,6 +73,9 @@ export async function POST(request: Request) {
  * Body: { contactId: string, contact: { name, email, phone } }
  */
 export async function PUT(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const body = await request.json();
     const { contactId, ...contactData } = body;

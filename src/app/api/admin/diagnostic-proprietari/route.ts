@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 
 /**
@@ -13,7 +14,10 @@ import { db } from '@/lib/firebase-admin';
  *
  */
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denegado = await guard(request, 'propietario');
+  if (denegado) return denegado;
+
   try {
     const [proprietariSnap, immobiliSnap] = await Promise.all([
       // proprietari: full doc — il diagnostico elenca `Object.keys(p)` per

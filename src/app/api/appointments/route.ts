@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db, admin } from '@/lib/firebase-admin';
 import { createCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 import { sanitizeBody, APPOINTMENTS_ALLOWED } from '@/lib/sanitize';
@@ -33,6 +34,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const raw = await request.json();
     const body = sanitizeBody(raw, APPOINTMENTS_ALLOWED, 'appointments.POST') as any;
@@ -75,6 +79,9 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const raw = await request.json();
     const { id } = raw; // id da raw (ALWAYS_FORBIDDEN lo strappa dal sanitized)
@@ -96,6 +103,9 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
