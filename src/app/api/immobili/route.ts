@@ -9,6 +9,7 @@ import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 import { recountProprietario } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
 import { resolveListLimits } from '@/lib/immobili/list-limits';
+import { prepararImmobileParaCrear, sanearImmobileParaEditar } from '@/lib/immobili/sospeso';
 import type { Property } from '@/types/property';
 
 export const dynamic = 'force-dynamic';
@@ -182,7 +183,13 @@ export async function PATCH(request: Request) {
     const { id } = body;
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-    const updates = sanitizeBody(body, IMMOBILI_ALLOWED, 'immobili.PATCH');
+    // Saneado de Sospeso: un valor ininteligible (null, cadena vacía, un
+    // objeto...) se descarta en vez de escribirse. Escribir null dejaría el
+    // inmueble fuera de las DOS vistas —ni activo ni suspendido— y convertirlo
+    // a false reactivaría un inmueble suspendido por culpa de un payload roto.
+    const updates = sanearImmobileParaEditar(
+      sanitizeBody(body, IMMOBILI_ALLOWED, 'immobili.PATCH'),
+    );
 
     // Guard: never overwrite images/thumbnail with empty/falsy values.
     // A PATCH for text fields (Textos, DatiBase, etc.) must never accidentally
@@ -221,8 +228,19 @@ export async function POST(request: Request) {
 
   try {
     const rawBody = await request.json();
-    const body: any = sanitizeBody(rawBody, IMMOBILI_ALLOWED, 'immobili.POST');
+    // El default de Sospeso se aplica AQUÍ, antes que nada: desde que el
+    // listado filtra por ese campo en Firestore, un inmueble que se cree sin él
+    // nace invisible en la pantalla principal. Ver lib/immobili/sospeso.ts.
+    const body: any = prepararImmobileParaCrear(
+      sanitizeBody(rawBody, IMMOBILI_ALLOWED, 'immobili.POST'),
+    );
     const now = Date.now().toString();
+
+    // DatiBase se asegura fuera del bloque del contador: ese bloque tiene su
+    // propio try/catch y, si el contador fallaba antes de crear el mapa, la
+    // línea `body.DatiBase.SortKey` de más abajo reventaba con un TypeError y
+    // el alta entera se perdía con un 500.
+    if (!body.DatiBase) body.DatiBase = {};
 
     // ── Auto-increment Codice — atomic via Firestore counter document ────────
     // Uses a dedicated counter doc (counters/immobili_codice) so concurrent POSTs
@@ -258,7 +276,6 @@ export async function POST(request: Request) {
         return next;
       });
 
-      if (!body.DatiBase) body.DatiBase = {};
       body.DatiBase.Codice = String(nextCode);
     } catch (codeErr: any) {
       // Non-fatal: if the counter transaction fails, keep whatever the frontend sent
