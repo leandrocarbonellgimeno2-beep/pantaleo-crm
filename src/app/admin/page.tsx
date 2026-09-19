@@ -29,6 +29,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { hasAtLeast, ROLES, type Role } from "@/lib/roles";
+import PresenceSection from "./PresenceSection";
+import AuditSection from "./AuditSection";
 
 interface UsuarioFila {
   id: string;
@@ -374,6 +376,12 @@ export default function AdminPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* ── Presencia y trazabilidad ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <PresenceSection />
+        <AuditSection />
       </div>
 
       {/* ── Mi cuenta ── */}
