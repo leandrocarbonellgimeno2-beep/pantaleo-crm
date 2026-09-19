@@ -6,6 +6,7 @@ import { markForSoftDelete } from '@/lib/services/soft-delete';
 import { deactivateOnIdealista } from '@/lib/services/idealista-deactivate';
 import { recountProprietario } from '@/lib/services/proprietari-counter';
 import { extractImageUrls } from '@/lib/imageUtils';
+import { resolveListLimits } from '@/lib/immobili/list-limits';
 import type { Property } from '@/types/property';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,9 @@ export async function GET(request: Request) {
     const qRaw = searchParams.get('q');
     const q = qRaw ? qRaw.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase() : undefined;
     const codice = searchParams.get('codice');
-    const limitCount = parseInt(searchParams.get('limit') || '50');
+    // Tope de SALIDA y tope de ESCANEO. No son el mismo número y con `?q=` el
+    // limit no puede empujarse a la consulta: el porqué, en list-limits.ts.
+    const { limitCount, scanLimit } = resolveListLimits(searchParams.get('limit'), Boolean(q));
     const cursor = searchParams.get('cursor');
     const status = searchParams.get('status');
     const type = searchParams.get('type');
@@ -91,7 +94,7 @@ export async function GET(request: Request) {
         'images', '_status', 'proprietarioId', 'createdAt',
         'Idealista.idealistaStatus',
       )
-      .limit(1000)
+      .limit(scanLimit)
       .get();
     const docs = snapshot.docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
@@ -106,10 +109,22 @@ export async function GET(request: Request) {
           .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return s.includes(q);
       });
-      return NextResponse.json({ data: filtered, totalCount: filtered.length });
+      // El recorte va AL FINAL, sobre lo ya filtrado: con `q` la consulta no
+      // pudo limitarse, así que este es el único sitio donde aplicarlo.
+      return NextResponse.json({
+        data: limitCount > 0 ? filtered.slice(0, limitCount) : filtered,
+        totalCount: filtered.length,
+      });
     }
 
-    return NextResponse.json({ data: docs, totalCount: docs.length });
+    // Ojo con totalCount cuando se pide `limit`: cuenta lo que había en la
+    // ventana escaneada, no la colección entera. Saber el total exacto exige
+    // recorrerla, que es justo lo que este limit evita; para eso está
+    // /api/stats, que lo resuelve con agregaciones count().
+    return NextResponse.json({
+      data: limitCount > 0 ? docs.slice(0, limitCount) : docs,
+      totalCount: docs.length,
+    });
   } catch (error: any) {
     console.error('[immobili GET]', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });
