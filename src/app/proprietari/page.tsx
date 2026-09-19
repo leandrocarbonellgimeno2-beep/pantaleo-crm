@@ -514,7 +514,7 @@ export default function ProprietariPage() {
                           <button
                             onClick={() => { openSlideOver(prop); setActiveTab("immobili"); }}
                             className={cn(
-                              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition-all",
+                              "inline-flex items-center gap-1.5 min-h-9 px-3 py-1.5 rounded-xl text-xs font-black border transition-all",
                               nImmobili > 0
                                 ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100"
                                 : "bg-slate-50 text-slate-400 border-slate-200 cursor-default"
@@ -531,24 +531,27 @@ export default function ProprietariPage() {
                                 href={`https://wa.me/39${telefono.replace(/\D/g, '')}`}
                                 target="_blank" rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
+                                className="h-9 w-9 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
                                 title="WhatsApp"
+                                aria-label={`Scrivi su WhatsApp a ${fullName}`}
                               >
                                 WA
                               </a>
                             )}
                             <button
                               onClick={() => openSlideOver(prop)}
-                              className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
+                              className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
                               title="Visualizza / Modifica"
+                              aria-label={`Visualizza o modifica ${fullName}`}
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <a
                               href={`/immobili?new=true&proprietarioId=${prop.id}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all"
+                              className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-emerald-600 hover:border-emerald-200 transition-all"
                               title="Aggiungi Immobile"
+                              aria-label={`Aggiungi un immobile a ${fullName}`}
                             >
                               <Home className="w-4 h-4" />
                             </a>
@@ -605,7 +608,7 @@ export default function ProprietariPage() {
                       </p>
                    </div>
                 </div>
-                <button onClick={closeSlideOver} className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                <button onClick={closeSlideOver} aria-label="Chiudi la scheda" className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                   <X className="w-6 h-6" />
                 </button>
               </div>
@@ -645,6 +648,7 @@ export default function ProprietariPage() {
                             </span>
                             <button 
                                onClick={() => setFormData(prev => ({...prev, stato: prev.stato === "Attivo" || prev.stato === true ? "Disattivato" : "Attivo"}))}
+                               aria-label="Attiva o disattiva il proprietario"
                                className={cn("w-12 h-6 rounded-full transition-colors relative flex items-center", (formData.stato === "Attivo" || formData.stato === true) ? "bg-green-500" : "bg-slate-300")}
                             >
                                <span className={cn("w-4 h-4 bg-white rounded-full shadow-sm transition-transform absolute", (formData.stato === "Attivo" || formData.stato === true) ? "translate-x-7" : "translate-x-1")} />
@@ -656,20 +660,20 @@ export default function ProprietariPage() {
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Codice Cliente</label>
-                              <input type="text" disabled value={selectedProprietario?.id || "- Autogenerato -"} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-500 font-medium cursor-not-allowed" />
+                              <label htmlFor="prop-codice-cliente" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Codice Cliente</label>
+                              <input id="prop-codice-cliente" type="text" disabled value={selectedProprietario?.id || "- Autogenerato -"} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-500 font-medium cursor-not-allowed" />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cod. Fiscale / P.IVA</label>
-                              <input type="text" value={formData.note_riservate || ""} onChange={(e) => setFormData({...formData, note_riservate: e.target.value})} placeholder="Incolla Codice Fiscale..." className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-codice-fiscale" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cod. Fiscale / P.IVA</label>
+                              <input id="prop-codice-fiscale" type="text" value={formData.note_riservate || ""} onChange={(e) => setFormData({...formData, note_riservate: e.target.value})} placeholder="Incolla Codice Fiscale..." className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome</label>
-                              <input type="text" value={formData.nome || formData.Nome || ""} onChange={(e) => setFormData({...formData, nome: e.target.value, Nome: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-nome" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nome</label>
+                              <input id="prop-nome" type="text" value={formData.nome || formData.Nome || ""} onChange={(e) => setFormData({...formData, nome: e.target.value, Nome: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cognome / Rag. Sociale</label>
-                              <input type="text" value={formData.cognome || formData.Cognome || ""} onChange={(e) => setFormData({...formData, cognome: e.target.value, Cognome: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-cognome" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cognome / Rag. Sociale</label>
+                              <input id="prop-cognome" type="text" value={formData.cognome || formData.Cognome || ""} onChange={(e) => setFormData({...formData, cognome: e.target.value, Cognome: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                          </div>
                       </section>
@@ -681,16 +685,16 @@ export default function ProprietariPage() {
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                             <div className="md:col-span-12">
-                               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nazione</label>
-                               <input type="text" value={formData.nazione || "Italia"} onChange={(e) => setFormData({...formData, nazione: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                               <label htmlFor="prop-nazione" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Nazione</label>
+                               <input id="prop-nazione" type="text" value={formData.nazione || "Italia"} onChange={(e) => setFormData({...formData, nazione: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div className="md:col-span-9">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Indirizzo</label>
-                              <input type="text" value={formData.indirizzo_residenza || formData.indirizzo || ""} onChange={(e) => setFormData({...formData, indirizzo_residenza: e.target.value, indirizzo: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-indirizzo" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Indirizzo</label>
+                              <input id="prop-indirizzo" type="text" value={formData.indirizzo_residenza || formData.indirizzo || ""} onChange={(e) => setFormData({...formData, indirizzo_residenza: e.target.value, indirizzo: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div className="md:col-span-3">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Num. Civico</label>
-                              <input type="text" value={formData.numero_civico || ""} onChange={(e) => setFormData({...formData, numero_civico: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-numero-civico" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Num. Civico</label>
+                              <input id="prop-numero-civico" type="text" value={formData.numero_civico || ""} onChange={(e) => setFormData({...formData, numero_civico: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                          </div>
                       </section>
@@ -702,9 +706,9 @@ export default function ProprietariPage() {
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cellulare Principale</label>
+                              <label htmlFor="prop-cellulare" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cellulare Principale</label>
                               <div className="flex gap-2">
-                                 <input type="tel" inputMode="tel" value={formData.cellulare || formData.telefono || formData.cell1 || formData.Cellulare || ""} onChange={(e) => {
+                                 <input id="prop-cellulare" type="tel" inputMode="tel" value={formData.cellulare || formData.telefono || formData.cell1 || formData.Cellulare || ""} onChange={(e) => {
                                      const val = e.target.value.replace(/[^0-9+\s-]/g, '');
                                      setFormData(prev => ({...prev, cellulare: val, telefono: val, cell1: val, Cellulare: val}));
                                  }} className="flex-1 bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
@@ -721,28 +725,28 @@ export default function ProprietariPage() {
                               </div>
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cellulare Secondario</label>
+                              <label htmlFor="prop-cellulare2" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Cellulare Secondario</label>
                               <div className="flex gap-2">
-                                 <input type="tel" inputMode="tel" value={formData.cellulare2 || formData.telefono2 || ""} onChange={(e) => {
+                                 <input id="prop-cellulare2" type="tel" inputMode="tel" value={formData.cellulare2 || formData.telefono2 || ""} onChange={(e) => {
                                      const val = e.target.value.replace(/[^0-9+\s-]/g, '');
                                      setFormData(prev => ({...prev, cellulare2: val, telefono2: val}));
                                  }} className="flex-1 bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                               </div>
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Telefono Fisso</label>
-                              <input type="tel" inputMode="tel" value={formData.telefono_fisso || formData.tel1 || ""} onChange={(e) => {
+                              <label htmlFor="prop-telefono-fisso" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Telefono Fisso</label>
+                              <input id="prop-telefono-fisso" type="tel" inputMode="tel" value={formData.telefono_fisso || formData.tel1 || ""} onChange={(e) => {
                                   const val = e.target.value.replace(/[^0-9+\s-]/g, '');
                                   setFormData(prev => ({...prev, telefono_fisso: val, tel1: val}));
                               }} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div>
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Email</label>
-                              <input type="email" value={formData.email || ""} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
+                              <label htmlFor="prop-email" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Email</label>
+                              <input id="prop-email" type="email" value={formData.email || ""} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all" />
                             </div>
                             <div className="md:col-span-2">
-                              <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Note / Annotazioni</label>
-                              <textarea value={formData.note || ""} onChange={(e) => setFormData({...formData, note: e.target.value})} rows={3} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all placeholder:text-slate-400" placeholder="Aggiungi note sui contatti, orari chiamate..."></textarea>
+                              <label htmlFor="prop-note" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Note / Annotazioni</label>
+                              <textarea id="prop-note" value={formData.note || ""} onChange={(e) => setFormData({...formData, note: e.target.value})} rows={3} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all placeholder:text-slate-400" placeholder="Aggiungi note sui contatti, orari chiamate..."></textarea>
                             </div>
                          </div>
                       </section>
@@ -814,7 +818,7 @@ export default function ProprietariPage() {
 
                                return (
                                  <div key={docType.id} className="bg-slate-50 border border-slate-100 p-4 rounded-xl flex flex-col gap-3">
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest">{docType.label}</label>
+                                    <label htmlFor={`prop-doc-${docType.id}`} className="block text-xs font-bold text-slate-500 uppercase tracking-widest">{docType.label}</label>
                                     
                                     {/* Lista Documentos Existentes */}
                                     {files.length > 0 && (
@@ -828,7 +832,7 @@ export default function ProprietariPage() {
                                                    <p className="text-sm font-bold text-slate-700 truncate">{fileObj.name || `Documento ${idx + 1}`}</p>
                                                    <a href={fileObj.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:text-blue-700">Scarica / Vedi PDF</a>
                                                 </div>
-                                                <button onClick={() => handleDeleteFile(docType.id, fileObj.url)} className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors shrink-0" title="Elimina Documento">
+                                                <button onClick={() => handleDeleteFile(docType.id, fileObj.url)} className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors shrink-0" title="Elimina Documento" aria-label={`Elimina il documento ${fileObj.name || `Documento ${idx + 1}`}`}>
                                                   <Trash2 className="w-4 h-4" />
                                                 </button>
                                              </div>
@@ -840,7 +844,7 @@ export default function ProprietariPage() {
                                     <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl hover:bg-white hover:border-slate-300 transition-colors cursor-pointer group">
                                        <UploadCloud className="w-6 h-6 text-slate-300 group-hover:text-primary transition-colors mb-2" />
                                        <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600">Clicca per caricare altri File</span>
-                                       <input type="file" multiple accept=".pdf, image/*" className="hidden" onChange={(e) => handleFileUpload(e, docType.id)} />
+                                       <input id={`prop-doc-${docType.id}`} type="file" multiple accept=".pdf, image/*" className="hidden" onChange={(e) => handleFileUpload(e, docType.id)} />
                                     </label>
                                  </div>
                                );
@@ -855,8 +859,8 @@ export default function ProprietariPage() {
                          </h3>
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Stato Chiavi</label>
-                               <select value={formData.stato_chiavi || ""} onChange={(e) => setFormData({...formData, stato_chiavi: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all appearance-none cursor-pointer">
+                               <label htmlFor="prop-stato-chiavi" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Stato Chiavi</label>
+                               <select id="prop-stato-chiavi" value={formData.stato_chiavi || ""} onChange={(e) => setFormData({...formData, stato_chiavi: e.target.value})} className="w-full bg-white border-2 border-slate-100 focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl px-4 py-3 text-slate-800 font-medium transition-all appearance-none cursor-pointer">
                                   <option value="">Seleziona...</option>
                                   <option value="Disponibili">Disponibili</option>
                                   <option value="Non disponibili">Non disponibili</option>
@@ -877,9 +881,10 @@ export default function ProprietariPage() {
                            </h3>
                            <div className="flex gap-4 items-end">
                               <div className="flex-1">
-                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tramite Codice / RIF / ID</label>
-                                 <input 
-                                    type="text" 
+                                 <label htmlFor="prop-assegna-codice" className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tramite Codice / RIF / ID</label>
+                                 <input
+                                    id="prop-assegna-codice"
+                                    type="text"
                                     placeholder="Es. 7405" 
                                     value={assignCode} 
                                     onChange={(e) => setAssignCode(e.target.value)} 
@@ -952,15 +957,18 @@ export default function ProprietariPage() {
                                       </div>
                                    </div>
                                    
-                                   <div className="flex items-center gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                                     <button 
+                                   {/* Su touch non esiste l'hover: sotto md le azioni restano sempre visibili,
+                                       l'apparizione al passaggio del mouse vale solo da desktop in su. */}
+                                   <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                     <button
                                         onClick={() => handleUnassignProperty(imm.id)}
-                                        className="p-3 bg-red-50 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-colors shrink-0" 
+                                        className="p-3 bg-red-50 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-colors shrink-0"
                                         title="Scollega Immobile"
+                                        aria-label={`Scollega l'immobile RIF ${rif}`}
                                      >
                                         <Trash2 className="w-5 h-5" />
                                      </button>
-                                     <a href={`/immobili?id=${imm.id}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-colors shrink-0" title="Vedi scheda immobile">
+                                     <a href={`/immobili?id=${imm.id}`} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl transition-colors shrink-0" title="Vedi scheda immobile" aria-label={`Vedi la scheda dell'immobile RIF ${rif}`}>
                                        <ChevronRight className="w-5 h-5" />
                                      </a>
                                    </div>

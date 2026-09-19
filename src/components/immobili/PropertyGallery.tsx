@@ -62,17 +62,21 @@ export function PropertyGallery({ images, onOpenLightbox }: PropertyGalleryProps
       </div>
 
       {/* Navigation Arrows */}
+      {/* En pantalla táctil no hay hover: las flechas se ven siempre por
+          debajo de md y el efecto de aparición queda solo en escritorio. */}
       {images.length > 1 && (
         <>
           <button
             onClick={(e) => { e.stopPropagation(); setIndex(prev => (prev === 0 ? images.length - 1 : prev - 1)); }}
-            className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+            aria-label="Foto precedente"
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:scale-110"
           >
             <ChevronLeft className="h-6 w-6 pr-0.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); setIndex(prev => (prev === images.length - 1 ? 0 : prev + 1)); }}
-            className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+            aria-label="Foto successiva"
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 bg-white/80 hover:bg-white backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-xl opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:scale-110"
           >
             <ChevronRight className="h-6 w-6 pl-0.5" />
           </button>
@@ -86,6 +90,7 @@ export function PropertyGallery({ images, onOpenLightbox }: PropertyGalleryProps
             <button
               key={idx}
               onClick={(e) => { e.stopPropagation(); setIndex(idx); }}
+              aria-label={`Vai alla foto ${idx + 1}`}
               className={cn(
                 "h-1.5 rounded-full transition-all shrink-0 snap-center",
                 current === idx ? "w-6 bg-white" : "w-1.5 bg-white/50 hover:bg-white/80 hover:w-3",

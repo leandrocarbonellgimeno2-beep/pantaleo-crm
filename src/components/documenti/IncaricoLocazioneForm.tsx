@@ -24,8 +24,8 @@ function SC({ icon: Icon, title, badge, children }: { icon: any; title: string; 
     </div>
   );
 }
-function FI({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return <div className={cn("space-y-1.5", className)}><label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>{children}</div>;
+function FI({ label, htmlFor, children, className }: { label: string; htmlFor?: string; children: React.ReactNode; className?: string }) {
+  return <div className={cn("space-y-1.5", className)}><label htmlFor={htmlFor} className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>{children}</div>;
 }
 const ic = "w-full h-11 px-4 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm text-slate-800 transition-all placeholder:text-slate-300";
 
@@ -156,7 +156,7 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Impegnativa d&apos;affitto — Immobiliare Pantaleo</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} aria-label="Chiudi il modulo" className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
         </div>
       </div>
 
@@ -166,10 +166,10 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
         <SC icon={User} title="Dati del Locatore (Proprietario)" badge="Sezione 1">
           <div className="space-y-4">
             <div className="relative">
-              <label className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca proprietario</label>
+              <label htmlFor="loc-cerca-proprietario" className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca proprietario</label>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
-                <input type="text" value={cSearch} onChange={e => searchClienti(e.target.value)} onFocus={() => cResults.length > 0 && setCOpen(true)} placeholder="Digita nome proprietario..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-indigo-100 bg-indigo-50/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm" />
+                <input id="loc-cerca-proprietario" type="text" value={cSearch} onChange={e => searchClienti(e.target.value)} onFocus={() => cResults.length > 0 && setCOpen(true)} placeholder="Digita nome proprietario..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-indigo-100 bg-indigo-50/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm" />
               </div>
               {cOpen && cResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-30">
@@ -183,14 +183,14 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FI label="Nome e Cognome *"><input type="text" value={form.locatoreNome} onChange={e => u('locatoreNome', e.target.value)} className={ic} placeholder="es. Mario Rossi" /></FI>
-              <FI label="Codice Fiscale"><input type="text" value={form.locatoreCF} onChange={e => u('locatoreCF', e.target.value)} className={ic} placeholder="RSSMRA80A01..." /></FI>
-              <FI label="Nato/a a, il"><input type="text" value={form.locatoreNascita} onChange={e => u('locatoreNascita', e.target.value)} className={ic} placeholder="es. Marsala, 01/01/1980" /></FI>
-              <FI label="Residente in"><input type="text" value={form.locatoreResidenza} onChange={e => u('locatoreResidenza', e.target.value)} className={ic} placeholder="es. Marsala (TP)" /></FI>
-              <FI label="Via"><input type="text" value={form.locatoreVia} onChange={e => u('locatoreVia', e.target.value)} className={ic} placeholder="es. Via Roma 23" /></FI>
-              <FI label="Telefono"><input type="tel" value={form.locatoreTel} onChange={e => u('locatoreTel', e.target.value)} className={ic} placeholder="+39 333..." /></FI>
-              <FI label="Email"><input type="email" value={form.locatoreEmail} onChange={e => u('locatoreEmail', e.target.value)} className={ic} placeholder="email@esempio.it" /></FI>
-              <FI label="Professione"><input type="text" value={form.locatoreProfessione} onChange={e => u('locatoreProfessione', e.target.value)} className={ic} placeholder="es. Libero professionista" /></FI>
+              <FI label="Nome e Cognome *" htmlFor="loc-locatorenome"><input id="loc-locatorenome" type="text" value={form.locatoreNome} onChange={e => u('locatoreNome', e.target.value)} className={ic} placeholder="es. Mario Rossi" /></FI>
+              <FI label="Codice Fiscale" htmlFor="loc-locatorecf"><input id="loc-locatorecf" type="text" value={form.locatoreCF} onChange={e => u('locatoreCF', e.target.value)} className={ic} placeholder="RSSMRA80A01..." /></FI>
+              <FI label="Nato/a a, il" htmlFor="loc-locatorenascita"><input id="loc-locatorenascita" type="text" value={form.locatoreNascita} onChange={e => u('locatoreNascita', e.target.value)} className={ic} placeholder="es. Marsala, 01/01/1980" /></FI>
+              <FI label="Residente in" htmlFor="loc-locatoreresidenza"><input id="loc-locatoreresidenza" type="text" value={form.locatoreResidenza} onChange={e => u('locatoreResidenza', e.target.value)} className={ic} placeholder="es. Marsala (TP)" /></FI>
+              <FI label="Via" htmlFor="loc-locatorevia"><input id="loc-locatorevia" type="text" value={form.locatoreVia} onChange={e => u('locatoreVia', e.target.value)} className={ic} placeholder="es. Via Roma 23" /></FI>
+              <FI label="Telefono" htmlFor="loc-locatoretel"><input id="loc-locatoretel" type="tel" value={form.locatoreTel} onChange={e => u('locatoreTel', e.target.value)} className={ic} placeholder="+39 333..." /></FI>
+              <FI label="Email" htmlFor="loc-locatoreemail"><input id="loc-locatoreemail" type="email" value={form.locatoreEmail} onChange={e => u('locatoreEmail', e.target.value)} className={ic} placeholder="email@esempio.it" /></FI>
+              <FI label="Professione" htmlFor="loc-locatoreprofessione"><input id="loc-locatoreprofessione" type="text" value={form.locatoreProfessione} onChange={e => u('locatoreProfessione', e.target.value)} className={ic} placeholder="es. Libero professionista" /></FI>
             </div>
           </div>
         </SC>
@@ -198,15 +198,15 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
         {/* ═══ CONDUTTORE ═══ */}
         <SC icon={User} title="Dati del Conduttore (Inquilino)" badge="Sezione 2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FI label="Nome e Cognome *"><input type="text" value={form.conduttoreNome} onChange={e => u('conduttoreNome', e.target.value)} className={ic} placeholder="es. Luigi Bianchi" /></FI>
-            <FI label="Codice Fiscale"><input type="text" value={form.conduttoreCF} onChange={e => u('conduttoreCF', e.target.value)} className={ic} placeholder="BNCLGU85..." /></FI>
-            <FI label="Nato/a a, il"><input type="text" value={form.conduttoreNascita} onChange={e => u('conduttoreNascita', e.target.value)} className={ic} placeholder="es. Trapani, 15/06/1985" /></FI>
-            <FI label="Residente in"><input type="text" value={form.conduttoreResidenza} onChange={e => u('conduttoreResidenza', e.target.value)} className={ic} placeholder="es. Trapani (TP)" /></FI>
-            <FI label="Via"><input type="text" value={form.conduttoreVia} onChange={e => u('conduttoreVia', e.target.value)} className={ic} placeholder="es. Via Garibaldi 10" /></FI>
-            <FI label="Telefono"><input type="tel" value={form.conduttoreTel} onChange={e => u('conduttoreTel', e.target.value)} className={ic} placeholder="+39 320..." /></FI>
-            <FI label="Email"><input type="email" value={form.conduttoreEmail} onChange={e => u('conduttoreEmail', e.target.value)} className={ic} placeholder="email@esempio.it" /></FI>
-            <FI label="Professione"><input type="text" value={form.conduttoreProfessione} onChange={e => u('conduttoreProfessione', e.target.value)} className={ic} placeholder="es. Impiegato" /></FI>
-            <FI label="Reddito Annuo (€)" className="md:col-span-2"><input type="text" value={form.conduttoreReddito} onChange={e => u('conduttoreReddito', e.target.value)} className={ic} placeholder="es. 25.000" /></FI>
+            <FI label="Nome e Cognome *" htmlFor="loc-conduttorenome"><input id="loc-conduttorenome" type="text" value={form.conduttoreNome} onChange={e => u('conduttoreNome', e.target.value)} className={ic} placeholder="es. Luigi Bianchi" /></FI>
+            <FI label="Codice Fiscale" htmlFor="loc-conduttorecf"><input id="loc-conduttorecf" type="text" value={form.conduttoreCF} onChange={e => u('conduttoreCF', e.target.value)} className={ic} placeholder="BNCLGU85..." /></FI>
+            <FI label="Nato/a a, il" htmlFor="loc-conduttorenascita"><input id="loc-conduttorenascita" type="text" value={form.conduttoreNascita} onChange={e => u('conduttoreNascita', e.target.value)} className={ic} placeholder="es. Trapani, 15/06/1985" /></FI>
+            <FI label="Residente in" htmlFor="loc-conduttoreresidenza"><input id="loc-conduttoreresidenza" type="text" value={form.conduttoreResidenza} onChange={e => u('conduttoreResidenza', e.target.value)} className={ic} placeholder="es. Trapani (TP)" /></FI>
+            <FI label="Via" htmlFor="loc-conduttorevia"><input id="loc-conduttorevia" type="text" value={form.conduttoreVia} onChange={e => u('conduttoreVia', e.target.value)} className={ic} placeholder="es. Via Garibaldi 10" /></FI>
+            <FI label="Telefono" htmlFor="loc-conduttoretel"><input id="loc-conduttoretel" type="tel" value={form.conduttoreTel} onChange={e => u('conduttoreTel', e.target.value)} className={ic} placeholder="+39 320..." /></FI>
+            <FI label="Email" htmlFor="loc-conduttoreemail"><input id="loc-conduttoreemail" type="email" value={form.conduttoreEmail} onChange={e => u('conduttoreEmail', e.target.value)} className={ic} placeholder="email@esempio.it" /></FI>
+            <FI label="Professione" htmlFor="loc-conduttoreprofessione"><input id="loc-conduttoreprofessione" type="text" value={form.conduttoreProfessione} onChange={e => u('conduttoreProfessione', e.target.value)} className={ic} placeholder="es. Impiegato" /></FI>
+            <FI label="Reddito Annuo (€)" className="md:col-span-2" htmlFor="loc-conduttorereddito"><input id="loc-conduttorereddito" type="text" value={form.conduttoreReddito} onChange={e => u('conduttoreReddito', e.target.value)} className={ic} placeholder="es. 25.000" /></FI>
           </div>
         </SC>
 
@@ -224,11 +224,11 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FI label="Indirizzo *" className="md:col-span-2"><input type="text" value={form.indirizzo} onChange={e => u('indirizzo', e.target.value)} className={ic} placeholder="es. Via Roma 23" /></FI>
-              <FI label="Città"><input type="text" value={form.citta} onChange={e => u('citta', e.target.value)} className={ic} placeholder="es. Marsala" /></FI>
-              <FI label="Piano"><input type="text" value={form.piano} onChange={e => u('piano', e.target.value)} className={ic} placeholder="es. 3°" /></FI>
-              <FI label="Scala"><input type="text" value={form.scala} onChange={e => u('scala', e.target.value)} className={ic} placeholder="es. A" /></FI>
-              <FI label="Interno"><input type="text" value={form.interno} onChange={e => u('interno', e.target.value)} className={ic} placeholder="es. 12" /></FI>
+              <FI label="Indirizzo *" className="md:col-span-2" htmlFor="loc-indirizzo"><input id="loc-indirizzo" type="text" value={form.indirizzo} onChange={e => u('indirizzo', e.target.value)} className={ic} placeholder="es. Via Roma 23" /></FI>
+              <FI label="Città" htmlFor="loc-citta"><input id="loc-citta" type="text" value={form.citta} onChange={e => u('citta', e.target.value)} className={ic} placeholder="es. Marsala" /></FI>
+              <FI label="Piano" htmlFor="loc-piano"><input id="loc-piano" type="text" value={form.piano} onChange={e => u('piano', e.target.value)} className={ic} placeholder="es. 3°" /></FI>
+              <FI label="Scala" htmlFor="loc-scala"><input id="loc-scala" type="text" value={form.scala} onChange={e => u('scala', e.target.value)} className={ic} placeholder="es. A" /></FI>
+              <FI label="Interno" htmlFor="loc-interno"><input id="loc-interno" type="text" value={form.interno} onChange={e => u('interno', e.target.value)} className={ic} placeholder="es. 12" /></FI>
             </div>
           </div>
         </SC>
@@ -236,12 +236,12 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
         {/* ═══ DATI CATASTALI ═══ */}
         <SC icon={MapPin} title="Dati Catastali" badge="Sezione 4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            <FI label="Foglio"><input type="text" value={form.foglio} onChange={e => u('foglio', e.target.value)} className={ic} placeholder="—" /></FI>
-            <FI label="Particella"><input type="text" value={form.particella} onChange={e => u('particella', e.target.value)} className={ic} placeholder="—" /></FI>
-            <FI label="Sub"><input type="text" value={form.sub} onChange={e => u('sub', e.target.value)} className={ic} placeholder="—" /></FI>
-            <FI label="Valore Catastale (€)"><input type="text" value={form.valoreCatastale} onChange={e => u('valoreCatastale', e.target.value)} className={ic} placeholder="—" /></FI>
-            <FI label="Classe Energetica" className="col-span-2">
-              <select value={form.classeEnergetica} onChange={e => u('classeEnergetica', e.target.value)} className={ic + ' bg-white'}>
+            <FI label="Foglio" htmlFor="loc-foglio"><input id="loc-foglio" type="text" value={form.foglio} onChange={e => u('foglio', e.target.value)} className={ic} placeholder="—" /></FI>
+            <FI label="Particella" htmlFor="loc-particella"><input id="loc-particella" type="text" value={form.particella} onChange={e => u('particella', e.target.value)} className={ic} placeholder="—" /></FI>
+            <FI label="Sub" htmlFor="loc-sub"><input id="loc-sub" type="text" value={form.sub} onChange={e => u('sub', e.target.value)} className={ic} placeholder="—" /></FI>
+            <FI label="Valore Catastale (€)" htmlFor="loc-valorecatastale"><input id="loc-valorecatastale" type="text" value={form.valoreCatastale} onChange={e => u('valoreCatastale', e.target.value)} className={ic} placeholder="—" /></FI>
+            <FI label="Classe Energetica" className="col-span-2" htmlFor="loc-classeenergetica">
+              <select id="loc-classeenergetica" value={form.classeEnergetica} onChange={e => u('classeEnergetica', e.target.value)} className={ic + ' bg-white'}>
                 {CLASSI_EN.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </FI>
@@ -252,16 +252,16 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
         <SC icon={Percent} title="Condizioni di Locazione" badge="Sezione 5">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FI label="Prezzo Richiesto (€/mese) *"><input type="number" value={form.prezzoRichiesto} onChange={e => u('prezzoRichiesto', e.target.value)} className={ic} placeholder="es. 500" /></FI>
-              <FI label="Spese Condominio (€/mese)"><input type="number" value={form.condominio} onChange={e => u('condominio', e.target.value)} className={ic} placeholder="es. 50" /></FI>
-              <FI label="Cauzione (mesi)"><input type="number" value={form.cauzione} onChange={e => u('cauzione', e.target.value)} className={ic} placeholder="es. 2" /></FI>
-              <FI label="Mesi Anticipati"><input type="number" value={form.mesiAnticipati} onChange={e => u('mesiAnticipati', e.target.value)} className={ic} placeholder="1" /></FI>
-              <FI label="Durata Contratto">
-                <select value={form.durataContratto} onChange={e => u('durataContratto', e.target.value)} className={ic + ' bg-white'}>
+              <FI label="Prezzo Richiesto (€/mese) *" htmlFor="loc-prezzorichiesto"><input id="loc-prezzorichiesto" type="number" value={form.prezzoRichiesto} onChange={e => u('prezzoRichiesto', e.target.value)} className={ic} placeholder="es. 500" /></FI>
+              <FI label="Spese Condominio (€/mese)" htmlFor="loc-condominio"><input id="loc-condominio" type="number" value={form.condominio} onChange={e => u('condominio', e.target.value)} className={ic} placeholder="es. 50" /></FI>
+              <FI label="Cauzione (mesi)" htmlFor="loc-cauzione"><input id="loc-cauzione" type="number" value={form.cauzione} onChange={e => u('cauzione', e.target.value)} className={ic} placeholder="es. 2" /></FI>
+              <FI label="Mesi Anticipati" htmlFor="loc-mesianticipati"><input id="loc-mesianticipati" type="number" value={form.mesiAnticipati} onChange={e => u('mesiAnticipati', e.target.value)} className={ic} placeholder="1" /></FI>
+              <FI label="Durata Contratto" htmlFor="loc-duratacontratto">
+                <select id="loc-duratacontratto" value={form.durataContratto} onChange={e => u('durataContratto', e.target.value)} className={ic + ' bg-white'}>
                   {DURATE.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </FI>
-              <FI label="Data Disponibilità"><input type="date" value={form.dataDisponibilita} onChange={e => u('dataDisponibilita', e.target.value)} className={ic} /></FI>
+              <FI label="Data Disponibilità" htmlFor="loc-datadisponibilita"><input id="loc-datadisponibilita" type="date" value={form.dataDisponibilita} onChange={e => u('dataDisponibilita', e.target.value)} className={ic} /></FI>
             </div>
             <div className="flex gap-6">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -275,7 +275,7 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
                 <span className="text-sm font-bold text-slate-700">Garage incluso</span>
               </label>
             </div>
-            <FI label="Note aggiuntive"><textarea value={form.note} onChange={e => u('note', e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm resize-none placeholder:text-slate-300" placeholder="Eventuali note o condizioni particolari..." /></FI>
+            <FI label="Note aggiuntive" htmlFor="loc-note"><textarea id="loc-note" value={form.note} onChange={e => u('note', e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm resize-none placeholder:text-slate-300" placeholder="Eventuali note o condizioni particolari..." /></FI>
           </div>
         </SC>
 
@@ -290,8 +290,8 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
               ))}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FI label="Importo Mediazione (€)"><input type="number" value={form.mediazioneImporto} onChange={e => u('mediazioneImporto', e.target.value)} className={ic} placeholder="es. 500" /></FI>
-              <FI label="IVA (%)"><input type="number" value={form.mediazioneIva} onChange={e => u('mediazioneIva', e.target.value)} className={ic} placeholder="22" /></FI>
+              <FI label="Importo Mediazione (€)" htmlFor="loc-mediazioneimporto"><input id="loc-mediazioneimporto" type="number" value={form.mediazioneImporto} onChange={e => u('mediazioneImporto', e.target.value)} className={ic} placeholder="es. 500" /></FI>
+              <FI label="IVA (%)" htmlFor="loc-mediazioneiva"><input id="loc-mediazioneiva" type="number" value={form.mediazioneIva} onChange={e => u('mediazioneIva', e.target.value)} className={ic} placeholder="22" /></FI>
             </div>
           </div>
         </SC>

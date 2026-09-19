@@ -39,7 +39,9 @@ export function PageHeader({ title, subtitle, action, search, searchExtra, child
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             )}
             <input
+              id="page-header-search"
               type="text"
+              aria-label={search.placeholder ?? "Cerca..."}
               placeholder={search.placeholder ?? "Cerca..."}
               value={search.value}
               onChange={(e) => search.onChange(e.target.value)}

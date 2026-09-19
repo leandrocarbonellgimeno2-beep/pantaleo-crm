@@ -39,6 +39,7 @@ export function ClienteMatchModal({ cliente, onClose, onWhatsApp }: ClienteMatch
           </div>
           <button
             onClick={onClose}
+            aria-label="Chiudi scheda cliente"
             className="h-9 w-9 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
           >
             <X className="h-5 w-5" />

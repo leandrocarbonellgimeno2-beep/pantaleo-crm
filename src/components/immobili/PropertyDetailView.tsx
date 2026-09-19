@@ -473,6 +473,7 @@ export function PropertyDetailView({
                                <div className="flex items-center gap-1.5 flex-shrink-0">
                                  <button
                                    onClick={() => onWhatsAppCliente(cm)}
+                                   aria-label={`Invia WhatsApp a ${cm.nome} ${cm.cognome}`}
                                    className="h-9 w-9 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-200 transition-colors"
                                    title="WhatsApp"
                                  >
@@ -480,6 +481,7 @@ export function PropertyDetailView({
                                  </button>
                                  <button
                                    onClick={() => inverse.setExpanded(isExp ? null : cm.clienteId)}
+                                   aria-label={isExp ? "Nascondi punteggio dettagliato" : "Mostra punteggio dettagliato"}
                                    className={cn(
                                      "h-9 w-9 rounded-lg flex items-center justify-center transition-colors border",
                                      isExp ? 'bg-violet-100 text-violet-600 border-violet-200' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100'

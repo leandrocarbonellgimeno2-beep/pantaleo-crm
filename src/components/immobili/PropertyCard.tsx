@@ -54,9 +54,12 @@ function PropertyCardBase({
     style={{ contentVisibility: 'auto', containIntrinsicSize: '0 400px' }}
   >
     {/* Quick Action ⋮ */}
+    {/* En pantalla táctil no hay hover: el botón se ve siempre por debajo de
+        md y el efecto de aparición queda solo en escritorio. */}
     <button
       onClick={(e) => { e.stopPropagation(); onToggleMenu(item); }}
-      className="absolute top-4 right-4 z-20 h-8 w-8 rounded-full bg-black/40 backdrop-blur-md text-white/80 flex items-center justify-center hover:bg-black/70 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+      aria-label="Apri menu azioni immobile"
+      className="absolute top-4 right-4 z-20 h-9 w-9 rounded-full bg-black/40 backdrop-blur-md text-white/80 flex items-center justify-center hover:bg-black/70 hover:text-white transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
     </button>

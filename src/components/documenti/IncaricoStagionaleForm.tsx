@@ -23,8 +23,8 @@ function SC({ icon: Icon, title, badge, children }: { icon: any; title: string; 
     </div>
   );
 }
-function FI({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
-  return <div className={cn("space-y-1.5", className)}><label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>{children}</div>;
+function FI({ label, htmlFor, children, className }: { label: string; htmlFor?: string; children: React.ReactNode; className?: string }) {
+  return <div className={cn("space-y-1.5", className)}><label htmlFor={htmlFor} className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>{children}</div>;
 }
 const ic = "w-full h-11 px-4 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm text-slate-800 transition-all placeholder:text-slate-300";
 
@@ -144,7 +144,7 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Impegnativa locazione stagionale — Immobiliare Pantaleo</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} aria-label="Chiudi il modulo" className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all"><X className="h-5 w-5" /></button>
         </div>
       </div>
 
@@ -154,10 +154,10 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
         <SC icon={User} title="Dati del Conduttore" badge="Sezione 1">
           <div className="space-y-4">
             <div className="relative">
-              <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca cliente</label>
+              <label htmlFor="stag-cerca-cliente" className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca cliente</label>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-300" />
-                <input type="text" value={cSearch} onChange={e => searchClienti(e.target.value)} onFocus={() => cResults.length > 0 && setCOpen(true)} placeholder="Digita nome..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-amber-100 bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm" />
+                <input id="stag-cerca-cliente" type="text" value={cSearch} onChange={e => searchClienti(e.target.value)} onFocus={() => cResults.length > 0 && setCOpen(true)} placeholder="Digita nome..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-amber-100 bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm" />
               </div>
               {cOpen && cResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-30">
@@ -171,13 +171,13 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FI label="Nome e Cognome *"><input type="text" value={form.conduttoreNome} onChange={e => u('conduttoreNome', e.target.value)} className={ic} placeholder="es. Mario Rossi" /></FI>
-              <FI label="Codice Fiscale"><input type="text" value={form.conduttoreCF} onChange={e => u('conduttoreCF', e.target.value)} className={ic} /></FI>
-              <FI label="Nato/a a, il"><input type="text" value={form.conduttoreNascita} onChange={e => u('conduttoreNascita', e.target.value)} className={ic} /></FI>
-              <FI label="Residente in"><input type="text" value={form.conduttoreResidenza} onChange={e => u('conduttoreResidenza', e.target.value)} className={ic} /></FI>
-              <FI label="Via"><input type="text" value={form.conduttoreVia} onChange={e => u('conduttoreVia', e.target.value)} className={ic} /></FI>
-              <FI label="Telefono"><input type="tel" value={form.conduttoreTel} onChange={e => u('conduttoreTel', e.target.value)} className={ic} /></FI>
-              <FI label="Email" className="md:col-span-2"><input type="email" value={form.conduttoreEmail} onChange={e => u('conduttoreEmail', e.target.value)} className={ic} /></FI>
+              <FI label="Nome e Cognome *" htmlFor="stag-conduttorenome"><input id="stag-conduttorenome" type="text" value={form.conduttoreNome} onChange={e => u('conduttoreNome', e.target.value)} className={ic} placeholder="es. Mario Rossi" /></FI>
+              <FI label="Codice Fiscale" htmlFor="stag-conduttorecf"><input id="stag-conduttorecf" type="text" value={form.conduttoreCF} onChange={e => u('conduttoreCF', e.target.value)} className={ic} /></FI>
+              <FI label="Nato/a a, il" htmlFor="stag-conduttorenascita"><input id="stag-conduttorenascita" type="text" value={form.conduttoreNascita} onChange={e => u('conduttoreNascita', e.target.value)} className={ic} /></FI>
+              <FI label="Residente in" htmlFor="stag-conduttoreresidenza"><input id="stag-conduttoreresidenza" type="text" value={form.conduttoreResidenza} onChange={e => u('conduttoreResidenza', e.target.value)} className={ic} /></FI>
+              <FI label="Via" htmlFor="stag-conduttorevia"><input id="stag-conduttorevia" type="text" value={form.conduttoreVia} onChange={e => u('conduttoreVia', e.target.value)} className={ic} /></FI>
+              <FI label="Telefono" htmlFor="stag-conduttoretel"><input id="stag-conduttoretel" type="tel" value={form.conduttoreTel} onChange={e => u('conduttoreTel', e.target.value)} className={ic} /></FI>
+              <FI label="Email" className="md:col-span-2" htmlFor="stag-conduttoreemail"><input id="stag-conduttoreemail" type="email" value={form.conduttoreEmail} onChange={e => u('conduttoreEmail', e.target.value)} className={ic} /></FI>
             </div>
           </div>
         </SC>
@@ -185,8 +185,8 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
         {/* PERIODO */}
         <SC icon={Calendar} title="Periodo di Locazione Stagionale" badge="Sezione 2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FI label="Dal (data inizio) *"><input type="date" value={form.dataDal} onChange={e => u('dataDal', e.target.value)} className={ic} /></FI>
-            <FI label="Al (data fine) *"><input type="date" value={form.dataAl} onChange={e => u('dataAl', e.target.value)} className={ic} /></FI>
+            <FI label="Dal (data inizio) *" htmlFor="stag-datadal"><input id="stag-datadal" type="date" value={form.dataDal} onChange={e => u('dataDal', e.target.value)} className={ic} /></FI>
+            <FI label="Al (data fine) *" htmlFor="stag-dataal"><input id="stag-dataal" type="date" value={form.dataAl} onChange={e => u('dataAl', e.target.value)} className={ic} /></FI>
           </div>
           {form.dataDal && form.dataAl && (
             <div className="mt-4 p-3 rounded-xl bg-amber-50/60 border border-amber-100">
@@ -199,10 +199,10 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
         <SC icon={Building2} title="Dati Immobile" badge="Sezione 3">
           <div className="space-y-4">
             <div className="relative">
-              <label className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca immobile</label>
+              <label htmlFor="stag-cerca-immobile" className="text-[11px] font-black text-amber-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Cerca immobile</label>
               <div className="relative">
                 <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-300" />
-                <input type="text" value={iSearch} onChange={e => searchImmobili(e.target.value)} onFocus={() => iResults.length > 0 && setIOpen(true)} placeholder="Digita indirizzo o codice..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-amber-100 bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm" />
+                <input id="stag-cerca-immobile" type="text" value={iSearch} onChange={e => searchImmobili(e.target.value)} onFocus={() => iResults.length > 0 && setIOpen(true)} placeholder="Digita indirizzo o codice..." className="w-full h-12 pl-10 pr-4 rounded-xl border-2 border-amber-100 bg-amber-50/30 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm" />
               </div>
               {iOpen && iResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl max-h-56 overflow-y-auto z-30">
@@ -216,10 +216,10 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
               )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FI label="Indirizzo *" className="md:col-span-2"><input type="text" value={form.indirizzo} onChange={e => u('indirizzo', e.target.value)} className={ic} /></FI>
-              <FI label="Città"><input type="text" value={form.citta} onChange={e => u('citta', e.target.value)} className={ic} /></FI>
-              <FI label="Piano"><input type="text" value={form.piano} onChange={e => u('piano', e.target.value)} className={ic} /></FI>
-              <FI label="Zona"><input type="text" value={form.zona} onChange={e => u('zona', e.target.value)} className={ic} /></FI>
+              <FI label="Indirizzo *" className="md:col-span-2" htmlFor="stag-indirizzo"><input id="stag-indirizzo" type="text" value={form.indirizzo} onChange={e => u('indirizzo', e.target.value)} className={ic} /></FI>
+              <FI label="Città" htmlFor="stag-citta"><input id="stag-citta" type="text" value={form.citta} onChange={e => u('citta', e.target.value)} className={ic} /></FI>
+              <FI label="Piano" htmlFor="stag-piano"><input id="stag-piano" type="text" value={form.piano} onChange={e => u('piano', e.target.value)} className={ic} /></FI>
+              <FI label="Zona" htmlFor="stag-zona"><input id="stag-zona" type="text" value={form.zona} onChange={e => u('zona', e.target.value)} className={ic} /></FI>
             </div>
           </div>
         </SC>
@@ -227,11 +227,11 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
         {/* CATASTALI */}
         <SC icon={MapPin} title="Dati Catastali" badge="Sezione 4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <FI label="Foglio"><input type="text" value={form.foglio} onChange={e => u('foglio', e.target.value)} className={ic} /></FI>
-            <FI label="Particella"><input type="text" value={form.particella} onChange={e => u('particella', e.target.value)} className={ic} /></FI>
-            <FI label="Sub"><input type="text" value={form.sub} onChange={e => u('sub', e.target.value)} className={ic} /></FI>
-            <FI label="Classe Energetica">
-              <select value={form.classeEnergetica} onChange={e => u('classeEnergetica', e.target.value)} className={ic + ' bg-white'}>{CLASSI_EN.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            <FI label="Foglio" htmlFor="stag-foglio"><input id="stag-foglio" type="text" value={form.foglio} onChange={e => u('foglio', e.target.value)} className={ic} /></FI>
+            <FI label="Particella" htmlFor="stag-particella"><input id="stag-particella" type="text" value={form.particella} onChange={e => u('particella', e.target.value)} className={ic} /></FI>
+            <FI label="Sub" htmlFor="stag-sub"><input id="stag-sub" type="text" value={form.sub} onChange={e => u('sub', e.target.value)} className={ic} /></FI>
+            <FI label="Classe Energetica" htmlFor="stag-classeenergetica">
+              <select id="stag-classeenergetica" value={form.classeEnergetica} onChange={e => u('classeEnergetica', e.target.value)} className={ic + ' bg-white'}>{CLASSI_EN.map(c => <option key={c} value={c}>{c}</option>)}</select>
             </FI>
           </div>
         </SC>
@@ -239,9 +239,9 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
         {/* PREZZO */}
         <SC icon={Percent} title="Prezzo di Locazione Stagionale" badge="Sezione 5">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FI label="Prezzo Totale (€) *"><input type="number" value={form.prezzoLocazione} onChange={e => u('prezzoLocazione', e.target.value)} className={ic} placeholder="es. 3000" /></FI>
-            <FI label="Acconto (€)"><input type="number" value={form.acconto} onChange={e => u('acconto', e.target.value)} className={ic} placeholder="es. 1000" /></FI>
-            <FI label="Saldo (€)"><input type="number" value={form.saldo} onChange={e => u('saldo', e.target.value)} className={ic} placeholder="es. 2000" /></FI>
+            <FI label="Prezzo Totale (€) *" htmlFor="stag-prezzolocazione"><input id="stag-prezzolocazione" type="number" value={form.prezzoLocazione} onChange={e => u('prezzoLocazione', e.target.value)} className={ic} placeholder="es. 3000" /></FI>
+            <FI label="Acconto (€)" htmlFor="stag-acconto"><input id="stag-acconto" type="number" value={form.acconto} onChange={e => u('acconto', e.target.value)} className={ic} placeholder="es. 1000" /></FI>
+            <FI label="Saldo (€)" htmlFor="stag-saldo"><input id="stag-saldo" type="number" value={form.saldo} onChange={e => u('saldo', e.target.value)} className={ic} placeholder="es. 2000" /></FI>
           </div>
           <div className="mt-4 flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -250,7 +250,7 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
               <span className="text-sm font-bold text-slate-700">Utenze incluse nel prezzo</span>
             </label>
           </div>
-          <FI label="Note" className="mt-4"><textarea value={form.note} onChange={e => u('note', e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm resize-none placeholder:text-slate-300" placeholder="Condizioni particolari..." /></FI>
+          <FI label="Note" className="mt-4" htmlFor="stag-note"><textarea id="stag-note" value={form.note} onChange={e => u('note', e.target.value)} rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400 font-medium text-sm resize-none placeholder:text-slate-300" placeholder="Condizioni particolari..." /></FI>
         </SC>
 
         {/* PRIVACY & FIRME */}

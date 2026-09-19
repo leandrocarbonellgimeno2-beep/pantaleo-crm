@@ -441,7 +441,9 @@ export default function DocumentiPage() {
           <div className="relative w-full sm:w-80 group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <input
+              id="documenti-ricerca"
               type="text"
+              aria-label="Cerca documenti per titolo o categoria"
               placeholder="Cerca per titolo o categoria..."
               className="w-full pl-10 pr-4 py-2 rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm font-medium"
               value={searchTerm}
@@ -489,7 +491,7 @@ export default function DocumentiPage() {
                           <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" className="h-9 px-3 inline-flex items-center justify-center rounded-lg bg-emerald-50 hover:bg-emerald-100 transition-colors text-emerald-600 border border-emerald-200 gap-1.5 text-xs font-bold" title="Scarica PDF">
                             <Download className="h-3.5 w-3.5" /> Scarica
                           </a>
-                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri in nuova scheda">
+                          <a href={doc.urlDownload} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri in nuova scheda">
                             <Eye className="h-4 w-4" />
                           </a>
                           {doc.categoria && FORM_TYPE_BY_CATEGORIA[doc.categoria as string] && (
@@ -513,6 +515,7 @@ export default function DocumentiPage() {
                                 }
                               }}
                               className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors text-slate-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200"
+                              aria-label="Riapri e modifica il documento"
                               title="Riapri e modifica"
                             >
                               <Pencil className="h-4 w-4" />
@@ -531,7 +534,7 @@ export default function DocumentiPage() {
                               setGeneratedDocs(prev => prev.filter(d => d.id !== doc.id));
                               setToast('🗑️ Documento eliminato');
                             } catch { setToast('❌ Errore eliminazione'); }
-                          }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" title="Elimina">
+                          }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" aria-label="Elimina il documento generato" title="Elimina">
                             <Trash2 className="h-4 w-4" />
                           </button>
                        </div>
@@ -592,13 +595,13 @@ export default function DocumentiPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => { setDocToCompile(doc); setShowCreator(false); setShowCompiler(true); }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors text-indigo-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200" title="🪄 Compila Smart">
+                          <button onClick={() => { setDocToCompile(doc); setShowCreator(false); setShowCompiler(true); }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-indigo-50 transition-colors text-indigo-400 hover:text-indigo-600 border border-transparent hover:border-indigo-200" aria-label="Compila il modello con i dati del cliente" title="🪄 Compila Smart">
                             <Wand2 className="h-4 w-4" />
                           </button>
-                          <a href={doc.url} target="_blank" rel="noopener noreferrer" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri / Scarica">
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer" aria-label="Apri o scarica il modello" className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-500 hover:text-blue-600 border border-transparent hover:border-blue-200" title="Apri / Scarica">
                             <Eye className="h-4 w-4" />
                           </a>
-                          <button onClick={() => handleDelete(doc)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" title="Elimina defintivamente">
+                          <button onClick={() => handleDelete(doc)} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" aria-label="Elimina il modello" title="Elimina defintivamente">
                             <Trash2 className="h-4 w-4" />
                           </button>
                        </div>
@@ -625,9 +628,10 @@ export default function DocumentiPage() {
               <h3 className="text-xl font-bold flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" /> Carica File Master
               </h3>
-              <button 
+              <button
                 onClick={() => { setShowCreator(false); setNewDocTitolo(""); setNewDocCategoria("Modello Generico"); }}
-                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
+                aria-label="Chiudi"
+                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-200 transition-colors"
                 disabled={uploading}
               >
                 <Plus className="h-5 w-5 rotate-45" />
@@ -637,12 +641,12 @@ export default function DocumentiPage() {
             <div className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                  <div className="col-span-2 space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Titolo Documento *</label>
-                    <input type="text" value={newDocTitolo} onChange={e => setNewDocTitolo(e.target.value)} placeholder="es. Incarico Vendita (PDF Bianco)" className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium" />
+                    <label htmlFor="nuovo-doc-titolo" className="text-xs font-bold text-slate-500 uppercase">Titolo Documento *</label>
+                    <input id="nuovo-doc-titolo" type="text" value={newDocTitolo} onChange={e => setNewDocTitolo(e.target.value)} placeholder="es. Incarico Vendita (PDF Bianco)" className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium" />
                  </div>
                  <div className="col-span-2 space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
-                    <select value={newDocCategoria} onChange={e => setNewDocCategoria(e.target.value)} className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium bg-white">
+                    <label htmlFor="nuovo-doc-categoria" className="text-xs font-bold text-slate-500 uppercase">Categoria</label>
+                    <select id="nuovo-doc-categoria" value={newDocCategoria} onChange={e => setNewDocCategoria(e.target.value)} className="w-full h-11 px-4 rounded-xl border border-slate-200 focus:outline-none focus:border-primary font-medium bg-white">
                       <option value="Modello Generico">Modello Generico</option>
                       <option value="Incarico Vendita">Incarico Vendita</option>
                       <option value="Foglio di Visita">Foglio di Visita</option>
@@ -665,7 +669,7 @@ export default function DocumentiPage() {
                    uploading ? "border-slate-300 bg-slate-50 cursor-not-allowed opacity-75" : "border-slate-300 bg-white cursor-pointer hover:border-primary hover:bg-primary/5"
                  )}
               >
-                 <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.jpg,.png" className="hidden" onChange={e => handleFileUpload(e.target.files)} disabled={uploading} />
+                 <input ref={fileInputRef} id="nuovo-doc-file" type="file" aria-label="Seleziona il file del modello da caricare" accept=".pdf,.doc,.docx,.jpg,.png" className="hidden" onChange={e => handleFileUpload(e.target.files)} disabled={uploading} />
                  {uploading ? (
                    <div className="flex flex-col items-center">
                      <Loader2 className="h-10 w-10 text-primary animate-spin mb-3" />
@@ -695,9 +699,10 @@ export default function DocumentiPage() {
               <h3 className="text-xl font-bold flex items-center gap-2 text-indigo-900">
                 <Wand2 className="h-5 w-5 text-indigo-600" /> Compila Smart Document
               </h3>
-              <button 
-                onClick={() => setShowCompiler(false)} 
-                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-indigo-100 transition-colors text-indigo-600"
+              <button
+                onClick={() => setShowCompiler(false)}
+                aria-label="Chiudi"
+                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-indigo-100 transition-colors text-indigo-600"
               >
                 <Plus className="h-5 w-5 rotate-45" />
               </button>
@@ -710,10 +715,11 @@ export default function DocumentiPage() {
               </div>
               
               <div className="relative">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Seleziona Cliente</label>
+                <label htmlFor="compila-cliente" className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Seleziona Cliente</label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                   <input
+                    id="compila-cliente"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium shadow-sm leading-normal"
                     placeholder="Cerca cliente per nome..."
                     value={personSearch}
@@ -722,7 +728,7 @@ export default function DocumentiPage() {
                     style={{ lineHeight: "normal", color: selectedCliente ? "#1e1b4b" : "inherit" }}
                   />
                   {selectedCliente && (
-                    <button onClick={() => { setSelectedCliente(null); setPersonSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 hover:bg-rose-50 rounded-full p-1 transition-all">
+                    <button onClick={() => { setSelectedCliente(null); setPersonSearch(""); }} aria-label="Rimuovi il cliente selezionato" className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 hover:bg-rose-50 rounded-full p-1 transition-all">
                       <Plus className="h-4 w-4 rotate-45" />
                     </button>
                   )}
@@ -748,10 +754,11 @@ export default function DocumentiPage() {
               </div>
 
               <div className="relative">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Seleziona Immobile</label>
+                <label htmlFor="compila-immobile" className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Seleziona Immobile</label>
                 <div className="relative">
                   <HomeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                   <input
+                    id="compila-immobile"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium shadow-sm leading-normal"
                     placeholder="Cerca immobile..."
                     value={immSearch}
@@ -760,7 +767,7 @@ export default function DocumentiPage() {
                     style={{ lineHeight: "normal", color: selectedImmobile ? "#1e1b4b" : "inherit" }}
                   />
                   {selectedImmobile && (
-                    <button onClick={() => { setSelectedImmobile(null); setImmSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 hover:bg-rose-50 rounded-full p-1 transition-all">
+                    <button onClick={() => { setSelectedImmobile(null); setImmSearch(""); }} aria-label="Rimuovi l'immobile selezionato" className="absolute right-3 top-1/2 -translate-y-1/2 text-rose-500 hover:bg-rose-50 rounded-full p-1 transition-all">
                       <Plus className="h-4 w-4 rotate-45" />
                     </button>
                   )}

@@ -163,6 +163,7 @@ export function PropertyDetailModal({
                             <button
                               onClick={idealista.deactivate}
                               disabled={idealista.loading}
+                              aria-label="Rimuovi da Idealista"
                               className="inline-flex items-center justify-center rounded-xl border border-rose-200 px-3 py-2 text-sm font-bold text-rose-600 transition-all hover:bg-rose-50 disabled:opacity-50"
                               title="Rimuovi da Idealista"
                             >
@@ -207,7 +208,7 @@ export function PropertyDetailModal({
                   </button>
                 </div>
               )}
-              <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
+              <button onClick={() => setIsModalOpen(false)} aria-label="Chiudi scheda immobile" className="h-10 w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
                 <X className="h-5 w-5" />
               </button>
             </div>

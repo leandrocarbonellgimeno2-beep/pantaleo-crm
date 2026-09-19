@@ -85,10 +85,10 @@ function SectionCard({ icon: Icon, title, badge, children }: { icon: any; title:
 }
 
 // ═══ Input wrapper ═══
-function FormInput({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function FormInput({ label, htmlFor, children, className }: { label: string; htmlFor?: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
+      <label htmlFor={htmlFor} className="text-[11px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
       {children}
     </div>
   );
@@ -245,7 +245,7 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
               <p className="text-[11px] text-slate-400 font-bold tracking-wide">Verbale di presa visione immobiliare — Immobiliare Pantaleo</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all duration-200">
+          <button onClick={onClose} aria-label="Chiudi il modulo" className="h-10 w-10 rounded-full bg-slate-100 hover:bg-red-50 hover:text-red-500 flex items-center justify-center text-slate-400 transition-all duration-200">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -284,12 +284,13 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
           <div className="space-y-5">
             {/* Client predictive search */}
             <div className="relative">
-              <label className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="fv-cerca-cliente" className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3" /> Cerca cliente esistente (autocompletamento)
               </label>
               <div className="relative">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
                 <input
+                  id="fv-cerca-cliente"
                   type="text"
                   value={clienteSearch}
                   onChange={e => searchClienti(e.target.value)}
@@ -317,17 +318,17 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
 
             {/* Form fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Il/La sottoscritto/a (Nome Completo) *">
-                <input type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="es. Mario Rossi" className={inputClasses} />
+              <FormInput label="Il/La sottoscritto/a (Nome Completo) *" htmlFor="fv-nome">
+                <input id="fv-nome" type="text" value={form.nome} onChange={e => update('nome', e.target.value)} placeholder="es. Mario Rossi" className={inputClasses} />
               </FormInput>
-              <FormInput label="Telefono">
-                <input type="tel" value={form.telefono} onChange={e => update('telefono', e.target.value)} placeholder="es. +39 333 1234567" className={inputClasses} />
+              <FormInput label="Telefono" htmlFor="fv-telefono">
+                <input id="fv-telefono" type="tel" value={form.telefono} onChange={e => update('telefono', e.target.value)} placeholder="es. +39 333 1234567" className={inputClasses} />
               </FormInput>
-              <FormInput label="Residente in">
-                <input type="text" value={form.residenteIn} onChange={e => update('residenteIn', e.target.value)} placeholder="es. Marsala (TP)" className={inputClasses} />
+              <FormInput label="Residente in" htmlFor="fv-residentein">
+                <input id="fv-residentein" type="text" value={form.residenteIn} onChange={e => update('residenteIn', e.target.value)} placeholder="es. Marsala (TP)" className={inputClasses} />
               </FormInput>
-              <FormInput label="Via">
-                <input type="text" value={form.via} onChange={e => update('via', e.target.value)} placeholder="es. Via Roma 23" className={inputClasses} />
+              <FormInput label="Via" htmlFor="fv-via">
+                <input id="fv-via" type="text" value={form.via} onChange={e => update('via', e.target.value)} placeholder="es. Via Roma 23" className={inputClasses} />
               </FormInput>
             </div>
 
@@ -345,7 +346,7 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
               </label>
               {form.perContoEnabled && (
                 <div className="pl-8 animate-in slide-in-from-top-2 duration-200">
-                  <input type="text" value={form.nomePerConto} onChange={e => update('nomePerConto', e.target.value)} placeholder="Nome della persona per cui agisce..." className={inputClasses} />
+                  <input id="fv-nomeperconto" type="text" aria-label="Nome della persona per cui agisce" value={form.nomePerConto} onChange={e => update('nomePerConto', e.target.value)} placeholder="Nome della persona per cui agisce..." className={inputClasses} />
                 </div>
               )}
             </div>
@@ -356,8 +357,8 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
         <SectionCard icon={Home} title="Dettagli della Visita" badge="Sezione 3">
           <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Data della Visita">
-                <input type="date" value={form.dataVisita} onChange={e => update('dataVisita', e.target.value)} className={inputClasses} />
+              <FormInput label="Data della Visita" htmlFor="fv-datavisita">
+                <input id="fv-datavisita" type="date" value={form.dataVisita} onChange={e => update('dataVisita', e.target.value)} className={inputClasses} />
               </FormInput>
               <FormInput label="Tipo di Visita">
                 <div className="flex gap-3 pt-0.5">
@@ -375,12 +376,13 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
 
             {/* Immobile search */}
             <div className="relative">
-              <label className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+              <label htmlFor="fv-cerca-immobile" className="text-[11px] font-black text-indigo-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3" /> Cerca Immobile dal database
               </label>
               <div className="relative">
                 <Home className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-300" />
                 <input
+                  id="fv-cerca-immobile"
                   type="text"
                   value={immobileSearch}
                   onChange={e => searchImmobili(e.target.value)}
@@ -406,8 +408,8 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
               )}
             </div>
 
-            <FormInput label="Descrizione Immobile / Azienda *">
-              <textarea value={form.descrizioneImmobile} onChange={e => update('descrizioneImmobile', e.target.value)} placeholder="Descrizione dettagliata dell'immobile visitato..." rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm resize-none transition-all placeholder:text-slate-300" />
+            <FormInput label="Descrizione Immobile / Azienda *" htmlFor="fv-descrizioneimmobile">
+              <textarea id="fv-descrizioneimmobile" value={form.descrizioneImmobile} onChange={e => update('descrizioneImmobile', e.target.value)} placeholder="Descrizione dettagliata dell'immobile visitato..." rows={3} className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm resize-none transition-all placeholder:text-slate-300" />
             </FormInput>
           </div>
         </SectionCard>
@@ -416,20 +418,20 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
         <SectionCard icon={Percent} title="Provvigione" badge="Sezione 4">
           {form.tipoScheda === 'locazioni' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Canone Mensile (€)">
-                <input type="number" value={form.canoneMensile} onChange={e => update('canoneMensile', e.target.value)} placeholder="es. 500" className={inputClasses} />
+              <FormInput label="Canone Mensile (€)" htmlFor="fv-canonemensile">
+                <input id="fv-canonemensile" type="number" value={form.canoneMensile} onChange={e => update('canoneMensile', e.target.value)} placeholder="es. 500" className={inputClasses} />
               </FormInput>
-              <FormInput label="IVA (%)">
-                <input type="number" value={form.canoneIva} onChange={e => update('canoneIva', e.target.value)} placeholder="22" className={inputClasses} />
+              <FormInput label="IVA (%)" htmlFor="fv-canoneiva">
+                <input id="fv-canoneiva" type="number" value={form.canoneIva} onChange={e => update('canoneIva', e.target.value)} placeholder="22" className={inputClasses} />
               </FormInput>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Provvigione (%)">
-                <input type="number" value={form.provvigionePercent} onChange={e => update('provvigionePercent', e.target.value)} placeholder="3" className={inputClasses} />
+              <FormInput label="Provvigione (%)" htmlFor="fv-provvigionepercent">
+                <input id="fv-provvigionepercent" type="number" value={form.provvigionePercent} onChange={e => update('provvigionePercent', e.target.value)} placeholder="3" className={inputClasses} />
               </FormInput>
-              <FormInput label="IVA (%)">
-                <input type="number" value={form.provvigioneIva} onChange={e => update('provvigioneIva', e.target.value)} placeholder="22" className={inputClasses} />
+              <FormInput label="IVA (%)" htmlFor="fv-provvigioneiva">
+                <input id="fv-provvigioneiva" type="number" value={form.provvigioneIva} onChange={e => update('provvigioneIva', e.target.value)} placeholder="22" className={inputClasses} />
               </FormInput>
             </div>
           )}

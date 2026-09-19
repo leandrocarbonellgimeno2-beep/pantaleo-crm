@@ -316,7 +316,13 @@ export default function AgendaPage() {
         <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium animate-in slide-in-from-top">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span>Importati {syncResult.totalFromGoogle} eventi. Nuovi: {syncResult.created}, Aggiornati: {syncResult.updated}.</span>
-          <button onClick={() => setSyncResult(null)} className="ml-auto"><X className="h-4 w-4" /></button>
+          <button
+            onClick={() => setSyncResult(null)}
+            aria-label="Chiudi notifica di sincronizzazione"
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
@@ -340,16 +346,24 @@ export default function AgendaPage() {
 
         {/* Date Navigation */}
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+          <button
+            onClick={() => navigate(-1)}
+            aria-label="Periodo precedente"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-slate-100 transition-colors"
+          >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          <button 
-            onClick={() => setCurrentDate(new Date())} 
-            className="px-3 py-1.5 text-xs font-bold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+          <button
+            onClick={() => setCurrentDate(new Date())}
+            className="h-10 px-4 text-xs font-bold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
           >
             Oggi
           </button>
-          <button onClick={() => navigate(1)} className="p-2 rounded-xl hover:bg-slate-100 transition-colors">
+          <button
+            onClick={() => navigate(1)}
+            aria-label="Periodo successivo"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-slate-100 transition-colors"
+          >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
@@ -358,7 +372,9 @@ export default function AgendaPage() {
         <div className="relative flex-1 group">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <input
+            id="agenda-search"
             type="text"
+            aria-label="Cerca appuntamenti per cliente, immobile o tipo"
             placeholder="Cerca per cliente, immobile o tipo..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-card shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-sm"
             value={searchTerm}
@@ -532,7 +548,11 @@ export default function AgendaPage() {
                 <h3 className="text-lg font-black">Nuovo Appuntamento</h3>
                 <p className="text-xs text-muted-foreground font-medium">Compila i dettagli e sincronizza con Google Calendar</p>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Chiudi"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+              >
                 <X className="h-5 w-5 text-slate-400" />
               </button>
             </div>
@@ -541,8 +561,10 @@ export default function AgendaPage() {
             <div className="p-5 space-y-5">
               {/* Tipo di Appuntamento */}
               <div>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo di Appuntamento</label>
-                <div className="flex flex-wrap gap-2">
+                {/* Estos rotulos encabezan un grupo de botones, no un campo: un
+                    <label> sin control asociado no dice nada. Van como span + role="group". */}
+                <span id="appt-tipo-label" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo di Appuntamento</span>
+                <div role="group" aria-labelledby="appt-tipo-label" className="flex flex-wrap gap-2">
                   {APPOINTMENT_TYPES.map(t => (
                     <button
                       key={t.value}
@@ -562,8 +584,8 @@ export default function AgendaPage() {
 
               {/* Selezione Tipo Cliente */}
               <div>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo Contatto</label>
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+                <span id="appt-contatto-label" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo Contatto</span>
+                <div role="group" aria-labelledby="appt-contatto-label" className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit">
                   <button onClick={() => switchProfile("proprietario")} className={cn("px-4 py-2 text-sm font-bold rounded-lg transition-all", profileMode === "proprietario" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700")}>Proprietario</button>
                   <button onClick={() => switchProfile("cliente")} className={cn("px-4 py-2 text-sm font-bold rounded-lg transition-all", profileMode === "cliente" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700")}>Cliente Registrato</button>
                   <button onClick={() => switchProfile("nuovo")} className={cn("px-4 py-2 text-sm font-bold rounded-lg transition-all", profileMode === "nuovo" ? "bg-white text-primary shadow-sm" : "text-slate-500 hover:text-slate-700")}>Nuovo Cliente</button>
@@ -573,12 +595,13 @@ export default function AgendaPage() {
               {profileMode !== "nuovo" ? (
                 <>
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
+                    <label htmlFor="appt-person-search" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
                       Ricerca {profileMode === "cliente" ? "Cliente" : "Proprietario"}
                     </label>
                     <div className="relative">
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                       <input
+                        id="appt-person-search"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
                         placeholder={`Cerca ${profileMode === "cliente" ? "cliente" : "proprietario"}...`}
                         value={personSearch}
@@ -609,10 +632,11 @@ export default function AgendaPage() {
                   </div>
                   {/* Telefono (pre-filled or manual) */}
                   <div>
-                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Telefono</label>
+                    <label htmlFor="appt-client-phone" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Telefono</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                       <input
+                        id="appt-client-phone"
                         className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
                         placeholder="Numero telefono"
                         value={newAppt.clientPhone}
@@ -629,29 +653,32 @@ export default function AgendaPage() {
                     </p>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome</label>
-                    <input 
-                      className="w-full py-2 px-3 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20" 
+                    <label htmlFor="appt-new-nome" className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome</label>
+                    <input
+                      id="appt-new-nome"
+                      className="w-full py-2 px-3 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20"
                       placeholder="es. Mario"
                       value={newAppt.newNome} 
                       onChange={e => setNewAppt({...newAppt, newNome: e.target.value})} 
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cognome</label>
-                    <input 
-                      className="w-full py-2 px-3 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20" 
+                    <label htmlFor="appt-new-cognome" className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cognome</label>
+                    <input
+                      id="appt-new-cognome"
+                      className="w-full py-2 px-3 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20"
                       placeholder="es. Rossi"
                       value={newAppt.newCognome} 
                       onChange={e => setNewAppt({...newAppt, newCognome: e.target.value})} 
                     />
                   </div>
                   <div className="col-span-2 flex flex-col">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Telefono</label>
+                    <label htmlFor="appt-new-phone" className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Telefono</label>
                     <div className="relative">
                       <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-300" />
-                      <input 
-                        className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20" 
+                      <input
+                        id="appt-new-phone"
+                        className="w-full pl-9 pr-3 py-2 rounded-lg border border-border bg-white text-sm font-medium focus:ring-2 focus:ring-primary/20"
                         placeholder="Numero di cellulare"
                         value={newAppt.newPhone} 
                         onChange={e => {
@@ -665,10 +692,11 @@ export default function AgendaPage() {
 
               {/* Immobile - with autocomplete */}
               <div>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Immobile (Indirizzo)</label>
+                <label htmlFor="appt-property" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Immobile (Indirizzo)</label>
                 <div className="relative">
                   <HomeIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
                   <input
+                    id="appt-property"
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
                     placeholder="Cerca immobile..."
                     value={immSearch || newAppt.propertyAddress}
@@ -698,8 +726,9 @@ export default function AgendaPage() {
               {/* Data + Ora + Durata */}
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Data</label>
+                  <label htmlFor="appt-date" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Data</label>
                   <input
+                    id="appt-date"
                     type="date"
                     className="w-full py-2.5 px-3 rounded-xl border border-border bg-slate-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
                     value={newAppt.date}
@@ -708,8 +737,9 @@ export default function AgendaPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Ora</label>
+                  <label htmlFor="appt-time" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Ora</label>
                   <input
+                    id="appt-time"
                     type="time"
                     className="w-full py-2.5 px-3 rounded-xl border border-border bg-slate-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
                     value={newAppt.time}
@@ -717,8 +747,9 @@ export default function AgendaPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Durata</label>
+                  <label htmlFor="appt-duration" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Durata</label>
                   <select
+                    id="appt-duration"
                     className="w-full py-2.5 px-3 rounded-xl border border-border bg-slate-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
                     value={newAppt.duration}
                     onChange={(e) => setNewAppt({ ...newAppt, duration: parseInt(e.target.value) })}
@@ -735,8 +766,9 @@ export default function AgendaPage() {
 
               {/* Note */}
               <div>
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Note</label>
+                <label htmlFor="appt-notes" className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Note</label>
                 <textarea
+                  id="appt-notes"
                   className="w-full px-4 py-3 rounded-xl border border-border bg-slate-50 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[70px]"
                   placeholder="Note sull'appuntamento..."
                   value={newAppt.notes}

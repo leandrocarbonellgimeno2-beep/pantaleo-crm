@@ -66,8 +66,9 @@ export function PropertyEditForm({
    </div>
    <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Stato Immobile</label>
-        <select 
+        <label htmlFor="edit-stato-immobile" className="text-xs font-bold text-slate-500 uppercase">Stato Immobile</label>
+        <select
+          id="edit-stato-immobile"
           className="w-full h-11 px-3 rounded-lg border border-emerald-200 bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-emerald-800"
           value={property.GestioneCommerciale?.Sospeso ? "Sospeso" : "Attivo"}
           onChange={(e) => updateNested('GestioneCommerciale', 'Sospeso', e.target.value === "Sospeso")}
@@ -77,20 +78,22 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Codice Cliente</label>
-        <input 
-          type="text" 
-          readOnly 
-          value={property.DatiBase?.Codice || "N/A"} 
+        <label htmlFor="edit-codice-cliente" className="text-xs font-bold text-slate-500 uppercase">Codice Cliente</label>
+        <input
+          id="edit-codice-cliente"
+          type="text"
+          readOnly
+          value={property.DatiBase?.Codice || "N/A"}
           className="w-full h-11 px-3 rounded-lg border border-slate-200 bg-slate-100 text-slate-500 font-medium cursor-not-allowed"
         />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Proprietario Collegato</label>
+        <label htmlFor="edit-proprietario-collegato" className="text-xs font-bold text-slate-500 uppercase">Proprietario Collegato</label>
         <div className="flex items-center gap-2">
-          <input 
-            type="text" 
-            readOnly 
+          <input
+            id="edit-proprietario-collegato"
+            type="text"
+            readOnly
             value={property.DatiBase?.NomeProprietario || getOwnerDisplayName(ownerData, ownerData === null ? 'Caricamento...' : 'Proprietario da verificare')} 
             className="flex-1 h-11 px-3 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-bold"
           />
@@ -109,24 +112,25 @@ export function PropertyEditForm({
    <div className="p-5">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         <div className="col-span-1 md:col-span-2 space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Indirizzo Completo</label>
-          <input type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.DatiBase?.Indirizzo || ""} onChange={(e) => updateNested('DatiBase', 'Indirizzo', e.target.value)} />
+          <label htmlFor="edit-indirizzo" className="text-xs font-bold text-slate-500 uppercase">Indirizzo Completo</label>
+          <input id="edit-indirizzo" type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.DatiBase?.Indirizzo || ""} onChange={(e) => updateNested('DatiBase', 'Indirizzo', e.target.value)} />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Città</label>
-          <input type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.DatiBase?.Citta || ""} onChange={(e) => updateNested('DatiBase', 'Citta', e.target.value)} />
+          <label htmlFor="edit-citta" className="text-xs font-bold text-slate-500 uppercase">Città</label>
+          <input id="edit-citta" type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.DatiBase?.Citta || ""} onChange={(e) => updateNested('DatiBase', 'Citta', e.target.value)} />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Provincia / CAP</label>
+          <label htmlFor="edit-provincia" className="text-xs font-bold text-slate-500 uppercase">Provincia / CAP</label>
           <div className="flex gap-2">
-            <input type="text" className="w-16 h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-center font-bold" value={property.DatiBase?.Provincia || "TP"} onChange={(e) => updateNested('DatiBase', 'Provincia', e.target.value)} />
-            <input type="text" className="flex-1 h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="CAP" value={property.DatiBase?.CAP || ""} onChange={(e) => updateNested('DatiBase', 'CAP', e.target.value)} />
+            <input id="edit-provincia" aria-label="Provincia" type="text" className="w-16 h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-center font-bold" value={property.DatiBase?.Provincia || "TP"} onChange={(e) => updateNested('DatiBase', 'Provincia', e.target.value)} />
+            <input id="edit-cap" aria-label="CAP" type="text" className="flex-1 h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="CAP" value={property.DatiBase?.CAP || ""} onChange={(e) => updateNested('DatiBase', 'CAP', e.target.value)} />
           </div>
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Zona / Quartiere</label>
-          <select 
-            className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+          <label htmlFor="edit-zona" className="text-xs font-bold text-slate-500 uppercase">Zona / Quartiere</label>
+          <select
+            id="edit-zona"
+            className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             value={property.DatiBase?.Zona || ""} 
             onChange={(e) => updateNested('DatiBase', 'Zona', e.target.value)}
           >
@@ -137,12 +141,12 @@ export function PropertyEditForm({
           </select>
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-500 uppercase">Distanza Mare (m)</label>
-          <input type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="Es. 500" value={property.DatiBase?.DistanzaMare || ""} onChange={(e) => updateNested('DatiBase', 'DistanzaMare', e.target.value)} />
+          <label htmlFor="edit-distanza-mare" className="text-xs font-bold text-slate-500 uppercase">Distanza Mare (m)</label>
+          <input id="edit-distanza-mare" type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="Es. 500" value={property.DatiBase?.DistanzaMare || ""} onChange={(e) => updateNested('DatiBase', 'DistanzaMare', e.target.value)} />
         </div>
         <div className="col-span-1 md:col-span-2 flex items-center h-full pt-4">
-           <label className="flex items-center gap-3 cursor-pointer">
-             <input type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" checked={property.Caratteristiche?.ZonaMare || false} onChange={(e) => updateNested('Caratteristiche', 'ZonaMare', e.target.checked)} />
+           <label htmlFor="edit-zona-mare" className="flex items-center gap-3 cursor-pointer">
+             <input id="edit-zona-mare" type="checkbox" className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" checked={property.Caratteristiche?.ZonaMare || false} onChange={(e) => updateNested('Caratteristiche', 'ZonaMare', e.target.checked)} />
              <span className="font-bold text-slate-700">Situato in Zona Mare (Turistica)</span>
            </label>
         </div>
@@ -177,8 +181,9 @@ export function PropertyEditForm({
    </div>
    <div className="p-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Tipologia</label>
-        <select 
+        <label htmlFor="edit-tipologia" className="text-xs font-bold text-slate-500 uppercase">Tipologia</label>
+        <select
+          id="edit-tipologia"
           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           value={property.DatiBase?.Tipologia || "Appartamento"}
           onChange={(e) => updateNested('DatiBase', 'Tipologia', e.target.value)}
@@ -197,29 +202,30 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Metri Comm. (m²)</label>
-        <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.MetriCommerciali || 0} onChange={(e) => updateNested('DettagliFisici', 'MetriCommerciali', Number(e.target.value))} />
+        <label htmlFor="edit-metri-commerciali" className="text-xs font-bold text-slate-500 uppercase">Metri Comm. (m²)</label>
+        <input id="edit-metri-commerciali" type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.MetriCommerciali || 0} onChange={(e) => updateNested('DettagliFisici', 'MetriCommerciali', Number(e.target.value))} />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">N° Vani</label>
-        <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Vani || 0} onChange={(e) => updateNested('DettagliFisici', 'Vani', Number(e.target.value))} />
+        <label htmlFor="edit-vani" className="text-xs font-bold text-slate-500 uppercase">N° Vani</label>
+        <input id="edit-vani" type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Vani || 0} onChange={(e) => updateNested('DettagliFisici', 'Vani', Number(e.target.value))} />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">N° Camere Letto</label>
-        <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.CamereLetto || 0} onChange={(e) => updateNested('DettagliFisici', 'CamereLetto', Number(e.target.value))} />
+        <label htmlFor="edit-camere-letto" className="text-xs font-bold text-slate-500 uppercase">N° Camere Letto</label>
+        <input id="edit-camere-letto" type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.CamereLetto || 0} onChange={(e) => updateNested('DettagliFisici', 'CamereLetto', Number(e.target.value))} />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">N° Bagni</label>
-        <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Bagni || 0} onChange={(e) => updateNested('DettagliFisici', 'Bagni', Number(e.target.value))} />
+        <label htmlFor="edit-bagni" className="text-xs font-bold text-slate-500 uppercase">N° Bagni</label>
+        <input id="edit-bagni" type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Bagni || 0} onChange={(e) => updateNested('DettagliFisici', 'Bagni', Number(e.target.value))} />
       </div>
       
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Piano</label>
-        <input type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Piano || ""} onChange={(e) => updateNested('DettagliFisici', 'Piano', e.target.value)} />
+        <label htmlFor="edit-piano" className="text-xs font-bold text-slate-500 uppercase">Piano</label>
+        <input id="edit-piano" type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Piano || ""} onChange={(e) => updateNested('DettagliFisici', 'Piano', e.target.value)} />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Stato Finiture</label>
-        <select 
+        <label htmlFor="edit-stato-finiture" className="text-xs font-bold text-slate-500 uppercase">Stato Finiture</label>
+        <select
+          id="edit-stato-finiture"
           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           value={property.DettagliFisici?.StatoFiniture || "Abitabile"}
           onChange={(e) => updateNested('DettagliFisici', 'StatoFiniture', e.target.value)}
@@ -232,9 +238,10 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Stato Arredamento</label>
-        <select 
-           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
+        <label htmlFor="edit-arredamento" className="text-xs font-bold text-slate-500 uppercase">Stato Arredamento</label>
+        <select
+           id="edit-arredamento"
+           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
            value={property.Caratteristiche?.ArredamentoDesc || (property.Caratteristiche?.Arredato ? "Arredato" : "Non Arredato")} 
            onChange={(e) => {
              updateNested('Caratteristiche', 'ArredamentoDesc', e.target.value);
@@ -247,10 +254,11 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Tipologia Edificio</label>
-        <select 
-           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
-           value={property.DettagliFisici?.TipoEdificio || "Unica Elevazione"} 
+        <label htmlFor="edit-tipo-edificio" className="text-xs font-bold text-slate-500 uppercase">Tipologia Edificio</label>
+        <select
+           id="edit-tipo-edificio"
+           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+           value={property.DettagliFisici?.TipoEdificio || "Unica Elevazione"}
            onChange={(e) => updateNested('DettagliFisici', 'TipoEdificio', e.target.value)}
         >
           <option value="Unica Elevazione">Unica Elevazione</option>
@@ -258,10 +266,11 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Presenza Cartello</label>
-        <select 
-           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" 
-           value={property.GestioneCommerciale?.PresenzaCartello || "No — Senza Cartello"} 
+        <label htmlFor="edit-presenza-cartello" className="text-xs font-bold text-slate-500 uppercase">Presenza Cartello</label>
+        <select
+           id="edit-presenza-cartello"
+           className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+           value={property.GestioneCommerciale?.PresenzaCartello || "No — Senza Cartello"}
            onChange={(e) => updateNested('GestioneCommerciale', 'PresenzaCartello', e.target.value)}
         >
           <option value="Sì — Ha Cartello Pubblicitario">Sì — Ha Cartello Pubblicitario</option>
@@ -269,8 +278,8 @@ export function PropertyEditForm({
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-500 uppercase">Classe Energetica (APE)</label>
-        <select className="w-full h-11 px-3 rounded-lg border border-green-300 bg-green-50 font-black text-green-800 focus:outline-none focus:ring-2 focus:ring-green-400/20 focus:border-green-500" value={property.DettagliFisici?.ClasseEnergetica || ""} onChange={(e) => updateNested('DettagliFisici', 'ClasseEnergetica', e.target.value)}>
+        <label htmlFor="edit-classe-energetica" className="text-xs font-bold text-slate-500 uppercase">Classe Energetica (APE)</label>
+        <select id="edit-classe-energetica" className="w-full h-11 px-3 rounded-lg border border-green-300 bg-green-50 font-black text-green-800 focus:outline-none focus:ring-2 focus:ring-green-400/20 focus:border-green-500" value={property.DettagliFisici?.ClasseEnergetica || ""} onChange={(e) => updateNested('DettagliFisici', 'ClasseEnergetica', e.target.value)}>
           <option value="">Seleziona APE...</option>
           <option value="A4">A4 (Massima Efficienza)</option>
           <option value="A3">A3</option>
@@ -354,36 +363,36 @@ export function PropertyEditForm({
    </div>
    <div className="p-5 space-y-6">
       <div className="flex gap-6 pb-6 border-b border-slate-100">
-         <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-200 flex-1 hover:bg-slate-100 transition-colors">
-            <input type="checkbox" className="w-6 h-6 rounded border-slate-300 text-primary" checked={property.GestioneCommerciale?.InVendita || false} onChange={(e) => updateNested('GestioneCommerciale', 'InVendita', e.target.checked)} />
+         <label htmlFor="edit-in-vendita" className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-200 flex-1 hover:bg-slate-100 transition-colors">
+            <input id="edit-in-vendita" type="checkbox" className="w-6 h-6 rounded border-slate-300 text-primary" checked={property.GestioneCommerciale?.InVendita || false} onChange={(e) => updateNested('GestioneCommerciale', 'InVendita', e.target.checked)} />
             <span className="font-black text-lg text-slate-800">IN VENDITA</span>
          </label>
-         <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-200 flex-1 hover:bg-slate-100 transition-colors">
-            <input type="checkbox" className="w-6 h-6 rounded border-slate-300 text-primary" checked={property.GestioneCommerciale?.InAffitto || false} onChange={(e) => updateNested('GestioneCommerciale', 'InAffitto', e.target.checked)} />
+         <label htmlFor="edit-in-affitto" className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-200 flex-1 hover:bg-slate-100 transition-colors">
+            <input id="edit-in-affitto" type="checkbox" className="w-6 h-6 rounded border-slate-300 text-primary" checked={property.GestioneCommerciale?.InAffitto || false} onChange={(e) => updateNested('GestioneCommerciale', 'InAffitto', e.target.checked)} />
             <span className="font-black text-lg text-slate-800">IN AFFITTO</span>
          </label>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
          <div className="space-y-2">
-           <label className="text-xs font-bold text-slate-500 uppercase">Prezzo Vendita (€)</label>
-           <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold bg-green-50/50" value={property.GestioneCommerciale?.PrezzoVendita || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoVendita', Number(e.target.value))} />
+           <label htmlFor="edit-prezzo-vendita" className="text-xs font-bold text-slate-500 uppercase">Prezzo Vendita (€)</label>
+           <input id="edit-prezzo-vendita" type="number"className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold bg-green-50/50" value={property.GestioneCommerciale?.PrezzoVendita || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoVendita', Number(e.target.value))} />
          </div>
          <div className="space-y-2">
-           <label className="text-xs font-bold text-slate-500 uppercase">Prezzo Min. Accettabile (€)</label>
-           <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold bg-orange-50/50" placeholder="0" value={property.GestioneCommerciale?.PrezzoMinimo || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoMinimo', Number(e.target.value))} />
+           <label htmlFor="edit-prezzo-minimo" className="text-xs font-bold text-slate-500 uppercase">Prezzo Min. Accettabile (€)</label>
+           <input id="edit-prezzo-minimo" type="number"className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold bg-orange-50/50" placeholder="0" value={property.GestioneCommerciale?.PrezzoMinimo || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoMinimo', Number(e.target.value))} />
          </div>
          <div className="space-y-2">
-           <label className="text-xs font-bold text-slate-500 uppercase">Canone Mensile (€)</label>
-           <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold" value={property.GestioneCommerciale?.PrezzoAffitto || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoAffitto', Number(e.target.value))} />
+           <label htmlFor="edit-prezzo-affitto" className="text-xs font-bold text-slate-500 uppercase">Canone Mensile (€)</label>
+           <input id="edit-prezzo-affitto" type="number"className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-bold" value={property.GestioneCommerciale?.PrezzoAffitto || 0} onChange={(e) => updateNested('GestioneCommerciale', 'PrezzoAffitto', Number(e.target.value))} />
          </div>
          <div className="space-y-2">
-           <label className="text-xs font-bold text-slate-500 uppercase">Spese Cond. Annue (€)</label>
-           <input type="number" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="0" value={property.GestioneCommerciale?.SpeseCondominio || 0} onChange={(e) => updateNested('GestioneCommerciale', 'SpeseCondominio', Number(e.target.value))} />
+           <label htmlFor="edit-spese-condominio" className="text-xs font-bold text-slate-500 uppercase">Spese Cond. Annue (€)</label>
+           <input id="edit-spese-condominio" type="number"className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" placeholder="0" value={property.GestioneCommerciale?.SpeseCondominio || 0} onChange={(e) => updateNested('GestioneCommerciale', 'SpeseCondominio', Number(e.target.value))} />
          </div>
          <div className="col-span-2 space-y-2">
-           <label className="text-xs font-bold text-slate-500 uppercase">Amministratore Condominio</label>
-           <input type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.GestioneCommerciale?.Amministratore || ""} onChange={(e) => updateNested('GestioneCommerciale', 'Amministratore', e.target.value)} />
+           <label htmlFor="edit-amministratore" className="text-xs font-bold text-slate-500 uppercase">Amministratore Condominio</label>
+           <input id="edit-amministratore" type="text"className="w-full h-11 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-medium" value={property.GestioneCommerciale?.Amministratore || ""} onChange={(e) => updateNested('GestioneCommerciale', 'Amministratore', e.target.value)} />
          </div>
       </div>
    </div>
@@ -401,8 +410,9 @@ export function PropertyEditForm({
    <div className="p-5 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
          <div className="space-y-3">
-           <label className="text-xs font-bold text-slate-500 uppercase">Planimetria</label>
-           <select 
+           <label htmlFor="edit-planimetria" className="text-xs font-bold text-slate-500 uppercase">Planimetria</label>
+           <select
+             id="edit-planimetria"
              className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
              value={property.Documentazione?.Planimetria || "-- Non specificato --"}
              onChange={(e) => updateNested('Documentazione', 'Planimetria', e.target.value)}
@@ -411,18 +421,19 @@ export function PropertyEditForm({
               <option value="Disponibile">Disponibile</option>
               <option value="Da Richiedere">Da Richiedere</option>
            </select>
-           <label className="w-full h-9 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
-              <UploadCloud className="h-3 w-3 mr-1.5" /> 
+           <label htmlFor="edit-file-planimetria" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+              <UploadCloud className="h-3 w-3 mr-1.5" />
               {property.Documentazione?.UrlPlanimetria ? "Aggiorna File Planimetria" : "Carica File Planimetria"}
-              <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlPlanimetria')} />
+              <input id="edit-file-planimetria" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlPlanimetria')} />
            </label>
            {property.Documentazione?.UrlPlanimetria && (
               <a href={property.Documentazione.UrlPlanimetria} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block mt-1 hover:underline truncate">Vedi Documento Corrente</a>
            )}
          </div>
          <div className="space-y-3">
-           <label className="text-xs font-bold text-slate-500 uppercase">Atto Immobile</label>
-           <select 
+           <label htmlFor="edit-atto-immobile" className="text-xs font-bold text-slate-500 uppercase">Atto Immobile</label>
+           <select
+             id="edit-atto-immobile"
              className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
              value={property.Documentazione?.AttoImmobile || "-- Non specificato --"}
              onChange={(e) => updateNested('Documentazione', 'AttoImmobile', e.target.value)}
@@ -431,18 +442,19 @@ export function PropertyEditForm({
               <option value="Disponibile">Disponibile</option>
               <option value="Da Richiedere">Da Richiedere</option>
            </select>
-           <label className="w-full h-9 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
-              <UploadCloud className="h-3 w-3 mr-1.5" /> 
+           <label htmlFor="edit-file-atto" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+              <UploadCloud className="h-3 w-3 mr-1.5" />
               {property.Documentazione?.UrlAttoImmobile ? "Aggiorna File Atto" : "Carica File Atto"}
-              <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAttoImmobile')} />
+              <input id="edit-file-atto" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAttoImmobile')} />
            </label>
            {property.Documentazione?.UrlAttoImmobile && (
               <a href={property.Documentazione.UrlAttoImmobile} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block mt-1 hover:underline truncate">Vedi Documento Corrente</a>
            )}
          </div>
          <div className="space-y-3 flex flex-col">
-           <label className="text-xs font-bold text-slate-500 uppercase">Stato Chiavi</label>
-           <select 
+           <label htmlFor="edit-stato-chiavi" className="text-xs font-bold text-slate-500 uppercase">Stato Chiavi</label>
+           <select
+             id="edit-stato-chiavi"
              className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
              value={property.Documentazione?.StatoChiavi || "-- Non specificato --"}
              onChange={(e) => updateNested('Documentazione', 'StatoChiavi', e.target.value)}
@@ -453,11 +465,11 @@ export function PropertyEditForm({
               <option value="All'Inquilino">All'Inquilino</option>
            </select>
            <div className="mt-auto">
-             <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Vari</label>
-             <label className="w-full h-9 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
-                <UploadCloud className="h-3 w-3 mr-1.5" /> 
+             <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Vari</span>
+             <label htmlFor="edit-file-altri" className="w-full h-10 bg-slate-50 border border-slate-200 border-dashed rounded-lg flex items-center justify-center text-xs font-bold text-slate-500 hover:text-primary hover:border-primary transition-colors cursor-pointer">
+                <UploadCloud className="h-3 w-3 mr-1.5" />
                 {property.Documentazione?.UrlAltriDocumenti ? "Aggiorna Altri Documenti" : "Altri Documenti"}
-                <input type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAltriDocumenti')} />
+                <input id="edit-file-altri" type="file" className="hidden" accept=".pdf,image/*" onChange={(e) => onFileUpload(e, 'documenti', 'Documentazione', 'UrlAltriDocumenti')} />
              </label>
              {property.Documentazione?.UrlAltriDocumenti && (
               <a href={property.Documentazione.UrlAltriDocumenti} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 font-bold block mt-1 hover:underline truncate">Vedi Documento Corrente</a>
@@ -482,7 +494,7 @@ export function PropertyEditForm({
    <div className="p-5 space-y-6">
       {/* Dropzone */}
       <div {...getRootProps()} className={cn("border-2 border-dashed rounded-xl p-8 text-center transition-colors", property?.id ? "cursor-pointer" : "opacity-50 cursor-not-allowed", isDragActive && property?.id ? "border-primary bg-primary/5" : "border-slate-300 bg-slate-50 hover:border-primary hover:bg-slate-50/80")}>
-        <input {...getInputProps()} disabled={!property?.id} />
+        <input {...getInputProps()} aria-label="Carica foto dell'immobile" disabled={!property?.id} />
         <UploadCloud className="h-10 w-10 text-slate-400 mx-auto mb-3" />
         <p className="font-bold text-slate-700 text-lg">
           {property?.id ? "Trascina le foto qui o clicca per sfogliare" : "Salva prima le informazioni per caricare foto"}
@@ -531,7 +543,9 @@ export function PropertyEditForm({
                       Principale
                     </div>
                   )}
-                  <button onClick={(e) => photos.deletePhoto(e, img)} className="absolute top-2 right-2 h-7 w-7 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
+                  {/* En pantalla táctil no hay hover: el botón se ve siempre por
+                      debajo de md y el efecto queda solo en escritorio. */}
+                  <button onClick={(e) => photos.deletePhoto(e, img)} aria-label="Elimina foto" className="absolute top-2 right-2 h-9 w-9 bg-white/90 rounded-full flex items-center justify-center text-rose-500 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity hover:bg-rose-500 hover:text-white">
                      <Trash2 className="h-4 w-4" />
                   </button>
                   {isBlob && (
@@ -563,16 +577,18 @@ export function PropertyEditForm({
    </div>
    <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6">
      <div className="space-y-2">
-       <label className="text-xs font-bold text-slate-500 uppercase">Descrizione Immobile (Pubblica)</label>
-       <textarea 
+       <label htmlFor="edit-descrizione" className="text-xs font-bold text-slate-500 uppercase">Descrizione Immobile (Pubblica)</label>
+       <textarea
+         id="edit-descrizione"
          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium min-h-[160px]"
          value={property.Textos?.Descrizione || ""}
          onChange={(e) => updateNested('Textos', 'Descrizione', e.target.value)}
        />
      </div>
      <div className="space-y-2">
-       <label className="text-xs font-bold text-slate-500 uppercase text-rose-500">Note Riservate (Solo Agenzia)</label>
-       <textarea 
+       <label htmlFor="edit-note-interne" className="text-xs font-bold text-slate-500 uppercase text-rose-500">Note Riservate (Solo Agenzia)</label>
+       <textarea
+         id="edit-note-interne"
          className="w-full px-4 py-3 rounded-xl border border-rose-200 bg-rose-50 focus:border-rose-400 font-medium min-h-[160px] text-slate-700"
          value={property.Textos?.NoteInterne || ""}
          onChange={(e) => updateNested('Textos', 'NoteInterne', e.target.value)}

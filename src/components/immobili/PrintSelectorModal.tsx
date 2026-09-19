@@ -63,7 +63,7 @@ export function PrintSelectorModal({
               Scegli da 1 a {MAX_PRINT_PHOTOS} foto. Selezionate: {selected.length}/{MAX_PRINT_PHOTOS}
             </p>
           </div>
-          <button onClick={onClose} className="h-10 w-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center transition-colors">
+          <button onClick={onClose} aria-label="Chiudi selezione immagini" className="h-10 w-10 bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 rounded-full flex items-center justify-center transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -97,8 +97,9 @@ export function PrintSelectorModal({
           )}
 
           <div className="mt-8 space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase">Testo per il Cartello (Modificabile)</label>
+            <label htmlFor="print-testo-cartello" className="text-xs font-bold text-slate-500 uppercase">Testo per il Cartello (Modificabile)</label>
             <textarea
+              id="print-testo-cartello"
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium min-h-[160px] resize-none"
               value={customText}
               onChange={(e) => onCustomTextChange(e.target.value)}

@@ -582,16 +582,18 @@ export default function ClientiPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="h-8 w-8 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
+                      className="h-9 w-9 flex items-center justify-center rounded-xl bg-[#25D366]/10 text-[#25D366] hover:bg-[#25D366] hover:text-white transition-all border border-[#25D366]/20 text-[10px] font-black"
                       title="Contatta su WhatsApp"
+                      aria-label="Contatta su WhatsApp"
                     >
                       WA
                     </a>
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleOpenModal(cliente); }}
-                    className="h-8 w-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
+                    className="h-9 w-9 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-primary hover:border-primary/30 transition-all"
                     title="Visualizza / Modifica"
+                    aria-label="Visualizza o modifica cliente"
                   >
                     <Eye className="h-4 w-4" />
                   </button>
@@ -655,7 +657,7 @@ export default function ClientiPage() {
                  <button onClick={handlePrintPDF} className="h-10 px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center gap-2 transition-colors text-sm font-bold border border-indigo-100" title="Stampa Scheda Incarico">
                    <Printer className="h-4 w-4" /> Stampa Scheda
                  </button>
-                 <button onClick={handleCloseModal} className="h-10 w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
+                 <button onClick={handleCloseModal} aria-label="Chiudi scheda cliente" className="h-10 w-10 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full flex items-center justify-center transition-colors">
                    <X className="h-5 w-5" />
                  </button>
                </div>
@@ -708,54 +710,60 @@ export default function ClientiPage() {
                      </h3>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Nome</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium" 
+                          <label htmlFor="cliente-nome" className="text-xs font-bold text-slate-500 uppercase">Nome</label>
+                          <input
+                            id="cliente-nome"
+                            type="text"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium"
                             value={selectedCliente.DatiPersonali.Nome}
                             onChange={(e) => updateNestedField('DatiPersonali', 'Nome', e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Cognome</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium" 
+                          <label htmlFor="cliente-cognome" className="text-xs font-bold text-slate-500 uppercase">Cognome</label>
+                          <input
+                            id="cliente-cognome"
+                            type="text"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium"
                             value={selectedCliente.DatiPersonali.Cognome}
                             onChange={(e) => updateNestedField('DatiPersonali', 'Cognome', e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Telefono</label>
-                          <input 
-                            type="tel" 
+                          <label htmlFor="cliente-telefono" className="text-xs font-bold text-slate-500 uppercase">Telefono</label>
+                          <input
+                            id="cliente-telefono"
+                            type="tel"
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium" 
                             value={selectedCliente.DatiPersonali.Telefono}
                             onChange={(e) => updateNestedField('DatiPersonali', 'Telefono', e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Email</label>
-                          <input 
-                            type="email" 
+                          <label htmlFor="cliente-email" className="text-xs font-bold text-slate-500 uppercase">Email</label>
+                          <input
+                            id="cliente-email"
+                            type="email"
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium" 
                             value={selectedCliente.DatiPersonali.Email}
                             onChange={(e) => updateNestedField('DatiPersonali', 'Email', e.target.value)}
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Codice Fiscale</label>
-                          <input 
-                            type="text" 
-                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium uppercase" 
+                          <label htmlFor="cliente-codice-fiscale" className="text-xs font-bold text-slate-500 uppercase">Codice Fiscale</label>
+                          <input
+                            id="cliente-codice-fiscale"
+                            type="text"
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium uppercase"
                             value={selectedCliente.DatiPersonali.CodiceFiscale}
                             onChange={(e) => updateNestedField('DatiPersonali', 'CodiceFiscale', e.target.value)}
                           />
                         </div>
                         <div className="space-y-2 md:col-span-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Residenza / Indirizzo</label>
-                          <input 
-                            type="text" 
+                          <label htmlFor="cliente-residenza" className="text-xs font-bold text-slate-500 uppercase">Residenza / Indirizzo</label>
+                          <input
+                            id="cliente-residenza"
+                            type="text"
                             className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium" 
                             value={selectedCliente.DatiPersonali.IndirizzoResidenza}
                             onChange={(e) => updateNestedField('DatiPersonali', 'IndirizzoResidenza', e.target.value)}
@@ -773,9 +781,10 @@ export default function ClientiPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Professione</label>
-                            <input 
-                              type="text" 
+                            <label htmlFor="cliente-professione" className="text-xs font-bold text-slate-500 uppercase">Professione</label>
+                            <input
+                              id="cliente-professione"
+                              type="text"
                               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-400 font-medium bg-amber-50/30" 
                               placeholder="Es. Insegnante, Medico..."
                               value={selectedCliente.DatiPersonali.Professione || ""}
@@ -783,9 +792,10 @@ export default function ClientiPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Reddito Mensile/Annuo</label>
-                            <input 
-                              type="text" 
+                            <label htmlFor="cliente-reddito" className="text-xs font-bold text-slate-500 uppercase">Reddito Mensile/Annuo</label>
+                            <input
+                              id="cliente-reddito"
+                              type="text"
                               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-amber-400 font-medium bg-amber-50/30" 
                               placeholder="Es. 25.000 €"
                               value={selectedCliente.DatiPersonali.RedditoAnnuo || ""}
@@ -808,8 +818,10 @@ export default function ClientiPage() {
                           Operazione & Budget
                         </h3>
                         <div className="mb-6">
-                          <label className="text-xs font-bold text-slate-500 uppercase block mb-3">Operazione (Scegli una o entrambe)</label>
-                          <div className="flex gap-4">
+                          {/* Il gruppo e composto da pulsanti, non da un singolo campo: l'etichetta
+                              si collega con aria-labelledby invece che con htmlFor. */}
+                          <label id="richiesta-operazione-label" className="text-xs font-bold text-slate-500 uppercase block mb-3">Operazione (Scegli una o entrambe)</label>
+                          <div role="group" aria-labelledby="richiesta-operazione-label" className="flex gap-4">
                             <button
                               onClick={() => updateNestedField('Richiesta', 'Operazione', { ...(selectedCliente.Richiesta.Operazione || {}), Vendita: !selectedCliente.Richiesta.Operazione?.Vendita })}
                               className={cn("flex-1 py-3 px-4 rounded-xl font-bold border-2 transition-all flex items-center justify-center gap-2", selectedCliente.Richiesta.Operazione?.Vendita ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-500 hover:border-slate-300")}
@@ -832,8 +844,8 @@ export default function ClientiPage() {
                               <div className="flex flex-col gap-4">
                                 <h4 className="text-xs font-black text-indigo-800 uppercase tracking-widest border-b border-indigo-100 pb-2">Vendita - Limiti di Budget</h4>
                                 <div className="grid grid-cols-2 gap-3">
-                                  <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Min (\u20ac)</label><input type="number" className="w-full px-3 py-2.5 rounded-lg border border-indigo-200 focus:border-indigo-500 font-medium bg-white" value={selectedCliente.Richiesta.BudgetAcquistoMin || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAcquistoMin', e.target.value)} placeholder="0" /></div>
-                                  <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Max (\u20ac)</label><input type="number" className="w-full px-3 py-2.5 rounded-lg border border-indigo-200 focus:border-indigo-500 font-black text-indigo-700 bg-white" value={selectedCliente.Richiesta.BudgetAcquistoMax || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAcquistoMax', e.target.value)} placeholder="Tetto" /></div>
+                                  <div className="space-y-1"><label htmlFor="richiesta-budget-acquisto-min" className="text-[11px] font-bold text-slate-500 uppercase">Min (\u20ac)</label><input id="richiesta-budget-acquisto-min" type="number" className="w-full px-3 py-2.5 rounded-lg border border-indigo-200 focus:border-indigo-500 font-medium bg-white" value={selectedCliente.Richiesta.BudgetAcquistoMin || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAcquistoMin', e.target.value)} placeholder="0" /></div>
+                                  <div className="space-y-1"><label htmlFor="richiesta-budget-acquisto-max" className="text-[11px] font-bold text-slate-500 uppercase">Max (\u20ac)</label><input id="richiesta-budget-acquisto-max" type="number" className="w-full px-3 py-2.5 rounded-lg border border-indigo-200 focus:border-indigo-500 font-black text-indigo-700 bg-white" value={selectedCliente.Richiesta.BudgetAcquistoMax || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAcquistoMax', e.target.value)} placeholder="Tetto" /></div>
                                 </div>
                               </div>
                             )}
@@ -841,8 +853,8 @@ export default function ClientiPage() {
                               <div className="flex flex-col gap-4">
                                 <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest border-b border-emerald-100 pb-2">Affitto - Limiti Mensili</h4>
                                 <div className="grid grid-cols-2 gap-3">
-                                  <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Min (\u20ac/m)</label><input type="number" className="w-full px-3 py-2.5 rounded-lg border border-emerald-200 focus:border-emerald-500 font-medium bg-white" value={selectedCliente.Richiesta.BudgetAffittoMin || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAffittoMin', e.target.value)} placeholder="0" /></div>
-                                  <div className="space-y-1"><label className="text-[11px] font-bold text-slate-500 uppercase">Max (\u20ac/m)</label><input type="number" className="w-full px-3 py-2.5 rounded-lg border border-emerald-200 focus:border-emerald-500 font-black text-emerald-700 bg-white" value={selectedCliente.Richiesta.BudgetAffittoMax || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAffittoMax', e.target.value)} placeholder="Tetto" /></div>
+                                  <div className="space-y-1"><label htmlFor="richiesta-budget-affitto-min" className="text-[11px] font-bold text-slate-500 uppercase">Min (\u20ac/m)</label><input id="richiesta-budget-affitto-min" type="number" className="w-full px-3 py-2.5 rounded-lg border border-emerald-200 focus:border-emerald-500 font-medium bg-white" value={selectedCliente.Richiesta.BudgetAffittoMin || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAffittoMin', e.target.value)} placeholder="0" /></div>
+                                  <div className="space-y-1"><label htmlFor="richiesta-budget-affitto-max" className="text-[11px] font-bold text-slate-500 uppercase">Max (\u20ac/m)</label><input id="richiesta-budget-affitto-max" type="number" className="w-full px-3 py-2.5 rounded-lg border border-emerald-200 focus:border-emerald-500 font-black text-emerald-700 bg-white" value={selectedCliente.Richiesta.BudgetAffittoMax || ""} onChange={e => updateNestedField('Richiesta', 'BudgetAffittoMax', e.target.value)} placeholder="Tetto" /></div>
                                 </div>
                               </div>
                             )}
@@ -859,8 +871,8 @@ export default function ClientiPage() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                           {/* Tipologie - ESPEJO EXACTO del select de immobili */}
                           <div className="space-y-3">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Tipologie Desiderate</label>
-                            <div className="grid grid-cols-2 gap-2">
+                            <label id="richiesta-tipologie-label" className="text-xs font-bold text-slate-500 uppercase">Tipologie Desiderate</label>
+                            <div role="group" aria-labelledby="richiesta-tipologie-label" className="grid grid-cols-2 gap-2">
                               {TIPOLOGIE_IMMOBILE.map(tipo => {
                                 const isSelected = selectedCliente.Richiesta.Tipologie.includes(tipo);
                                 return (
@@ -876,8 +888,8 @@ export default function ClientiPage() {
                           </div>
                           {/* Zone - MULTI-SELECT desde zonas.json */}
                           <div className="space-y-3">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Zone di Interesse ({selectedCliente.Richiesta.Zone.length} selezionate)</label>
-                            <div className="max-h-[300px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 divide-y divide-slate-100">
+                            <label id="richiesta-zone-label" className="text-xs font-bold text-slate-500 uppercase">Zone di Interesse ({selectedCliente.Richiesta.Zone.length} selezionate)</label>
+                            <div role="group" aria-labelledby="richiesta-zone-label" className="max-h-[300px] overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/50 divide-y divide-slate-100">
                               {ZONE_AGENCIA.map(zona => {
                                 const isSelected = selectedCliente.Richiesta.Zone.includes(zona);
                                 return (
@@ -901,17 +913,17 @@ export default function ClientiPage() {
                           Requisiti Fisici & Condizioni
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                          <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Superf. Min (m\u00b2)</label><input type="number" value={selectedCliente.Richiesta.SuperficieMin || ""} onChange={e => updateNestedField('Richiesta', 'SuperficieMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
-                          <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Superf. Max (m\u00b2)</label><input type="number" value={selectedCliente.Richiesta.SuperficieMax || ""} onChange={e => updateNestedField('Richiesta', 'SuperficieMax', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
-                          <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cam. Letto (Min)</label><input type="number" value={selectedCliente.Richiesta.CamereLettoMin || ""} onChange={e => updateNestedField('Richiesta', 'CamereLettoMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
-                          <div className="space-y-1.5"><label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bagni (Min)</label><input type="number" value={selectedCliente.Richiesta.BagniMin || ""} onChange={e => updateNestedField('Richiesta', 'BagniMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
+                          <div className="space-y-1.5"><label htmlFor="richiesta-superficie-min" className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Superf. Min (m\u00b2)</label><input id="richiesta-superficie-min" type="number" value={selectedCliente.Richiesta.SuperficieMin || ""} onChange={e => updateNestedField('Richiesta', 'SuperficieMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
+                          <div className="space-y-1.5"><label htmlFor="richiesta-superficie-max" className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Superf. Max (m\u00b2)</label><input id="richiesta-superficie-max" type="number" value={selectedCliente.Richiesta.SuperficieMax || ""} onChange={e => updateNestedField('Richiesta', 'SuperficieMax', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
+                          <div className="space-y-1.5"><label htmlFor="richiesta-camere-letto-min" className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Cam. Letto (Min)</label><input id="richiesta-camere-letto-min" type="number" value={selectedCliente.Richiesta.CamereLettoMin || ""} onChange={e => updateNestedField('Richiesta', 'CamereLettoMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
+                          <div className="space-y-1.5"><label htmlFor="richiesta-bagni-min" className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">Bagni (Min)</label><input id="richiesta-bagni-min" type="number" value={selectedCliente.Richiesta.BagniMin || ""} onChange={e => updateNestedField('Richiesta', 'BagniMin', e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white focus:border-primary" /></div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                           {/* Stato Finiture - Multi-select */}
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Stato Finiture Accettate</label>
-                            <div className="flex flex-col gap-1.5">
+                            <label id="richiesta-finiture-label" className="text-xs font-bold text-slate-500 uppercase">Stato Finiture Accettate</label>
+                            <div role="group" aria-labelledby="richiesta-finiture-label" className="flex flex-col gap-1.5">
                               {STATI_FINITURE.map(stato => {
                                 const isSelected = (selectedCliente.Richiesta.StatoFinitureAccettati || []).includes(stato);
                                 return (
@@ -927,15 +939,15 @@ export default function ClientiPage() {
                           </div>
                           {/* Piano */}
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Piano Preferito</label>
-                            <select className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-bold text-slate-800 bg-white" value={selectedCliente.Richiesta.PianoPreferenza || "Qualsiasi"} onChange={e => updateNestedField('Richiesta', 'PianoPreferenza', e.target.value)}>
+                            <label htmlFor="richiesta-piano" className="text-xs font-bold text-slate-500 uppercase">Piano Preferito</label>
+                            <select id="richiesta-piano" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-bold text-slate-800 bg-white" value={selectedCliente.Richiesta.PianoPreferenza || "Qualsiasi"} onChange={e => updateNestedField('Richiesta', 'PianoPreferenza', e.target.value)}>
                               {PIANI_PREFERENZA.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                           </div>
                           {/* Arredamento */}
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Arredamento</label>
-                            <select className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-bold text-slate-800 bg-white" value={selectedCliente.Richiesta.ArredamentoPreferenza || "Indifferente"} onChange={e => updateNestedField('Richiesta', 'ArredamentoPreferenza', e.target.value)}>
+                            <label htmlFor="richiesta-arredamento" className="text-xs font-bold text-slate-500 uppercase">Arredamento</label>
+                            <select id="richiesta-arredamento" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-bold text-slate-800 bg-white" value={selectedCliente.Richiesta.ArredamentoPreferenza || "Indifferente"} onChange={e => updateNestedField('Richiesta', 'ArredamentoPreferenza', e.target.value)}>
                               {ARREDAMENTO_OPZIONI.map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
                           </div>
@@ -968,8 +980,8 @@ export default function ClientiPage() {
                       <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className="space-y-3">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Urgenza</label>
-                            <select className="w-full px-4 py-3 rounded-xl border border-rose-200 bg-rose-50/50 focus:border-rose-500 font-bold text-rose-800" value={selectedCliente.Richiesta.Urgenza} onChange={e => updateNestedField('Richiesta', 'Urgenza', e.target.value)}>
+                            <label htmlFor="richiesta-urgenza" className="text-xs font-bold text-slate-500 uppercase">Urgenza</label>
+                            <select id="richiesta-urgenza" className="w-full px-4 py-3 rounded-xl border border-rose-200 bg-rose-50/50 focus:border-rose-500 font-bold text-rose-800" value={selectedCliente.Richiesta.Urgenza} onChange={e => updateNestedField('Richiesta', 'Urgenza', e.target.value)}>
                               <option value="">Seleziona Livello...</option>
                               <option value="Alta">Alta (Immediata)</option>
                               <option value="Media">Media (3-6 mesi)</option>
@@ -977,8 +989,8 @@ export default function ClientiPage() {
                             </select>
                           </div>
                           <div className="space-y-3 md:col-span-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Note Interne sull'Incarico</label>
-                            <textarea className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium min-h-[80px]" value={selectedCliente.Richiesta.NoteRichiesta} onChange={e => updateNestedField('Richiesta', 'NoteRichiesta', e.target.value)} placeholder="Il cliente ha fretta, lavora fuori regione, disponibile solo nei weekend..." />
+                            <label htmlFor="richiesta-note" className="text-xs font-bold text-slate-500 uppercase">Note Interne sull'Incarico</label>
+                            <textarea id="richiesta-note" className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-primary font-medium min-h-[80px]" value={selectedCliente.Richiesta.NoteRichiesta} onChange={e => updateNestedField('Richiesta', 'NoteRichiesta', e.target.value)} placeholder="Il cliente ha fretta, lavora fuori regione, disponibile solo nei weekend..." />
                           </div>
                         </div>
                       </div>
@@ -1077,13 +1089,13 @@ export default function ClientiPage() {
 
                                   {/* Actions */}
                                   <div className="flex flex-col gap-1.5 flex-shrink-0">
-                                    <button onClick={() => handleScarta(match.immobileId)} title="Scarta" className="h-9 w-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors border border-rose-100">
+                                    <button onClick={() => handleScarta(match.immobileId)} title="Scarta" aria-label={`Scarta immobile ${match.codice}`} className="h-9 w-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors border border-rose-100">
                                       <ThumbsDown className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => handleProponi({ id: match.immobileId, DatiBase: { Codice: match.codice } })} title="Proponi" className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors border border-emerald-100">
+                                    <button onClick={() => handleProponi({ id: match.immobileId, DatiBase: { Codice: match.codice } })} title="Proponi" aria-label={`Proponi immobile ${match.codice} al cliente`} className="h-9 w-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors border border-emerald-100">
                                       <ThumbsUp className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => setExpandedMatchId(isExpanded ? null : match.immobileId)} title="Dettagli" className={cn("h-9 w-9 rounded-lg flex items-center justify-center transition-colors border", isExpanded ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100')}>
+                                    <button onClick={() => setExpandedMatchId(isExpanded ? null : match.immobileId)} title="Dettagli" aria-expanded={isExpanded} aria-label={isExpanded ? 'Nascondi dettagli del punteggio' : 'Mostra dettagli del punteggio'} className={cn("h-9 w-9 rounded-lg flex items-center justify-center transition-colors border", isExpanded ? 'bg-indigo-100 text-indigo-600 border-indigo-200' : 'bg-slate-50 text-slate-400 border-slate-100 hover:bg-slate-100')}>
                                       {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                     </button>
                                   </div>
@@ -1175,7 +1187,7 @@ export default function ClientiPage() {
                       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h4 className="font-bold text-sm text-slate-800 mb-3 flex items-center gap-2"><Hash className="h-4 w-4 text-primary" /> Aggiungi Immobile Manualmente (Tramite Codice)</h4>
                         <div className="flex gap-3">
-                          <input type="text" value={manualCode} onChange={e => setManualCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleManualAdd()} placeholder="Es. 7405" className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 font-bold focus:border-primary" />
+                          <input id="matching-codice-manuale" aria-label="Codice dell'immobile da aggiungere" type="text" value={manualCode} onChange={e => setManualCode(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleManualAdd()} placeholder="Es. 7405" className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 font-bold focus:border-primary" />
                           <button onClick={handleManualAdd} disabled={manualLoading} className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
                             {manualLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Aggiungi
                           </button>
@@ -1195,7 +1207,7 @@ export default function ClientiPage() {
                        onClick={() => fileInputRef.current?.click()}
                        className="bg-white p-10 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 text-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
                      >
-                       <input ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={e => handleDocUpload(e.target.files)} />
+                       <input id="documenti-file-input" aria-label="Seleziona i documenti da caricare" ref={fileInputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" onChange={e => handleDocUpload(e.target.files)} />
                        {docUploading ? (
                          <><Loader2 className="h-12 w-12 text-primary mx-auto animate-spin mb-3" /><p className="font-bold text-primary">Caricamento in corso...</p></>
                        ) : (
@@ -1220,8 +1232,8 @@ export default function ClientiPage() {
                                    <span className="text-sm font-medium text-slate-700 truncate">{name.substring(name.indexOf('_') + 1)}</span>
                                  </div>
                                  <div className="flex gap-2 flex-shrink-0">
-                                   <a href={url} target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
-                                   <button onClick={() => handleDocDelete(url)} className="h-8 w-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                                   <a href={url} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-9 w-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
+                                   <button onClick={() => handleDocDelete(url)} aria-label="Elimina documento" className="h-9 w-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 className="h-4 w-4" /></button>
                                  </div>
                                </div>
                              );
@@ -1273,7 +1285,7 @@ export default function ClientiPage() {
 
             {/* Footer Modal Sticky */}
             <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-border bg-slate-50 flex flex-wrap items-center justify-between gap-2 z-10">
-               <button onClick={handleDeleteCliente} className="flex items-center text-sm font-bold text-rose-500 hover:text-rose-600 transition-colors shrink-0">
+               <button onClick={handleDeleteCliente} aria-label="Elimina cliente" className="flex items-center text-sm font-bold text-rose-500 hover:text-rose-600 transition-colors shrink-0">
                  {selectedCliente.id && <><Trash2 className="h-4 w-4 mr-1.5" /><span className="hidden xs:inline">Elimina Cliente</span></>}
                </button>
                <div className="flex gap-2 sm:gap-3">

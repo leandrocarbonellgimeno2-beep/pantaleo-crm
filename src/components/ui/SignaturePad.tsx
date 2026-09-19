@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useId } from 'react';
 import { PenTool, Trash2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SignatureCanvas from 'react-signature-canvas';
@@ -48,6 +48,9 @@ export default function SignaturePadComponent({
 }: SignaturePadProps) {
   const sigRef = useRef<SignatureCanvas | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  // Puede haber dos pads en la misma pantalla (agente y cliente): el id
+  // tiene que ser unico por instancia, no una constante.
+  const labelId = useId();
 
   // Avoid SSR hydration issues — only render canvas on client
   useEffect(() => { setIsMounted(true); }, []);
@@ -106,19 +109,25 @@ export default function SignaturePadComponent({
   }, [onClear]);
 
   return (
-    <div className={cn('space-y-2.5 w-full max-w-full overflow-hidden', className)}>
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      className={cn('space-y-2.5 w-full max-w-full overflow-hidden', className)}
+    >
       {/* Header: Title + Action Button */}
       <div className="flex items-center justify-between">
-        <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+        {/* No es un <label>: el area de firma es un <canvas>, que no se puede
+            asociar con htmlFor. Rotula el grupo via aria-labelledby. */}
+        <span id={labelId} className="text-[11px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
           <PenTool className={cn('h-3.5 w-3.5', accentColor)} />
           {title}
-        </label>
+        </span>
         <div className="flex gap-1.5">
           {value && (
             <button
               type="button"
               onClick={handleClear}
-              className="px-3 py-1.5 rounded-lg bg-red-100 text-red-600 text-[10px] font-black uppercase hover:bg-red-200 transition-colors flex items-center gap-1"
+              className="h-9 px-3 rounded-lg bg-red-100 text-red-600 text-[10px] font-black uppercase hover:bg-red-200 transition-colors flex items-center gap-1"
             >
               <Trash2 className="h-3 w-3" /> Cancella
             </button>
@@ -150,6 +159,7 @@ export default function SignaturePadComponent({
               onEnd={handleEndStroke}
               canvasProps={{
                 className: 'w-full h-full cursor-crosshair bg-white absolute inset-0 z-10 touch-none',
+                'aria-label': `Area di firma: ${title}`,
               }}
             />
             {/* If there's an active value but we also have the canvas, we don't need the <img> preview covering it,
