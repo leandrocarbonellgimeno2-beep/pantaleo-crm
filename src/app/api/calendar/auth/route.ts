@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createOAuthState, OAUTH_STATE_COOKIE, OAUTH_STATE_TTL_MS } from '@/lib/oauth-state';
+import { guard } from '@/lib/api-guard';
 
 export async function GET(request: Request) {
+  // Vincular la cuenta de Google de LA AGENCIA es al menos tan sensible como
+  // gestionar usuarios, y no tenia ninguna comprobacion de rol: cualquier
+  // usuario autenticado podia consentir con SU cuenta personal y el callback
+  // reescribia la configuracion compartida con sus tokens. A partir de ahi cada
+  // cita de la inmobiliaria —nombre del cliente, direccion del inmueble y
+  // telefono en la descripcion del evento— aterrizaba en su calendario privado,
+  // y la agencia dejaba de recibirlas.
+  const denegado = await guard(request, 'propietario');
+  if (denegado) return denegado;
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
   // Derive redirect URI from the incoming request so it works in both local

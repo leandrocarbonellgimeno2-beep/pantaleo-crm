@@ -4,8 +4,18 @@ import { admin, db } from '@/lib/firebase-admin';
 import { verifyOAuthState, OAUTH_STATE_COOKIE } from '@/lib/oauth-state';
 import { CALENDAR_CONFIG_ID } from '@/lib/calendar-config';
 import { audit } from '@/lib/services/audit';
+import { guard } from '@/lib/api-guard';
 
 export async function GET(request: Request) {
+  // Vincular la cuenta de Google de LA AGENCIA es al menos tan sensible como
+  // gestionar usuarios, y no tenia ninguna comprobacion de rol: cualquier
+  // usuario autenticado podia consentir con SU cuenta personal y el callback
+  // reescribia la configuracion compartida con sus tokens. A partir de ahi cada
+  // cita de la inmobiliaria —nombre del cliente, direccion del inmueble y
+  // telefono en la descripcion del evento— aterrizaba en su calendario privado,
+  // y la agencia dejaba de recibirlas.
+  const denegado = await guard(request, 'propietario');
+  if (denegado) return denegado;
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
   const state = searchParams.get('state');
