@@ -5,6 +5,10 @@
  * del CRM que crece sin tope: cargarla entera dejaria de funcionar sola al cabo
  * de unos meses, y un offset obliga a Firestore a recorrer y facturar todo lo
  * que se salta.
+ *
+ * Nivel minimo: PROPIETARIO. El registro deja constancia de quien borro que y
+ * quien cambio los permisos de quien; leerlo es una capacidad de control, no de
+ * uso diario. Antes bastaba con secretaria.
  */
 import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
@@ -15,7 +19,7 @@ const COLLECTION = '_audit_logs';
 const POR_PAGINA = 50;
 
 export async function GET(request: Request) {
-  const denegado = await guard(request, 'secretaria');
+  const denegado = await guard(request, 'propietario');
   if (denegado) return denegado;
 
   try {

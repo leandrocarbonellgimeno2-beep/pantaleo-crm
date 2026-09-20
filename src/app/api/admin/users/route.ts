@@ -1,10 +1,20 @@
 /**
  * /api/admin/users — listado, alta y edicion de usuarios del CRM.
  *
- * Nivel minimo: secretaria. Con una excepcion que el usuario confirmo: la
- * secretaria gestiona al equipo, pero NO puede crear ni tocar usuarios con rol
- * 'propietario'. Eso lo comprueban el POST y el PATCH por su cuenta, porque
- * depende del cuerpo de la peticion y no solo del nivel de quien llama.
+ * Nivel minimo: PROPIETARIO, y solo propietario. Gestionar quien entra al CRM
+ * y con que permisos es cosa del dueno de la agencia.
+ *
+ * Antes el minimo era secretaria, con la salvedad de que no podia tocar
+ * usuarios con rol 'propietario'. Se subio por decision del dueno al integrar
+ * la administracion en el home: la secretaria conserva intacto su trabajo sobre
+ * los DATOS DE NEGOCIO —incluida el alta de propietarios de inmuebles en
+ * /api/proprietari, que es otra cosa y no se toca— pero deja de gestionar
+ * usuarios del sistema.
+ *
+ * LAS SALVAGUARDAS DE ABAJO SE QUEDAN, aunque con este nivel minimo ninguna
+ * pueda dispararse hoy: no crear ni tocar propietarios sin serlo, no degradarse
+ * a uno mismo, no dejar la agencia sin propietarios y no bloquearse solo. Son
+ * baratas y son la red que queda si alguien vuelve a bajar el minimo.
  */
 import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
@@ -27,7 +37,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
-  const denegado = await guard(request, 'secretaria');
+  const denegado = await guard(request, 'propietario');
   if (denegado) return denegado;
 
   try {
@@ -40,7 +50,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const denegado = await guard(request, 'secretaria');
+  const denegado = await guard(request, 'propietario');
   if (denegado) return denegado;
 
   try {
@@ -49,7 +59,7 @@ export async function POST(request: Request) {
     // createdBy. guard() solo responde si o no.
     let sesion;
     try {
-      sesion = await requireRole(request, 'secretaria');
+      sesion = await requireRole(request, 'propietario');
     } catch (e: any) {
       if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
       throw e;
@@ -114,13 +124,13 @@ export async function POST(request: Request) {
  * estado del que no se sale sin editar Firestore a mano.
  */
 export async function PATCH(request: Request) {
-  const denegado = await guard(request, 'secretaria');
+  const denegado = await guard(request, 'propietario');
   if (denegado) return denegado;
 
   try {
     let sesion;
     try {
-      sesion = await requireRole(request, 'secretaria');
+      sesion = await requireRole(request, 'propietario');
     } catch (e: any) {
       if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
       throw e;
