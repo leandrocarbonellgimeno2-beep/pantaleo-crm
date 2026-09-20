@@ -6,6 +6,12 @@
 // ═══════════════════════════════════════════════════════════════
 
 import type { Richiesta } from '@/types/cliente';
+import {
+  plantasDe,
+  estadoDe,
+  ESTADOS_ACABADO,
+  type ClavePlanta,
+} from '@/lib/immobili/clasificacion';
 
 // ── Score neutro per criteri non specificati.
 //    0.6 invece di 1.0: evita l'inflazione artificiale del punteggio.
@@ -319,59 +325,100 @@ function zonaScore(immobileZona: string, clienteZone: string[]): number {
   return 0.0;
 }
 
-/** Score stato finiture con prossimità sulla scala qualitativa */
-const FINITURE_SCALA = ['nuovo', 'ottime', 'buono', 'abitabile', 'da ristrutturare'];
+/**
+ * Score stato finiture con prossimità sulla scala qualitativa.
+ *
+ * La escala sale de ESTADOS_ACABADO (lib/immobili/clasificacion.ts), que ya
+ * está ordenada de mejor a peor y es la MISMA que usa el buscador avanzado.
+ * Antes había aquí una escala propia de cinco cadenas y se comparaba con
+ * indexOf, que tras normalizar es igualdad estricta contra texto libre: de los
+ * 631 inmuebles activos solo reconocía 137. Los otros 494 caían al 0.5 neutro,
+ * incluidos los 137 que dicen «Buone» —la escala decía «buono», en singular—.
+ * Con estadoDe() se reconocen 509.
+ *
+ * No era tan grave como el mismo fallo en el buscador, porque lo no reconocido
+ * puntuaba neutro en vez de desaparecer; pero deformaba el ranking en los dos
+ * sentidos: un inmueble «Buone» nunca llegaba al 1.0 para quien pedía «Buono»,
+ * y uno «Da Sistemare» sacaba un 0.5 inmerecido para quien solo aceptaba
+ * «Nuovo». Con peso 7 sobre 100, eso mueve el orden de la lista.
+ */
+
+/** Posición de cada estado en la escala de calidad, de mejor a peor. */
+const RANGO_ESTADO = new Map(ESTADOS_ACABADO.map((e, i) => [e.clave as string, i]));
+const MAX_DISTANCIA_ESTADO = ESTADOS_ACABADO.length - 1;
 
 function statoFinitureScore(immobileStato: string, clienteAccettati: string[]): number {
   if (!clienteAccettati || clienteAccettati.length === 0) return WILDCARD_SCORE;
 
-  const immobileNorm = (immobileStato || '').toLowerCase().trim();
-  const immobileIdx = FINITURE_SCALA.indexOf(immobileNorm);
-
-  // Stato finiture non riconosciuto → neutro
-  if (immobileIdx === -1) return 0.5;
+  const clave = estadoDe(immobileStato);
+  // Stato finiture non riconosciuto → neutro. Se conserva: «-- Non
+  // specificato --» son 182 inmuebles, y castigarlos sería tratar «no lo sé»
+  // como «está mal».
+  if (clave === null) return 0.5;
+  const idxInmueble = RANGO_ESTADO.get(clave);
+  if (idxInmueble === undefined) return 0.5;
 
   let bestScore = 0;
   for (const accettato of clienteAccettati) {
-    const accIdx = FINITURE_SCALA.indexOf(accettato.toLowerCase().trim());
-    if (accIdx === -1) continue;
-    const distanza = Math.abs(immobileIdx - accIdx);
-    const score =
-      distanza === 0 ? 1.0 :
-      distanza === 1 ? 0.7 :
-      distanza === 2 ? 0.3 : 0.0;
+    const claveCliente = estadoDe(accettato);
+    if (claveCliente === null) continue;
+    const idxCliente = RANGO_ESTADO.get(claveCliente);
+    if (idxCliente === undefined) continue;
+
+    // Caída lineal normalizada por el largo de la escala. Reproduce la curva
+    // que había (0 → 1.0, adyacente → 0.7, a dos → 0.3, más lejos → 0) pero
+    // sin depender de que la escala tenga exactamente cinco peldaños.
+    const x = Math.abs(idxInmueble - idxCliente) / MAX_DISTANCIA_ESTADO;
+    const score = Math.max(0, 1 - (4 / 3) * x);
     if (score > bestScore) bestScore = score;
   }
   return bestScore;
 }
 
-/** Score preferenza piano */
+/**
+ * Score preferenza piano.
+ *
+ * El campo Piano del inmueble es texto libre con SETENTA valores distintos, y
+ * aquí se comparaba a mano: includes('terra'), igualdad con 'primo'/'secondo'
+ * y un parseInt. De los 631 inmuebles activos solo clasificaba 209.
+ *
+ * Ahora la lectura la hace plantasDe(), la misma del buscador avanzado, que
+ * clasifica 559 y además es multivalor: «Piano Terra e Primo» cuenta como las
+ * dos plantas, que es lo que un cliente espera de un local en dos alturas.
+ *
+ * Y arregla un falso positivo concreto: 'seminterrato' CONTIENE 'terra' como
+ * subcadena, así que con includes() los semisótanos puntuaban 1.0 para quien
+ * pedía planta baja. plantasDe() usa fronteras de palabra.
+ */
+
+/** Qué plantas satisfacen cada preferencia del cliente. */
+const PLANTAS_POR_PREFERENCIA: Record<string, { acepta: ClavePlanta[]; fallo: number }> = {
+  'Piano Terra': { acepta: ['terra', 'rialzato'], fallo: 0.2 },
+  'Piani Intermedi': { acepta: ['1', '2', '3', 'ammezzato'], fallo: 0.3 },
+  'Attico / Ultimo Piano': { acepta: ['attico', 'mansarda', '4', '5', '6'], fallo: 0.2 },
+};
+
 function pianoScore(immobilePiano: string, clientePreferenza: string): number {
   if (!clientePreferenza || clientePreferenza === 'Qualsiasi') return WILDCARD_SCORE;
 
-  const pianoLower = (immobilePiano || '').toLowerCase().trim();
-  const pianoNum = parseInt(pianoLower);
+  const plantas = plantasDe(immobilePiano);
+  // Planta desconocida → neutro, igual que con el estado de los acabados. Son
+  // 72 de los 631 activos. Castigarlos sería tratar «no consta» como «no
+  // cumple», que es justo el fallo que este bucle vino a quitar.
+  if (plantas.length === 0) return 0.5;
 
-  switch (clientePreferenza) {
-    case 'Piano Terra':
-      return pianoLower.includes('terra') || pianoLower === '0' ? 1.0 : 0.2;
-
-    case 'Piani Intermedi':
-      return (
-        pianoLower === 'primo' || pianoLower === 'secondo' || pianoLower === 'terzo' ||
-        pianoLower === '1' || pianoLower === '2' || pianoLower === '3' ||
-        (!isNaN(pianoNum) && pianoNum >= 1 && pianoNum <= 3)
-      ) ? 1.0 : 0.3;
-
-    case 'Attico / Ultimo Piano':
-      return (
-        pianoLower.includes('attico') || pianoLower.includes('ultimo') ||
-        (!isNaN(pianoNum) && pianoNum >= 4)
-      ) ? 1.0 : 0.2;
-
-    default:
-      return WILDCARD_SCORE;
+  const regla = PLANTAS_POR_PREFERENCIA[clientePreferenza];
+  if (regla) {
+    return plantas.some((p) => (regla.acepta as string[]).includes(p)) ? 1.0 : regla.fallo;
   }
+
+  // Preferencia fuera de la lista de PIANI_PREFERENZA. Antes caía en el
+  // `default` y devolvía comodín, o sea que la preferencia se ignoraba en
+  // silencio: hay un cliente en la base con «1° Piano» escrito a mano. Se
+  // intenta leer como planta y, si se entiende, se compara de verdad.
+  const pedidas = plantasDe(clientePreferenza);
+  if (pedidas.length === 0) return WILDCARD_SCORE;
+  return plantas.some((p) => (pedidas as string[]).includes(p)) ? 1.0 : 0.3;
 }
 
 /** Score arredamento */
