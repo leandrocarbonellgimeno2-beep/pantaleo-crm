@@ -5,7 +5,7 @@ import { SlidersHorizontal, X, Tag, Euro, Maximize2, CheckCircle2, Zap, RotateCc
 import { cn } from "@/lib/utils";
 import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
 import zonasData from "@/lib/zonas.json";
-import { ZONA_SIN_ASIGNAR } from "@/lib/immobili/filters";
+import { ZONA_SIN_ASIGNAR, CARATTERISTICHE } from "@/lib/immobili/filters";
 import type { AdvFilters } from "@/lib/immobili/filters";
 import { TIPOLOGIE, CLASSI_ENERGETICHE } from "@/lib/immobili/options";
 // Las listas de plantas y de estado NO salen de options.ts: salen de los
@@ -173,11 +173,11 @@ export function AdvancedFiltersDrawer({
               <CheckCircle2 className="h-3.5 w-3.5" /> Caratteristiche
             </h4>
             <div className="grid grid-cols-2 gap-2.5">
-              {([
-                ['ascensore', 'Ascensore', '🛗'], ['balcone', 'Balcone', '🏠'], ['terrazza', 'Terrazzo', '☀️'],
-                ['garage', 'Garage', '🚗'], ['giardino', 'Giardino', '🌳'], ['arredato', 'Arredato', '🛋️'],
-                ['vistaMare', 'Vista Mare', '🌊'], ['ariaCondizionata', 'Aria Cond.', '❄️'], ['riscaldamentoAutonomo', 'Risc. Autonomo', '🔥']
-              ] as const).map(([key, label, emoji]) => (
+              {/* La lista NO se escribe aqui: viene de CARATTERISTICHE, en
+                  lib/immobili/filters.ts, que es tambien de donde sale el
+                  filtrado. Antes habia dos listas copiadas a mano y era
+                  cuestion de tiempo que una casilla dejara de filtrar. */}
+              {CARATTERISTICHE.map(({ clave: key, etiqueta: label, emoji }) => (
                 <label key={key} htmlFor={`adv-${key}`} className={cn(
                   "flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border text-sm font-medium cursor-pointer transition-all duration-200",
                   filters[key]

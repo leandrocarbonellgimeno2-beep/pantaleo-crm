@@ -29,26 +29,29 @@
  *   superficie ....... Igual. 344, 642 y 730 cadenas, cero NaN, y el tope
  *                      superior de superficie roto por lo mismo.
  *
- *   EL FALLO DE LOS TOPES SUPERIORES, arreglado después de la auditoría: los
- *   rangos hacían `Number(campo || 0)`, que convierte un campo sin rellenar en
- *   un cero, y un cero satisface cualquier «hasta X». Los inmuebles sin metros
- *   cargados aparecían en TODAS las búsquedas por tamaño, incluida «hasta 30
- *   m²»: 27 en el catálogo, 16 visibles en el listado por defecto. Con el
- *   precio, 3 y 2. Los filtros de mínimo no estaban afectados, porque ahí el
- *   cero ya quedaba fuera. Ver lib/immobili/rangos.ts.
  *   classeEnergetica . SANO. Vocabulario cerrado de verdad: 864 de 870 «G».
  *   piano ............ ESTABA ROTO, arreglado en el bucle anterior.
  *   statoFiniture .... ESTABA ROTO, arreglado en el bucle anterior.
- *   9 caracteristiche  SANAS. Las nueve claves existen y son booleanas en los
+ *   caracteristicas .. SANAS. Las claves existen y son booleanas en los
  *                      865-866 documentos que las llevan. No hay cadenas
  *                      «true» ni variantes de nombre.
  *
- * LO QUE LA AUDITORÍA ENCONTRÓ Y NO SE ARREGLA AQUÍ, porque es funcionalidad
- * que falta y no un fallo: en `Caratteristiche` hay once claves pobladas que
- * la interfaz no ofrece filtrar. Tres tienen volumen de verdad —PostoAuto
- * (413 en cierto), CucinaAbitabile (171) y PostoAutoScoperto (103)— y son
- * criterios de búsqueda que un agente pediría. Las otras ocho están por debajo
- * de 12, y Mansarda está en cero.
+ * EL FALLO DE LOS TOPES SUPERIORES, arreglado después de la auditoría: los
+ * rangos hacían `Number(campo || 0)`, que convierte un campo sin rellenar en un
+ * cero, y un cero satisface cualquier «hasta X». Los inmuebles sin metros
+ * cargados aparecían en TODAS las búsquedas por tamaño, incluida «hasta 30 m²»:
+ * 27 en el catálogo, 16 visibles en el listado por defecto. Con el precio, 3 y
+ * 2. Los filtros de mínimo no estaban afectados, porque ahí el cero ya quedaba
+ * fuera. Ver lib/immobili/rangos.ts.
+ *
+ * LAS CASILLAS QUE FALTABAN: la auditoría encontró once claves pobladas en
+ * `Caratteristiche` que la interfaz no ofrecía filtrar. Se han añadido las
+ * TRES que tienen volumen de verdad y son criterios que un agente pide —
+ * PostoAuto (413 inmuebles en cierto), CucinaAbitabile (171) y
+ * PostoAutoScoperto (103)—. Las otras ocho se quedan fuera a propósito: están
+ * todas por debajo de 12 y Mansarda está en cero, así que serían casillas que
+ * casi nunca devuelven nada. Si algún día se pueblan, se añaden en la lista
+ * CARATTERISTICHE de más abajo y funcionan solas.
  * ─────────────────────────────────────────────────────────────────────────
  */
 
@@ -76,6 +79,9 @@ export interface AdvFilters {
   vistaMare: boolean;
   ariaCondizionata: boolean;
   riscaldamentoAutonomo: boolean;
+  postoAuto: boolean;
+  cucinaAbitabile: boolean;
+  postoAutoScoperto: boolean;
   classeEnergetica: string;
   statoFiniture: string;
   provincia: string;
@@ -87,6 +93,7 @@ const EMPTY_ADV_FILTERS: AdvFilters = {
   camereMin: '', bagniMin: '', superficieMin: '', superficieMax: '', piano: '',
   ascensore: false, balcone: false, terrazza: false, garage: false, giardino: false,
   arredato: false, vistaMare: false, ariaCondizionata: false, riscaldamentoAutonomo: false,
+  postoAuto: false, cucinaAbitabile: false, postoAutoScoperto: false,
   classeEnergetica: '', statoFiniture: '', provincia: '',
 };
 
@@ -111,13 +118,39 @@ export const NON_RESIDENTIAL_TYPES = [
   'Terreni', 'Locale o Capannone', 'Garage o Posto auto', 'Ufficio',
 ];
 
+/**
+ * Las casillas de caracteristicas: clave del filtro, campo del documento y
+ * como se pintan.
+ *
+ * La etiqueta y el emoji viven AQUI, en el modulo de logica, y no en el cajon
+ * de filtros, aunque sean cosa de interfaz. El motivo es el mismo por el que
+ * existe este fichero: el cajon tenia su propia lista de nueve tuplas, copiada
+ * a mano, y el filtrado tenia otra. Dos listas que hay que mantener en
+ * sincronia son exactamente como se anade una casilla que no filtra nada, o un
+ * filtro que nadie puede activar. Con una sola fuente, anadir una casilla es
+ * una linea en un sitio.
+ *
+ * El orden es el de pintado.
+ */
+export const CARATTERISTICHE = [
+  { clave: 'ascensore', campo: 'Ascensore', etiqueta: 'Ascensore', emoji: '🛗' },
+  { clave: 'balcone', campo: 'Balcone', etiqueta: 'Balcone', emoji: '🏠' },
+  { clave: 'terrazza', campo: 'Terrazza', etiqueta: 'Terrazzo', emoji: '☀️' },
+  { clave: 'garage', campo: 'Garage', etiqueta: 'Garage', emoji: '🚗' },
+  { clave: 'postoAuto', campo: 'PostoAuto', etiqueta: 'Posto Auto', emoji: '🅿️' },
+  { clave: 'postoAutoScoperto', campo: 'PostoAutoScoperto', etiqueta: 'Posto Scoperto', emoji: '🌤️' },
+  { clave: 'giardino', campo: 'Giardino', etiqueta: 'Giardino', emoji: '🌳' },
+  { clave: 'cucinaAbitabile', campo: 'CucinaAbitabile', etiqueta: 'Cucina Abit.', emoji: '🍽️' },
+  { clave: 'arredato', campo: 'Arredato', etiqueta: 'Arredato', emoji: '🛋️' },
+  { clave: 'vistaMare', campo: 'VistaMare', etiqueta: 'Vista Mare', emoji: '🌊' },
+  { clave: 'ariaCondizionata', campo: 'AriaCondizionata', etiqueta: 'Aria Cond.', emoji: '❄️' },
+  { clave: 'riscaldamentoAutonomo', campo: 'RiscaldamentoAutonomo', etiqueta: 'Risc. Autonomo', emoji: '🔥' },
+] as const;
+
 /** Mapea la clave del filtro con la del documento en Caratteristiche. */
-const CHARACTERISTIC_KEYS: Record<string, string> = {
-  ascensore: 'Ascensore', balcone: 'Balcone', terrazza: 'Terrazza',
-  garage: 'Garage', giardino: 'Giardino', arredato: 'Arredato',
-  vistaMare: 'VistaMare', ariaCondizionata: 'AriaCondizionata',
-  riscaldamentoAutonomo: 'RiscaldamentoAutonomo',
-};
+const CHARACTERISTIC_KEYS: Record<string, string> = Object.fromEntries(
+  CARATTERISTICHE.map(c => [c.clave, c.campo]),
+);
 
 /** Normaliza para comparar sin acentos ni mayúsculas. */
 const nfd = (s: string) =>

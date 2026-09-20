@@ -5,6 +5,7 @@ import {
   createEmptyAdvFilters,
   NON_RESIDENTIAL_TYPES,
   ZONA_SIN_ASIGNAR,
+  CARATTERISTICHE,
 } from '@/lib/immobili/filters';
 
 const base = createEmptyAdvFilters;
@@ -161,11 +162,17 @@ describe('countActiveFilters', () => {
     expect(countActiveFilters({ ...base(), codice: '1001', proprietario: 'Rossi' })).toBe(2);
   });
 
-  it('cubre las 23 claves: todas activas suman 23', () => {
+  it('cubre todas las claves sin enumerarlas a mano', () => {
+    // Eran 23 y ahora son 26, con las tres casillas nuevas de caracteristicas.
+    // El contador se deriva de las claves del objeto vacio justamente para que
+    // anadir un filtro no obligue a tocarlo: este test comprueba esa
+    // propiedad, no el numero, que cambia cada vez que se amplia el buscador.
+    const claves = Object.keys(base());
     const todos = Object.fromEntries(
       Object.entries(base()).map(([k, v]) => [k, typeof v === 'boolean' ? true : 'x']),
     ) as any;
-    expect(countActiveFilters(todos)).toBe(23);
+    expect(countActiveFilters(todos)).toBe(claves.length);
+    expect(claves.length).toBe(26);
   });
 });
 
@@ -180,5 +187,89 @@ describe('createEmptyAdvFilters', () => {
   it('NON_RESIDENTIAL_TYPES conserva las cuatro tipologias', () => {
     expect(NON_RESIDENTIAL_TYPES).toHaveLength(4);
     expect(NON_RESIDENTIAL_TYPES).toContain('Terreni');
+  });
+});
+
+describe('las tres casillas nuevas de caracteristicas', () => {
+  // Salen de la auditoria contra produccion: son las tres claves de
+  // Caratteristiche que estaban pobladas como booleanos reales y que la
+  // interfaz no ofrecia filtrar. PostoAuto en 413 inmuebles, CucinaAbitabile
+  // en 171 y PostoAutoScoperto en 103.
+  const catalogo = [
+    { id: 'con-posto', Caratteristiche: { PostoAuto: true, CucinaAbitabile: false } },
+    { id: 'con-cucina', Caratteristiche: { CucinaAbitabile: true } },
+    { id: 'con-scoperto', Caratteristiche: { PostoAutoScoperto: true } },
+    { id: 'con-todo', Caratteristiche: { PostoAuto: true, CucinaAbitabile: true, PostoAutoScoperto: true } },
+    { id: 'sin-nada', Caratteristiche: {} },
+    { id: 'sin-mapa', DatiBase: {} },
+  ];
+
+  it('postoAuto filtra por Caratteristiche.PostoAuto', () => {
+    expect(ids(applyAdvancedFilters(catalogo, { ...base(), postoAuto: true })))
+      .toEqual(['con-posto', 'con-todo']);
+  });
+
+  it('cucinaAbitabile filtra por Caratteristiche.CucinaAbitabile', () => {
+    expect(ids(applyAdvancedFilters(catalogo, { ...base(), cucinaAbitabile: true })))
+      .toEqual(['con-cucina', 'con-todo']);
+  });
+
+  it('postoAutoScoperto filtra por Caratteristiche.PostoAutoScoperto', () => {
+    expect(ids(applyAdvancedFilters(catalogo, { ...base(), postoAutoScoperto: true })))
+      .toEqual(['con-scoperto', 'con-todo']);
+  });
+
+  it('se acumulan con las demas, como las otras nueve', () => {
+    expect(ids(applyAdvancedFilters(catalogo, { ...base(), postoAuto: true, cucinaAbitabile: true })))
+      .toEqual(['con-todo']);
+  });
+
+  it('un false explicito no cuenta como tener la caracteristica', () => {
+    expect(ids(applyAdvancedFilters([catalogo[0]], { ...base(), cucinaAbitabile: true }))).toEqual([]);
+  });
+
+  it('sin marcar, no descartan a nadie', () => {
+    expect(ids(applyAdvancedFilters(catalogo, base()))).toEqual(catalogo.map(d => d.id));
+  });
+
+  it('cuentan en el contador de filtros activos', () => {
+    // countActiveFilters se deriva de las claves del objeto vacio, asi que las
+    // tres nuevas entran solas. Este test lo fija.
+    expect(countActiveFilters({ ...base(), postoAuto: true })).toBe(1);
+    expect(countActiveFilters({ ...base(), postoAuto: true, cucinaAbitabile: true, postoAutoScoperto: true })).toBe(3);
+  });
+});
+
+describe('la lista de caracteristicas es una sola fuente', () => {
+  it('cada casilla declarada tiene su clave en el objeto de filtros', () => {
+    // Es la invariante que protege de anadir una casilla que no filtra nada,
+    // o un filtro que nadie puede activar: antes habia DOS listas, la del
+    // cajon y la del filtrado, y habia que acordarse de tocar las dos.
+    const vacio = base() as unknown as Record<string, unknown>;
+    for (const c of CARATTERISTICHE) {
+      expect(Object.prototype.hasOwnProperty.call(vacio, c.clave)).toBe(true);
+      expect(vacio[c.clave]).toBe(false);
+    }
+  });
+
+  it('no hay claves ni campos repetidos', () => {
+    const claves = CARATTERISTICHE.map(c => c.clave);
+    const campos = CARATTERISTICHE.map(c => c.campo);
+    expect(new Set(claves).size).toBe(claves.length);
+    expect(new Set(campos).size).toBe(campos.length);
+  });
+
+  it('son las doce esperadas', () => {
+    expect(CARATTERISTICHE).toHaveLength(12);
+    expect(CARATTERISTICHE.map(c => c.campo)).toContain('PostoAuto');
+    expect(CARATTERISTICHE.map(c => c.campo)).toContain('CucinaAbitabile');
+    expect(CARATTERISTICHE.map(c => c.campo)).toContain('PostoAutoScoperto');
+  });
+
+  it('todas tienen etiqueta y emoji para pintarse', () => {
+    for (const c of CARATTERISTICHE) {
+      expect(c.etiqueta.length).toBeGreaterThan(0);
+      expect(c.emoji.length).toBeGreaterThan(0);
+    }
   });
 });
