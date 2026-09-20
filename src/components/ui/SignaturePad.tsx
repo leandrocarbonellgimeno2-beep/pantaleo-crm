@@ -153,9 +153,30 @@ export default function SignaturePadComponent({
                 If re-rendering removes the canvas, they can't draw multiple parts (e.g. crossing a "t").
                 Instead, we should just let the canvas be the single source of truth and NOT replace it with an <img>!
              */}
+            {/* clearOnResize={false} ES LO QUE IMPIDE QUE SE PIERDA UNA FIRMA.
+
+                La libreria trae su propio oyente de `resize` que redimensiona el
+                lienzo y, al hacerlo, lo LIMPIA. Medido en el navegador sobre el
+                formulario real: firmar a 375x812 y girar a 812x375 dejaba el
+                recuadro con CERO pixeles de tinta.
+
+                Y lo peor no era que desapareciera de la vista. El valor guardado
+                sobrevive —se auto-guarda al terminar cada trazo— pero si el
+                cliente, viendo el recuadro en blanco, remata la rubrica o roza el
+                lienzo, `handleEndStroke` guarda lo que hay AHORA, que es solo ese
+                ultimo trazo, y eso es lo que se estampa en el PDF. Una firma
+                legal sustituida por un garabato, sin un solo aviso.
+
+                Basta con pedirle a la libreria que no limpie. No hace falta
+                repintar nada a mano: el trazo original sigue en el lienzo.
+
+                El giro no es el unico disparador. Al plegarse la barra del
+                navegador con el scroll tambien salta un resize, y useDialog no
+                bloquea el scroll del fondo a proposito. */}
             <SignatureCanvas
               ref={sigRef}
               penColor={penColor}
+              clearOnResize={false}
               onEnd={handleEndStroke}
               canvasProps={{
                 className: 'w-full h-full cursor-crosshair bg-white absolute inset-0 z-10 touch-none',
