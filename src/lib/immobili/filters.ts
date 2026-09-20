@@ -21,11 +21,21 @@
  *   zona ............. SANO, 857 de 859 alcanzables. Los dos huérfanos son
  *                      «Zona Tribunale» y «Stadio». Su opción «sin zona» SÍ
  *                      estaba rota: ver ZONA_SIN_ASIGNAR más abajo.
- *   prezzo min/max ... SANOS. Se temía que `Number()` devolviera NaN sobre
- *                      precios guardados como texto: son 337 y 394 cadenas,
- *                      y las dos listas dan CERO NaN.
+ *   prezzo min/max ... La coacción numérica está SANA: se temía que `Number()`
+ *                      devolviera NaN sobre precios guardados como texto —son
+ *                      337 y 394 cadenas— y las dos listas dan CERO NaN. Pero
+ *                      el TOPE SUPERIOR sí estaba roto: ver más abajo.
  *   camere, bagni,
- *   superficie ....... SANOS, por lo mismo. 344, 642 y 730 cadenas, cero NaN.
+ *   superficie ....... Igual. 344, 642 y 730 cadenas, cero NaN, y el tope
+ *                      superior de superficie roto por lo mismo.
+ *
+ *   EL FALLO DE LOS TOPES SUPERIORES, arreglado después de la auditoría: los
+ *   rangos hacían `Number(campo || 0)`, que convierte un campo sin rellenar en
+ *   un cero, y un cero satisface cualquier «hasta X». Los inmuebles sin metros
+ *   cargados aparecían en TODAS las búsquedas por tamaño, incluida «hasta 30
+ *   m²»: 27 en el catálogo, 16 visibles en el listado por defecto. Con el
+ *   precio, 3 y 2. Los filtros de mínimo no estaban afectados, porque ahí el
+ *   cero ya quedaba fuera. Ver lib/immobili/rangos.ts.
  *   classeEnergetica . SANO. Vocabulario cerrado de verdad: 864 de 870 «G».
  *   piano ............ ESTABA ROTO, arreglado en el bucle anterior.
  *   statoFiniture .... ESTABA ROTO, arreglado en el bucle anterior.
@@ -43,6 +53,7 @@
  */
 
 import { estaEnLaPlanta, tieneElEstado } from "@/lib/immobili/clasificacion";
+import { cumpleRango, precioDe, topeDe } from "@/lib/immobili/rangos";
 
 export interface AdvFilters {
   codice: string;
@@ -112,10 +123,6 @@ const CHARACTERISTIC_KEYS: Record<string, string> = {
 const nfd = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-/** Precio de referencia: venta si existe, si no alquiler. */
-const priceOf = (d: any) =>
-  Number(d.GestioneCommerciale?.PrezzoVendita || d.GestioneCommerciale?.PrezzoAffitto || 0);
-
 export function applyAdvancedFilters<T = any>(items: T[], af: AdvFilters): T[] {
   let result: any[] = items as any[];
 
@@ -134,32 +141,41 @@ export function applyAdvancedFilters<T = any>(items: T[], af: AdvFilters): T[] {
     result = result.filter(d => nfd(d.DatiBase?.Citta || '').includes(p));
   }
 
-  if (af.prezzoMin && Number(af.prezzoMin) > 0) {
-    const min = Number(af.prezzoMin);
-    result = result.filter(d => priceOf(d) >= min);
-  }
-  if (af.prezzoMax && Number(af.prezzoMax) > 0) {
-    const max = Number(af.prezzoMax);
-    result = result.filter(d => priceOf(d) <= max);
-  }
-
-  if (af.camereMin && Number(af.camereMin) > 0) {
-    const min = Number(af.camereMin);
-    result = result.filter(d => Number(d.DettagliFisici?.CamereLetto || 0) >= min);
-  }
-
-  if (af.bagniMin && Number(af.bagniMin) > 0) {
-    const min = Number(af.bagniMin);
-    result = result.filter(d => Number(d.DettagliFisici?.Bagni || 0) >= min);
+  // Los rangos van por cumpleRango, que trata el dato AUSENTE como
+  // desconocido en vez de como cero. Antes, `Number(campo || 0)` convertia un
+  // campo sin rellenar en un cero, y un cero satisface cualquier tope
+  // superior: los inmuebles sin metros cargados aparecian en TODAS las
+  // busquedas «hasta X m²», incluida «hasta 30». Ver lib/immobili/rangos.ts.
+  const prezzoMin = topeDe(af.prezzoMin);
+  const prezzoMax = topeDe(af.prezzoMax);
+  if (prezzoMin !== null || prezzoMax !== null) {
+    result = result.filter(d => {
+      const p = precioDe(d);
+      if (p === null) return false;
+      if (prezzoMin !== null && p < prezzoMin) return false;
+      if (prezzoMax !== null && p > prezzoMax) return false;
+      return true;
+    });
   }
 
-  if (af.superficieMin && Number(af.superficieMin) > 0) {
-    const min = Number(af.superficieMin);
-    result = result.filter(d => Number(d.DettagliFisici?.MetriCommerciali || 0) >= min);
+  // En habitaciones y banos el cero SI es una respuesta valida: un local o un
+  // garaje no tienen dormitorios. Por eso van con ceroCuenta.
+  const camereMin = topeDe(af.camereMin);
+  if (camereMin !== null) {
+    result = result.filter(d => cumpleRango(d.DettagliFisici?.CamereLetto, camereMin, null, { ceroCuenta: true }));
   }
-  if (af.superficieMax && Number(af.superficieMax) > 0) {
-    const max = Number(af.superficieMax);
-    result = result.filter(d => Number(d.DettagliFisici?.MetriCommerciali || 0) <= max);
+
+  const bagniMin = topeDe(af.bagniMin);
+  if (bagniMin !== null) {
+    result = result.filter(d => cumpleRango(d.DettagliFisici?.Bagni, bagniMin, null, { ceroCuenta: true }));
+  }
+
+  // La superficie, en cambio, no puede ser cero: ahi un cero es un campo sin
+  // rellenar, y son 27 inmuebles en la base.
+  const superficieMin = topeDe(af.superficieMin);
+  const superficieMax = topeDe(af.superficieMax);
+  if (superficieMin !== null || superficieMax !== null) {
+    result = result.filter(d => cumpleRango(d.DettagliFisici?.MetriCommerciali, superficieMin, superficieMax));
   }
 
   // Piano y StatoFiniture se comparaban con === contra un desplegable cerrado,

@@ -48,7 +48,9 @@ describe('applyAdvancedFilters', () => {
 
   it('el precio usa venta, y alquiler como alternativa', () => {
     expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMin: '1000' }))).toEqual(['a']);
-    expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMax: '1000' }))).toEqual(['b', 'c']);
+    // «c» es el documento minimo: sin precio. Ya NO se cuela en un tope
+    // superior, porque un dato ausente no satisface ningun rango.
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), prezzoMax: '1000' }))).toEqual(['b']);
   });
 
   it('un precio de 0 o vacio no filtra', () => {
@@ -59,7 +61,9 @@ describe('applyAdvancedFilters', () => {
     expect(ids(applyAdvancedFilters(immobili, { ...base(), camereMin: '4' }))).toEqual(['b']);
     expect(ids(applyAdvancedFilters(immobili, { ...base(), bagniMin: '3' }))).toEqual(['b']);
     expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMin: '100' }))).toEqual(['b']);
-    expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMax: '100' }))).toEqual(['a', 'c']);
+    // Idem: «c» no tiene MetriCommerciali, asi que no puede demostrar que
+    // cabe en «hasta 100 m²» y queda fuera.
+    expect(ids(applyAdvancedFilters(immobili, { ...base(), superficieMax: '100' }))).toEqual(['a']);
   });
 
   it('piano y estado se CLASIFICAN, no se comparan letra a letra', () => {
