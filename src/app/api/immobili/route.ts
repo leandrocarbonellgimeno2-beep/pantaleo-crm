@@ -191,10 +191,21 @@ export async function PATCH(request: Request) {
       sanitizeBody(body, IMMOBILI_ALLOWED, 'immobili.PATCH'),
     );
 
-    // Guard: never overwrite images/thumbnail with empty/falsy values.
-    // A PATCH for text fields (Textos, DatiBase, etc.) must never accidentally
-    // wipe photos if the client omits or sends an empty array.
-    if (!updates.images || (Array.isArray(updates.images) && (updates.images as any[]).length === 0)) {
+    // Guard: un PATCH de texto (Textos, DatiBase...) no puede llevarse las
+    // fotos por delante si no manda la clave.
+    //
+    // PERO UN ARRAY VACIO SI SE ESCRIBE, y esa distincion es el arreglo. Antes
+    // se descartaba tambien `images: []`, que es justo lo que manda el flujo de
+    // borrar la ULTIMA foto. Resultado: el fichero desaparecia del bucket y
+    // Firestore conservaba la URL, asi que al recargar la ficha volvia a decir
+    // «1 foto» con la imagen rota. Vaciar la galeria una a una guardaba todos
+    // los pasos menos el ultimo, el de 1 a 0.
+    //
+    // Descartar solo lo que NO es un array cumple igual el proposito original:
+    // un PATCH que no toca fotos no manda la clave, y el elemento proyectado
+    // del listado tampoco la lleva —stripToThumbnail la sustituye por
+    // thumbnail e imageCount mas arriba, en este mismo fichero—.
+    if (!Array.isArray(updates.images)) {
       delete (updates as any).images;
     }
     if (!updates.thumbnail) {
