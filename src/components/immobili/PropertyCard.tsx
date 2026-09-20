@@ -151,9 +151,10 @@ function PropertyCardBase({
         </div>
 
         {/* Tipologia */}
-        <h3 className="text-sm font-bold text-slate-800 line-clamp-1 leading-snug">
+        {/* h2: cuelga del h1 de la pantalla, sin saltarse niveles. */}
+        <h2 className="text-sm font-bold text-slate-800 line-clamp-1 leading-snug">
           {item.DatiBase?.Tipologia || 'Immobile'}
-        </h3>
+        </h2>
 
         {/* Location — Privacy Respecting (Città + Zona only) */}
         <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">

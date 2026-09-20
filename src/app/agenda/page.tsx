@@ -300,7 +300,7 @@ export default function AgendaPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground capitalize">{headerLabel}</h2>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground capitalize">{headerLabel}</h1>
           <p className="text-muted-foreground mt-1 text-lg font-medium">
             {filtered.length} appuntamenti nel periodo.
           </p>
@@ -554,7 +554,7 @@ export default function AgendaPage() {
           ) : (
             <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
               <CalendarIcon className="h-12 w-12 text-slate-200 mx-auto" />
-              <h3 className="mt-4 text-lg font-bold">Nessun impegno trovato</h3>
+              <h2 className="mt-4 text-lg font-bold">Nessun impegno trovato</h2>
               <p className="text-slate-500 text-sm mt-1">Nessun appuntamento per questo periodo.</p>
             </div>
           )}

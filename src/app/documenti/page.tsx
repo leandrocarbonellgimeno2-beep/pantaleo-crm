@@ -348,7 +348,10 @@ export default function DocumentiPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black tracking-tight text-foreground">Documenti & Contratti</h2>
+          {/* h1 y no h2: era la unica pantalla del CRM sin encabezado de
+              primer nivel, asi que un lector de pantalla no tenia por donde
+              empezar a recorrerla. */}
+          <h1 className="text-3xl font-black tracking-tight text-foreground">Documenti &amp; Contratti</h1>
           <p className="text-muted-foreground mt-1 text-base font-medium">
             Genera contratti, gestisci archivi e moduli in Cloud.
           </p>
@@ -371,7 +374,7 @@ export default function DocumentiPage() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-800">Generatore Contratti</h3>
+              <h2 className="text-lg font-black text-slate-800">Generatore Contratti</h2>
               <p className="text-xs text-slate-400 font-bold">Seleziona destinatario e tipo di documento</p>
             </div>
           </div>
@@ -437,7 +440,7 @@ export default function DocumentiPage() {
               </div>
 
               {/* Title & Desc */}
-              <h4 className="font-black text-base text-slate-800 leading-tight">{tmpl.name}</h4>
+              <h3 className="font-black text-base text-slate-800 leading-tight">{tmpl.name}</h3>
               <p className="text-[11px] text-slate-400 mt-1.5 line-clamp-2 font-medium">{tmpl.desc}</p>
 
               {/* Generate Button */}
@@ -478,7 +481,10 @@ export default function DocumentiPage() {
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          {/* tabIndex + role: una region que se desplaza en horizontal y no
+              recibe foco es inalcanzable para quien no usa raton. Lo marcaba
+              axe como «serious». */}
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabella modelli di documento, scorrevole">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-border">
@@ -585,7 +591,10 @@ export default function DocumentiPage() {
         </div>
 
         <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
+          {/* tabIndex + role: una region que se desplaza en horizontal y no
+              recibe foco es inalcanzable para quien no usa raton. Lo marcaba
+              axe como «serious». */}
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tabella documenti generati, scorrevole">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-border">

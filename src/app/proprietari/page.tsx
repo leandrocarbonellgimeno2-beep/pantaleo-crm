@@ -493,7 +493,7 @@ export default function ProprietariPage() {
                           <div className={`h-16 w-16 rounded-full ${avatarBg} flex items-center justify-center text-white font-black text-xl shadow-md mb-3`}>
                             {initials}
                           </div>
-                          <h4 className="font-black text-base text-slate-900 leading-tight">{fullName}</h4>
+                          <h2 className="font-black text-base text-slate-900 leading-tight">{fullName}</h2>
                         </div>
 
                         {/* Fila 2: Contatti */}

@@ -78,9 +78,12 @@ export default function Sidebar() {
             "ml-3 overflow-hidden transition-all duration-300",
             expanded ? "opacity-100 w-auto" : "opacity-0 w-0"
           )}>
-            <h1 className="text-base font-black bg-gradient-to-r from-indigo-700 to-violet-600 bg-clip-text text-transparent whitespace-nowrap">
+            {/* La marca NO es el h1 de la pagina: se repite en las diez
+                pantallas y competia con el titulo real, dejando dos h1 por
+                pagina. El h1 lo pone PageHeader, que es el titulo de verdad. */}
+            <span className="text-base font-black bg-gradient-to-r from-indigo-700 to-violet-600 bg-clip-text text-transparent whitespace-nowrap">
               Pantaleo CRM
-            </h1>
+            </span>
           </div>
         </div>
 
@@ -156,7 +159,10 @@ export default function Sidebar() {
       </div>
 
       {/* ═══ MOBILE BOTTOM NAVIGATION (below md) ═══ */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 flex items-center justify-around px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      {/* <nav> y no <div>: axe marcaba sus seis etiquetas como contenido fuera
+          de cualquier landmark, en TODAS las paginas. Para quien navega por
+          landmarks, la navegacion principal del movil sencillamente no existia. */}
+      <nav aria-label="Navigazione principale" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 flex items-center justify-around px-2 py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         {items.map((item) => {
           const isActive = item.href === "/"
             ? pathname === "/"
@@ -183,7 +189,7 @@ export default function Sidebar() {
             </Link>
           );
         })}
-      </div>
+      </nav>
     </>
   );
 }

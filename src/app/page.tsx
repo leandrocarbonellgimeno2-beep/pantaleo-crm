@@ -283,7 +283,7 @@ export default function DashboardPage() {
                 <action.icon className="h-6 w-6" />
               </div>
               <div className="flex-1 z-10">
-                <h3 className="font-bold text-white text-lg mb-0.5">{action.title}</h3>
+                <h2 className="font-bold text-white text-lg mb-0.5">{action.title}</h2>
                 <p className="text-sm text-white/70 font-medium">{action.subtitle}</p>
               </div>
               <Plus className="h-6 w-6 text-white/40 group-hover:text-white group-hover:rotate-90 transition-all duration-300 z-10" />
