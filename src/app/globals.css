@@ -173,3 +173,45 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   OBJETIVOS TÁCTILES EN PANTALLAS DE DEDO
+
+   Medido con el navegador sobre las pantallas reales, no deducido del
+   código: a 375 px había 548 elementos interactivos por debajo de 44 px
+   repartidos por las seis pantallas —403 solo en /documenti—. Casi todos son
+   botones de icono de 36×36 en las filas de las listas, y chips de filtro de
+   32 a 38 px de alto.
+
+   POR QUÉ VA EN CSS Y NO CLASE A CLASE. El intento anterior recorrió el JSX
+   buscando clases `h-8`/`h-9`/`h-10` y se dejó la mayoría, porque la expresión
+   que buscaba aperturas de etiqueta paraba en el primer `>`… que en
+   `onClick={() => …}` está dentro de la flecha. Una regla que mide lo
+   RENDERIZADO no puede dejarse casos por la forma en que esté escrito el JSX.
+
+   `pointer: coarse` y no un ancho: lo que pide 44 px es el dedo, no la
+   pantalla estrecha. Un escritorio con la ventana encogida sigue teniendo
+   ratón y no necesita esto.
+
+   `min-height` sobre elementos en línea NO hace nada según la especificación,
+   así que los enlaces dentro de un párrafo no se ven afectados: solo los
+   botones, los enlaces de navegación y los controles, que son bloque o flex.
+
+   La exclusión de `.sr-only` es imprescindible: ese patrón esconde el control
+   real con `width:1px;height:1px`, y agrandarlo lo sacaría de su escondite
+   rompiendo los trece checkboxes que lo usan.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  button:not(.sr-only),
+  select:not(.sr-only),
+  [role="tab"],
+  a[href]:not(.sr-only) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  input:not(.sr-only):not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+  textarea:not(.sr-only) {
+    min-height: 44px;
+  }
+}
