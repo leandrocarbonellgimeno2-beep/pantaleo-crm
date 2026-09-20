@@ -154,6 +154,28 @@ export async function POST(request: Request) {
       if (Object.keys(m).length === 0) delete (rest as any).Matching;
     }
 
+    // Guard: mai sovrascrivere la firma digitale con un valore vuoto.
+    //
+    // La ficha se abre y el pad sale en blanco mientras el documento completo
+    // todavia viaja —o si ese fetch fallo, que solo deja un console.error—. Si
+    // el agente cambia un telefono y pulsa Salva en esa ventana, la firma del
+    // cliente se pierde para siempre. Es el mismo candado que proprietari ya
+    // tiene para su documentacion, y que aqui existia para Matching pero no
+    // para la firma.
+    //
+    // Conviven dos grafias por herencia: FirmaDigitale (la que declara el tipo
+    // Cliente y la que leen los PDF) y firmaDigitale, de documentos antiguos.
+    for (const clave of ['FirmaDigitale', 'firmaDigitale'] as const) {
+      const f = (rest as any)[clave];
+      if (f === undefined) continue;
+      if (!f || typeof f !== 'object') { delete (rest as any)[clave]; continue; }
+      if (typeof f.UrlFirma === 'string' && f.UrlFirma.trim() === '') delete f.UrlFirma;
+      if (typeof f.urlFirma === 'string' && f.urlFirma.trim() === '') delete f.urlFirma;
+      // Sin URL no hay firma que anunciar: un HasFirma:false suelto solo sirve
+      // para apagar la insignia de una firma que sigue guardada.
+      if (f.UrlFirma === undefined && f.urlFirma === undefined) delete (rest as any)[clave];
+    }
+
     const clientData: any = {
       ...rest,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
