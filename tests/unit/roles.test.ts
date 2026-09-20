@@ -107,3 +107,37 @@ describe('hasAtLeast — la jerarquia', () => {
     expect(hasAtLeast(undefined, 'propietario')).toBe(false);
   });
 });
+
+describe('la reja de la pestaña de administración del home', () => {
+  // El home lo carga TODO el mundo. La pestaña «Amministrazione» se pinta con
+  // hasAtLeast(ruolo, 'propietario'), y este test fija esa frontera: si alguien
+  // toca la tabla de niveles, aquí se entera antes de que un vendedor vea el
+  // panel de usuarios.
+  //
+  // Que quede claro: esto NO es la seguridad. La barrera está en el servidor,
+  // en /api/admin/*, que comprueba el rol contra el token firmado en cada
+  // petición. Esto solo decide si se enseña la puerta.
+  const veLaPestana = (ruolo: unknown) => hasAtLeast(ruolo as any, 'propietario');
+
+  it('solo el propietario la ve', () => {
+    expect(veLaPestana('propietario')).toBe(true);
+    expect(veLaPestana('secretaria')).toBe(false);
+    expect(veLaPestana('vendedor')).toBe(false);
+    expect(veLaPestana('agente')).toBe(false);
+  });
+
+  it('sin rol, sin pestaña', () => {
+    // sessionData?.ruolo llega como undefined mientras la sesión está en vuelo
+    // y si la petición falla. El modo de fallo tiene que ser cerrado.
+    for (const v of [undefined, null, '', 'lo que sea', 0, {}]) {
+      expect(veLaPestana(v)).toBe(false);
+    }
+  });
+
+  it('los alias heredados también se resuelven', () => {
+    // normalizeRole traduce master -> propietario, así que una cookie antigua
+    // firmada con «master» sigue viendo lo que le toca.
+    expect(veLaPestana(normalizeRole('master'))).toBe(true);
+    expect(veLaPestana(normalizeRole('admin'))).toBe(false);
+  });
+});

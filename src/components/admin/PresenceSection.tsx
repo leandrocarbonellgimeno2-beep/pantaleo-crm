@@ -2,6 +2,8 @@
 
 import useSWR from "swr";
 import { Activity, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasAtLeast } from "@/lib/roles";
 
 interface Presencia {
   email: string;
@@ -37,6 +39,9 @@ const NOMBRE_PANTALLA: Record<string, string> = {
   "/immobili": "Immobili",
   "/proprietari": "Proprietari",
   "/documenti": "Documenti",
+  // /admin ya no existe: la administracion es una pestaña del home. Se deja
+  // la entrada porque los registros de presencia anteriores al cambio siguen
+  // guardando esa ruta.
   "/admin": "Amministrazione",
 };
 
@@ -44,8 +49,16 @@ export default function PresenceSection() {
   // Es el unico refreshInterval del proyecto, y esta justificado: la gracia de
   // la presencia es que este al dia. 30 segundos con 4 agentes son unas pocas
   // lecturas por minuto, y solo mientras el panel esta abierto.
+  // Doble reja. El montaje ya deberia bastar —esto solo se pinta dentro del
+  // panel de administracion— pero este es el unico sondeo periodico del
+  // proyecto: si algun dia alguien monta el componente en otro sitio, una
+  // clave condicional evita una peticion cada 30 segundos contra una ruta que
+  // va a devolver 403.
+  const { user } = useAuth();
+  const esPropietario = hasAtLeast(user?.ruolo, "propietario");
+
   const { data, isLoading } = useSWR<{ data: Presencia[]; online: number }>(
-    "/api/presence",
+    esPropietario ? "/api/presence" : null,
     fetcher,
     { refreshInterval: 30_000, revalidateOnFocus: true },
   );

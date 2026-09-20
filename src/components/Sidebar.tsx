@@ -13,11 +13,8 @@ import {
   ChevronRight,
   Loader2,
   CalendarDays,
-  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/contexts/AuthContext";
-import { hasAtLeast } from "@/lib/roles";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -28,21 +25,17 @@ const navigation = [
   { name: "Documenti", href: "/documenti", icon: FileText },
 ];
 
-// Solo para secretaria y propietario. Es comodidad, no seguridad: quien
-// escriba /admin a mano se topa igualmente con el middleware, que es donde
-// se decide de verdad. Aqui solo se evita ensenar una puerta que no abre.
-const adminItem = { name: "Admin", href: "/admin", icon: ShieldCheck };
+// Ya no hay enlace a «Admin»: la administracion dejo de ser una pantalla
+// aparte y vive dentro del home, en su propia pestaña. Quien tenga rol
+// propietario la ve nada mas entrar; quien no, no ve ni la pestaña.
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const { user } = useAuth();
 
-  const items = hasAtLeast(user?.ruolo, "secretaria")
-    ? [...navigation, adminItem]
-    : navigation;
+  const items = navigation;
 
   const handleLogout = async () => {
     setLoggingOut(true);

@@ -1,13 +1,18 @@
 "use client";
 
+import { useState } from 'react';
 import useSWR from 'swr';
 import { esFuenteLocal } from '@/lib/image-optimizable';
 import {
   Users, Home as HomeIcon,
   Plus, MapPin, Loader2, Briefcase,
   Building2, CalendarDays, FileText, ChevronRight,
-  Zap, Tag, KeyRound, PauseCircle
+  Zap, Tag, KeyRound, PauseCircle,
+  ShieldCheck, LayoutDashboard
 } from "lucide-react";
+import { hasAtLeast } from '@/lib/roles';
+import { AdminPanel } from '@/components/admin/AdminPanel';
+import { MiPassword } from '@/components/account/MiPassword';
 import Link from 'next/link';
 import NextImage from 'next/image';
 
@@ -74,6 +79,37 @@ export default function DashboardPage() {
   const todayAppointments = (Array.isArray(agendaData) ? agendaData : []).slice(0, 4);
   const userName = sessionData?.nome ? sessionData.nome.split(' ')[0] : 'Utente';
 
+  // La administración dejó de ser una pantalla aparte y vive aquí, en su propia
+  // pestaña. El rol viene de /api/auth/session, que esta pantalla ya pedía para
+  // el saludo: no hay ninguna petición nueva por esto.
+  //
+  // OCULTAR LA PESTAÑA NO ES SEGURIDAD. La barrera está en el servidor:
+  // /api/admin/* comprueba el rol contra el token firmado en cada petición y
+  // devuelve 403 a quien no llegue. Esto solo evita enseñar una puerta que no
+  // abre, y que la consola de un vendedor se llene de errores.
+  const esPropietario = hasAtLeast(sessionData?.ruolo, 'propietario');
+  const [pestana, setPestana] = useState<'lavoro' | 'admin'>('lavoro');
+
+  // El panel de administración se monta la PRIMERA vez que se abre, y a partir
+  // de ahí se queda montado aunque se cambie de pestaña. Así no se gasta ni una
+  // lectura en quien nunca lo abre, y quien lo usa no pierde el listado ni la
+  // página de movimientos cada vez que vuelve a su trabajo.
+  const [adminAbierto, setAdminAbierto] = useState(false);
+
+  const abrir = (cual: 'lavoro' | 'admin') => {
+    setPestana(cual);
+    if (cual === 'admin') setAdminAbierto(true);
+  };
+
+  // Flechas izquierda y derecha entre pestañas, como manda el patrón ARIA.
+  const navegarConTeclado = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const otra = pestana === 'lavoro' ? 'admin' : 'lavoro';
+    abrir(otra);
+    document.getElementById('tab-' + otra)?.focus();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30 flex items-center justify-center">
@@ -139,8 +175,8 @@ export default function DashboardPage() {
     });
   });
 
-  return (
-    <div className="flex flex-col gap-6 lg:gap-8 w-full">
+  const contenidoLavoro = (
+    <>
         {/* ═══════════════════════════════════════════════════
             1. HEADER CON SALUTO PERSONALIZZATO
         ═══════════════════════════════════════════════════ */}
@@ -422,12 +458,101 @@ export default function DashboardPage() {
 
         </div>
 
-        {/* Version tag — CI/CD verification marker */}
-        <div className="flex justify-end">
-          <span className="text-[11px] font-bold text-slate-300 tracking-widest uppercase">
-            v1.1 · {new Date().toLocaleDateString('it-IT')}
-          </span>
-        </div>
+        {/* Cambio de la contrasena propia. Va en «Il mio lavoro» y no en la
+            pestana de administracion a proposito: no es gestion de la agencia,
+            es la cuenta de cada uno, y la necesitan todos los roles. Antes
+            vivia dentro del panel de /admin y se habria perdido al moverlo. */}
+        <MiPassword />
+
+    </>
+  );
+
+  // Sin rol de propietario no hay pestañas ni adorno de más: la pantalla es
+  // exactamente la de siempre.
+  if (!esPropietario) {
+    return (
+      <div className="flex flex-col gap-6 lg:gap-8 w-full">
+        {contenidoLavoro}
+        <VersionTag />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 lg:gap-8 w-full">
+      <div
+        role="tablist"
+        aria-label="Sezioni della pagina iniziale"
+        className="flex items-center gap-1.5 p-1.5 bg-slate-100/80 rounded-2xl w-full sm:w-fit"
+        onKeyDown={navegarConTeclado}
+      >
+        {([
+          ['lavoro', 'Il mio lavoro', LayoutDashboard],
+          ['admin', 'Amministrazione', ShieldCheck],
+        ] as const).map(([clave, etiqueta, Icono]) => {
+          const activa = pestana === clave;
+          return (
+            <button
+              key={clave}
+              id={'tab-' + clave}
+              role="tab"
+              type="button"
+              aria-selected={activa}
+              aria-controls={'panel-' + clave}
+              // Solo la pestaña activa entra en el orden de tabulación: el resto
+              // se alcanza con las flechas. Es el patrón ARIA de tablist.
+              tabIndex={activa ? 0 : -1}
+              onClick={() => abrir(clave)}
+              className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 h-11 px-4 sm:px-5 rounded-xl text-sm font-bold transition-all outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 ${
+                activa
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Icono className="h-4 w-4" />
+              {etiqueta}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        id="panel-lavoro"
+        role="tabpanel"
+        aria-labelledby="tab-lavoro"
+        hidden={pestana !== 'lavoro'}
+        tabIndex={0}
+        className="flex flex-col gap-6 lg:gap-8 outline-none"
+      >
+        {/* Se queda MONTADO aunque no se vea: así volver a «Il mio lavoro» no
+            vuelve a pedir inmuebles, clientes ni agenda, y se conserva el
+            desplazamiento donde estaba. */}
+        {contenidoLavoro}
+      </div>
+
+      <div
+        id="panel-admin"
+        role="tabpanel"
+        aria-labelledby="tab-admin"
+        hidden={pestana !== 'admin'}
+        tabIndex={0}
+        className="outline-none"
+      >
+        {adminAbierto && <AdminPanel />}
+      </div>
+
+      <VersionTag />
+    </div>
+  );
+}
+
+/** Marca de verificación del despliegue. */
+function VersionTag() {
+  return (
+    <div className="flex justify-end">
+      <span className="text-[11px] font-bold text-slate-300 tracking-widest uppercase">
+        v1.1 · {new Date().toLocaleDateString('it-IT')}
+      </span>
     </div>
   );
 }

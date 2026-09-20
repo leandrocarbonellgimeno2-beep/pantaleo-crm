@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { History, Loader2, ChevronDown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { hasAtLeast } from "@/lib/roles";
 
 interface Registro {
   id: string;
@@ -56,6 +58,9 @@ export default function AuditSection() {
   const [error, setError] = useState(false);
   const [filtro, setFiltro] = useState("");
 
+  const { user } = useAuth();
+  const esPropietario = hasAtLeast(user?.ruolo, "propietario");
+
   // Paginacion por CURSOR, no por offset: esta es la unica tabla del CRM que
   // crece sin tope, y un offset obliga a Firestore a recorrer y facturar todo
   // lo que se salta.
@@ -78,10 +83,14 @@ export default function AuditSection() {
     }
   };
 
+  // Sin rol no se pide nada: el home lo carga todo el mundo y esta ruta
+  // devolveria 403. Ocultar el componente no es seguridad —de eso se encarga
+  // el servidor— pero pedir lo que se sabe que va a fallar tampoco sirve.
   useEffect(() => {
+    if (!esPropietario) return;
     cargar(null, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtro]);
+  }, [filtro, esPropietario]);
 
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">

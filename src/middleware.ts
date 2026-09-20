@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth';
-import { hasAtLeast } from '@/lib/roles';
 
 const PUBLIC_PATHS = ['/login', '/api/auth'];
 
@@ -59,20 +58,19 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  // El panel de administracion se filtra AQUI, en la pagina, y no solo en
-  // sus rutas de API. Si solo se protegiera la API, un vendedor cargaria la
-  // pantalla entera y veria una tabla vacia con errores: parece un fallo del
-  // CRM en vez de una falta de permiso.
+  // /admin ya no existe como pantalla: la administracion vive dentro del home,
+  // en su propia pestaña, que solo se pinta para el rol propietario.
   //
-  // Esto SI se puede hacer en el middleware aunque corra en Edge, porque el
-  // rol viaja firmado dentro de la propia cookie y no hay que consultar nada
-  // a Firestore. Los permisos que dependen de la base de datos siguen sin
-  // poder comprobarse aqui.
-  if (pathname.startsWith('/admin')) {
-    if (!hasAtLeast(payload.ruolo, 'secretaria')) {
-      console.warn(`[middleware] acceso a /admin denegado para rol "${payload.ruolo}"`);
-      return NextResponse.redirect(new URL('/', request.url));
-    }
+  // La redireccion se queda porque la URL puede estar en un marcador, en el
+  // historial del navegador o en un enlace pegado en un chat. Mandar a la
+  // portada es mejor que un 404, y no hace falta comprobar el rol aqui: quien
+  // no sea propietario simplemente no vera la pestaña al llegar.
+  //
+  // El filtro por rol que habia aqui NO se ha aflojado, ha cambiado de sitio:
+  // la barrera de verdad sigue estando en /api/admin/*, que comprueba el token
+  // firmado en cada peticion. Esta linea solo evitaba una pantalla rota.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   return NextResponse.next();

@@ -3,11 +3,17 @@
 /**
  * Panel de administracion — gestion de usuarios.
  *
- * El acceso lo decide el middleware, que redirige a la portada a cualquiera
- * por debajo de secretaria. Lo de aqui es la experiencia, no la barrera: el
- * backend vuelve a comprobarlo todo en /api/admin/users, incluidas las cuatro
- * salvaguardas (no tocar propietarios sin serlo, no degradarse a uno mismo, no
- * dejar la agencia sin propietarios, y no bloquearse solo).
+ * Vivia en su propia ruta /admin. Ahora es una seccion del home, dentro de la
+ * pestana «Amministrazione», que solo se pinta para el rol propietario.
+ *
+ * OCULTAR ESTO EN REACT NO ES SEGURIDAD, y conviene tenerlo presente: la
+ * barrera de verdad esta en el servidor. /api/admin/users vuelve a comprobar
+ * el rol contra el token firmado en CADA peticion, con sus cuatro
+ * salvaguardas —no tocar propietarios sin serlo, no degradarse a uno mismo, no
+ * dejar la agencia sin propietarios y no bloquearse solo— y la revocacion por
+ * tokenVersion sigue intacta. Lo de aqui es la experiencia: que un vendedor no
+ * vea una tabla vacia llena de errores, que parece un fallo del CRM en vez de
+ * una falta de permiso.
  */
 
 import { useState } from "react";
@@ -30,8 +36,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useDialog } from "@/hooks/useDialog";
 import { hasAtLeast, ROLES, type Role } from "@/lib/roles";
-import PresenceSection from "./PresenceSection";
-import AuditSection from "./AuditSection";
+import PresenceSection from "@/components/admin/PresenceSection";
+import AuditSection from "@/components/admin/AuditSection";
 
 interface UsuarioFila {
   id: string;
@@ -85,13 +91,16 @@ const formatearFecha = (ms: number) =>
 const campoClase =
   "w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
 
-export default function AdminPage() {
+export function AdminPanel() {
   const { user } = useAuth();
   const esPropietario = hasAtLeast(user?.ruolo, "propietario");
   const miEmail = (user?.email ?? "").trim().toLowerCase();
 
+  // Clave condicional. El home lo carga TODO el mundo, asi que sin esto la
+  // consola de un vendedor se llenaria de 403 y se gastarian peticiones en
+  // algo que nunca va a poder ver. `null` como clave hace que SWR no pida nada.
   const { data, isLoading, error, mutate } = useSWR<{ data: UsuarioFila[] }>(
-    "/api/admin/users",
+    esPropietario ? "/api/admin/users" : null,
     jsonFetcher,
     { revalidateOnFocus: false, dedupingInterval: 10_000 },
   );
@@ -101,8 +110,6 @@ export default function AdminPage() {
   const [form, setForm] = useState({ nome: "", email: "", password: "", role: "vendedor" as Role });
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [reset, setReset] = useState<{ email: string; password: string } | null>(null);
-  const [miPassword, setMiPassword] = useState({ actual: "", nueva: "" });
-  const [cambiandoMia, setCambiandoMia] = useState(false);
 
   // Un dialogo por modal, cada uno con su propio booleano: los dos pueden estar
   // montados a la vez (se puede abrir el alta y, por debajo, seguir el reset),
@@ -174,31 +181,6 @@ export default function AdminPage() {
     }
   };
 
-  const cambiarMiPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCambiandoMia(true);
-    try {
-      const res = await fetch("/api/account/password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          passwordActual: miPassword.actual,
-          nuevaPassword: miPassword.nueva,
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(body?.error || "Impossibile cambiare la password.");
-        return;
-      }
-      toast.success("Password aggiornata.");
-      setMiPassword({ actual: "", nueva: "" });
-    } catch {
-      toast.error("Errore di rete. Riprova.");
-    } finally {
-      setCambiandoMia(false);
-    }
-  };
 
   return (
     <div className="flex flex-col gap-6 w-full">
@@ -397,55 +379,6 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         <PresenceSection />
         <AuditSection />
-      </div>
-
-      {/* ── Mi cuenta ── */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-slate-100/80">
-          <h2 className="font-bold text-slate-800">La mia password</h2>
-          <p className="text-xs text-slate-400 font-medium mt-0.5">
-            Cambia la password del tuo account: {user?.email}
-          </p>
-        </div>
-        <form onSubmit={cambiarMiPassword} className="p-6 grid gap-4 sm:grid-cols-3 sm:items-end">
-          <div>
-            <label htmlFor="pwd-actual" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
-              Password attuale
-            </label>
-            <input
-              id="pwd-actual"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={miPassword.actual}
-              onChange={(e) => setMiPassword({ ...miPassword, actual: e.target.value })}
-              className={campoClase}
-            />
-          </div>
-          <div>
-            <label htmlFor="pwd-nueva" className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-1.5">
-              Nuova password
-            </label>
-            <input
-              id="pwd-nueva"
-              type="password"
-              required
-              minLength={PASSWORD_MIN}
-              autoComplete="new-password"
-              value={miPassword.nueva}
-              onChange={(e) => setMiPassword({ ...miPassword, nueva: e.target.value })}
-              className={campoClase}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={cambiandoMia}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-800 px-5 py-3 text-sm font-black text-white transition-colors hover:bg-slate-900 disabled:opacity-60"
-          >
-            {cambiandoMia && <Loader2 className="h-4 w-4 animate-spin" />}
-            Aggiorna
-          </button>
-        </form>
       </div>
 
       {/* ── Modal: nuevo usuario ── */}
