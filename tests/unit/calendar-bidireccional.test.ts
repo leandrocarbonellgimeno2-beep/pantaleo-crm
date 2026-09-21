@@ -142,7 +142,46 @@ describe('un evento de Google se convierte en cita sin inventarse nada', () => {
     const r = citaDesdeEvento({ id: 'e', summary: 'Dentista', start: { dateTime: '2026-09-21T09:00:00Z' }, end: { dateTime: '2026-09-21T10:00:00Z' } } as any);
     expect(r).not.toHaveProperty('clienteId');
     expect(r).not.toHaveProperty('immobileId');
+    expect(r).not.toHaveProperty('proprietarioId');
     // Un id inventado ataria la cita al cliente equivocado.
-    expect(Object.values(r).every((v) => typeof v === 'string' || typeof v === 'number')).toBe(true);
+    expect(Object.values(r).every(
+      (v) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean',
+    )).toBe(true);
+  });
+
+  it('un evento de dia completo se marca como tal, no como una cita de 00:00', () => {
+    // Pintarlo «00:00 · 1440 min» lo colocaba ademas el primero del dia, por
+    // delante de las visitas reales, y si pisaba una cita del CRM le destruia
+    // la hora de verdad.
+    const r = citaDesdeEvento({
+      id: 'e', summary: 'Ferie',
+      start: { date: '2026-08-10' }, end: { date: '2026-08-15' },
+    } as any);
+    expect(r.allDay).toBe(true);
+    expect(r.date).toBe('2026-08-10');
+    // `end.date` de Google es EXCLUSIVO: el ultimo dia ocupado es el 14.
+    expect(r.dateEnd).toBe('2026-08-14');
+  });
+
+  it('la hora se convierte a la zona de la agencia, no se recorta de la cadena', () => {
+    // Un evento creado con el telefono en otra zona llega con SU offset.
+    // `substring(11,16)` daba por hecho que siempre era el de Roma y metia la
+    // cita a una hora que no era.
+    const r = citaDesdeEvento({
+      id: 'e', summary: 'Riunione',
+      start: { dateTime: '2026-09-21T09:00:00Z' },   // 11:00 en Roma (CEST)
+      end: { dateTime: '2026-09-21T10:00:00Z' },
+    } as any);
+    expect(r.time).toBe('11:00');
+    expect(r.date).toBe('2026-09-21');
+    expect(r.duration).toBe(60);
+  });
+
+  it('el titulo pierde el prefijo que el propio CRM le pone al subir', () => {
+    const r = citaDesdeEvento({
+      id: 'e', summary: 'Appuntamento CRM: Mario Rossi',
+      start: { dateTime: '2026-09-21T09:00:00Z' }, end: { dateTime: '2026-09-21T10:00:00Z' },
+    } as any);
+    expect(r.clientName).toBe('Mario Rossi');
   });
 });

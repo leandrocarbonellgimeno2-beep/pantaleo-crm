@@ -20,8 +20,21 @@ export async function GET(request: Request) {
     const doc = await db.collection('calendar_configs').doc(CALENDAR_CONFIG_ID).get();
     const datos = doc.exists ? doc.data() : null;
 
+    // La forma de la respuesta es SIEMPRE la misma. Antes esta rama devolvia
+    // un objeto sin `desconectado`, y el aviso de la pantalla miraba justo ese
+    // campo: con el calendario nunca conectado —o con el token borrado— el
+    // aviso rojo no podia salir precisamente en el peor caso.
     if (!datos?.tokens?.refresh_token) {
-      return NextResponse.json({ connected: false, healthy: false, motivo: 'mai_collegato' });
+      return NextResponse.json({
+        connected: false,
+        healthy: false,
+        desconectado: true,
+        email: null,
+        motivo: 'Calendario mai collegato',
+        ultimoIntentoAt: null,
+        ultimoExitoAt: null,
+        nuncaSincronizado: true,
+      });
     }
 
     // «Hay un refresh_token guardado» NO es lo mismo que «la sincronizacion
@@ -35,15 +48,29 @@ export async function GET(request: Request) {
     // `google-calendar.ts` en cada operacion.
     const sync = datos.sync || {};
 
+    // ESTANCADA: la sincronizacion corre cada 15 minutos. Si hace mas de dos
+    // horas que no termina bien, algo esta roto aunque las credenciales sigan
+    // siendo validas —un 403 de permisos, una cuota agotada, el cron que no
+    // se ejecuta—. Mirar solo el caso «credencial rechazada» dejaba pasar
+    // semanas sin que subiera ni bajara una cita mientras el estado decia que
+    // todo iba bien.
+    const DOS_HORAS = 2 * 3600_000;
+    const ultimoExitoAt = sync.ultimoExitoAt ?? null;
+    const estancada = Boolean(ultimoExitoAt) && Date.now() - ultimoExitoAt > DOS_HORAS;
+    const desconectado = sync.desconectado === true;
+
     return NextResponse.json({
       connected: true,
       email: datos.email ?? null,
-      // false solo cuando Google ha RECHAZADO las credenciales. Un fallo de
-      // red pasajero no merece un aviso rojo pidiendo reconectar.
-      healthy: sync.desconectado !== true,
-      desconectado: sync.desconectado === true,
+      // `healthy` cubre las tres formas de estar roto: credenciales
+      // rechazadas, ultimo intento fallido, o hace demasiado que no cuaja uno.
+      healthy: !desconectado && sync.ok !== false && !estancada,
+      // `desconectado` sigue significando solo «hay que volver a autorizar»:
+      // es lo que decide si el aviso ofrece el boton de reconectar.
+      desconectado,
+      estancada,
       ultimoIntentoAt: sync.ultimoIntentoAt ?? null,
-      ultimoExitoAt: sync.ultimoExitoAt ?? null,
+      ultimoExitoAt,
       motivo: sync.motivo ?? null,
       // Si nunca ha corrido la sincronizacion todavia no se sabe nada, y
       // decirlo es mas honesto que dar por bueno el enlace.

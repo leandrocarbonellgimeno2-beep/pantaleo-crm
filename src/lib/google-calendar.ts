@@ -158,25 +158,94 @@ async function clienteDeLaAgencia(): Promise<calendar_v3.Calendar | null> {
   return google.calendar({ version: 'v3', auth: oauth2Client });
 }
 
-/** Deja constancia de cómo fue el último intento, para el aviso de la pantalla. */
+/**
+ * Deja constancia de cómo fue el último intento, para el aviso de la pantalla.
+ *
+ * OJO CON LAS CLAVES CON PUNTO. Esto escribía `{'sync.token': …}` con
+ * `set(…, {merge:true})`, y **Firestore no parte las claves por el punto en
+ * `set`** — solo lo hace en `update`. El resultado era un campo llamado
+ * literalmente «sync.token» en la raíz del documento, mientras `sync.token`
+ * —el que se lee— no existía jamás.
+ *
+ * Las dos consecuencias eran graves y silenciosas: el `syncToken` no se
+ * guardaba nunca, así que CADA vuelta del cron rehacía la sincronización
+ * completa de doce meses; y `sync.desconectado` tampoco existía, así que el
+ * aviso rojo no podía salir aunque Google rechazara las credenciales.
+ *
+ * Se escribe el mapa anidado, que con `merge:true` funde hoja a hoja y no
+ * borra los subcampos que no vengan.
+ */
 async function anotarEstado(estado: {
   ok: boolean;
   motivo?: string;
   desconectado?: boolean;
   syncToken?: string | null;
 }): Promise<void> {
-  const parche: Record<string, unknown> = {
-    'sync.ultimoIntentoAt': Date.now(),
-    'sync.ok': estado.ok,
-    'sync.motivo': estado.motivo ?? null,
-    'sync.desconectado': Boolean(estado.desconectado),
+  const ahora = Date.now();
+  const sync: Record<string, unknown> = {
+    ultimoIntentoAt: ahora,
+    ok: estado.ok,
+    motivo: estado.motivo ?? null,
+    desconectado: Boolean(estado.desconectado),
   };
-  if (estado.ok) parche['sync.ultimoExitoAt'] = Date.now();
-  if (estado.syncToken !== undefined) parche['sync.token'] = estado.syncToken;
+  if (estado.ok) sync.ultimoExitoAt = ahora;
+  if (estado.syncToken !== undefined) sync.token = estado.syncToken;
 
-  await configRef().set(parche, { merge: true }).catch((e) =>
+  await configRef().set({ sync }, { merge: true }).catch((e) =>
     console.error('[calendario] no se pudo anotar el estado:', e),
   );
+}
+
+/** Se llama al EMPEZAR una vuelta, para que un proceso que muera deje huella. */
+export async function anotarIntentoDeSync(): Promise<void> {
+  await configRef()
+    .set({ sync: { ultimoIntentoAt: Date.now() } }, { merge: true })
+    .catch((e) => console.error('[calendario] no se pudo anotar el intento:', e));
+}
+
+/** Anota un fallo de la vuelta sin tocar el token. */
+export async function anotarFalloDeSync(motivo: string): Promise<void> {
+  await anotarEstado({ ok: false, motivo });
+}
+
+/**
+ * Toma el turno para sincronizar, o devuelve false si ya hay otra vuelta.
+ *
+ * SIN ESTO SE DUPLICAN CITAS. El cron cada 15 minutos y el botón «Sincronizza»
+ * llaman a la misma función, y el `disabled` del botón solo bloquea la pestaña
+ * de quien lo pulsa. Dos vueltas a la vez leen el MISMO syncToken, reciben el
+ * MISMO evento nuevo y lo dan de alta las dos.
+ *
+ * La transacción es lo que lo hace fiable: comprobar y escribir en dos pasos
+ * deja justo la ventana que se quiere cerrar.
+ *
+ * El turno CADUCA: si una vuelta muere a medias sin soltarlo, la siguiente
+ * entra pasado ese plazo en vez de quedarse el calendario colgado para
+ * siempre.
+ */
+const TURNO_MS = 5 * 60_000;
+
+export async function tomarTurnoDeSync(): Promise<boolean> {
+  try {
+    return await db.runTransaction(async (tx) => {
+      const doc = await tx.get(configRef());
+      const hasta = doc.data()?.sync?.enCursoHasta ?? 0;
+      if (typeof hasta === 'number' && hasta > Date.now()) return false;
+      tx.set(configRef(), { sync: { enCursoHasta: Date.now() + TURNO_MS } }, { merge: true });
+      return true;
+    });
+  } catch (e: any) {
+    console.error('[calendario] no se pudo tomar el turno:', e?.message);
+    // Ante la duda NO se sincroniza: duplicar citas es peor que saltarse una
+    // vuelta, porque el duplicado se queda.
+    return false;
+  }
+}
+
+export async function soltarTurnoDeSync(): Promise<void> {
+  await configRef()
+    .set({ sync: { enCursoHasta: 0 } }, { merge: true })
+    .catch((e) => console.error('[calendario] no se pudo soltar el turno:', e));
 }
 
 /** El cuerpo del evento de Google que corresponde a una cita del CRM. */
@@ -254,14 +323,29 @@ export async function createCalendarEvent(
  * Esto NO existía: editar una cita en el CRM no tocaba Google, así que el
  * calendario compartido se quedaba con la hora vieja y nadie se enteraba.
  */
+export type ResultadoActualizacion =
+  | { estado: 'ok'; evento: calendar_v3.Schema$Event }
+  | { estado: 'no_existe' }
+  | { estado: 'error'; motivo: string };
+
 export async function updateCalendarEvent(
   googleEventId: string,
   appointment: any,
   crmAppointmentId?: string,
-): Promise<calendar_v3.Schema$Event | null> {
+): Promise<ResultadoActualizacion> {
+  // ──────────────────────────────────────────────────────────────────────
+  // «NO EXISTE» Y «FALLÓ» NO SON LO MISMO, Y CONFUNDIRLOS DUPLICA EVENTOS.
+  //
+  // Esto devolvía `null` en las dos situaciones. Quien llama interpretaba
+  // cualquier `null` como «lo borraron en Google» y creaba el evento otra vez.
+  // Bastaba un 403 de cuota o un corte de red —con la edición ya aplicada en
+  // Google— para que la agencia acabara con DOS «Appuntamento CRM: Mario
+  // Rossi» a horas distintas, y el CRM se quedaba solo con el id del nuevo: el
+  // viejo ya no se podía ni borrar desde aquí.
+  // ──────────────────────────────────────────────────────────────────────
   try {
     const calendar = await clienteDeLaAgencia();
-    if (!calendar) return null;
+    if (!calendar) return { estado: 'error', motivo: 'Calendario non collegato' };
 
     const res = await calendar.events.update({
       calendarId: 'primary',
@@ -270,20 +354,18 @@ export async function updateCalendarEvent(
     });
 
     console.log('[calendario] evento actualizado: %s', googleEventId);
-    return res.data;
+    return { estado: 'ok', evento: res.data };
   } catch (error: any) {
     const codigo = error?.code || error?.response?.status;
-    // Si el evento ya no está en Google, no es un fallo de la edición: lo que
-    // hay que hacer es crearlo de nuevo, y de eso se encarga quien llama.
     if (codigo === 404 || codigo === 410) {
       console.log(`[calendario] el evento ${googleEventId} ya no existe en Google`);
-      return null;
+      return { estado: 'no_existe' };
     }
     console.error('[calendario] error actualizando el evento:', error?.message);
     if (esCredencialInvalida(error)) {
       await anotarEstado({ ok: false, motivo: 'Credenziali Google non valide', desconectado: true });
     }
-    return null;
+    return { estado: 'error', motivo: error?.message || 'Errore Google' };
   }
 }
 
@@ -443,23 +525,73 @@ export function esEcoDelCrm(
   return tocadoEnGoogle <= citaGoogleSyncedAt + MARGEN_ECO_MS;
 }
 
+/** Quita el prefijo que el propio CRM le pone al título al subir. */
+export function sinPrefijoCrm(titulo: string): string {
+  const t = (titulo || '').trim();
+  if (!t.startsWith(PREFIJO_TITULO_CRM)) return t;
+  return t.slice(PREFIJO_TITULO_CRM.length).trim();
+}
+
+/** Fecha y hora de pared en la zona de la agencia, a partir de un instante. */
+function enLaAgencia(instanteMs: number): { fecha: string; hora: string } {
+  const partes = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Rome',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(instanteMs));
+  // `sv-SE` formatea como «2026-09-21 10:00», que es justo lo que se guarda.
+  const [fecha, hora] = partes.split(' ');
+  return { fecha, hora: (hora || '00:00').slice(0, 5) };
+}
+
 /** Los campos de una cita del CRM que salen de un evento de Google. */
 export function citaDesdeEvento(evento: calendar_v3.Schema$Event) {
+  const esDeDiaCompleto = Boolean(evento.start?.date && !evento.start?.dateTime);
+
   const inicio = evento.start?.dateTime || evento.start?.date || '';
   const fin = evento.end?.dateTime || evento.end?.date || '';
 
-  const fecha = inicio ? inicio.substring(0, 10) : '';
-  const hora = inicio.length > 10 ? inicio.substring(11, 16) : '00:00';
+  let fecha = '';
+  let hora = '00:00';
+  let duracion = 60;
 
-  const ms = Date.parse(fin) - Date.parse(inicio);
-  const duracion = Number.isFinite(ms) && ms > 0 ? Math.round(ms / 60000) : 60;
+  if (esDeDiaCompleto) {
+    // Google da `end.date` EXCLUSIVO: un evento de un día va del 21 al 22.
+    fecha = inicio.substring(0, 10);
+  } else {
+    // LA HORA NO SE RECORTA DE LA CADENA.
+    //
+    // `inicio.substring(11,16)` daba por hecho que el offset que manda Google
+    // es siempre el de Roma, y no lo es: un evento creado con el teléfono en
+    // otra zona, o una invitación de un notario o un banco, llega con el suyo.
+    // Recortar los caracteres metía la cita a una hora que no era, y el
+    // siguiente PATCH subía esa hora equivocada a Google.
+    const ms = Date.parse(inicio);
+    if (Number.isFinite(ms)) {
+      const p = enLaAgencia(ms);
+      fecha = p.fecha;
+      hora = p.hora;
+    }
+    const msFin = Date.parse(fin);
+    const dur = msFin - ms;
+    if (Number.isFinite(dur) && dur > 0) duracion = Math.round(dur / 60000);
+  }
 
   return {
-    clientName: evento.summary || 'Evento Google Calendar',
+    // El título se guarda SIN el prefijo que el propio CRM le pone al subir.
+    // Sin esto, cada ida y vuelta lo acumulaba: «Appuntamento CRM: Appuntamento
+    // CRM: Mario Rossi», y el nombre del cliente quedaba corrompido.
+    clientName: sinPrefijoCrm(evento.summary || '') || 'Evento Google Calendar',
     propertyAddress: evento.location || '',
     date: fecha,
     time: hora,
     duration: duracion,
+    /** Se pinta «Tutto il giorno» en vez de «00:00 · 1440 min». */
+    allDay: esDeDiaCompleto,
+    /** Último día que ocupa (inclusivo). Para los de varios días. */
+    dateEnd: esDeDiaCompleto && fin
+      ? new Date(Date.parse(fin) - 86_400_000).toISOString().substring(0, 10)
+      : fecha,
     googleEventId: evento.id || '',
     googleEventLink: evento.htmlLink || '',
   };

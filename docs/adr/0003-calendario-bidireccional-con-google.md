@@ -218,9 +218,33 @@ conectó y enseñarlo.
    aceptá.
 4. Volvés al CRM con `?calendar_connected=true`.
 
-**Elegí bien la cuenta en ese paso.** El calendario que se conecte ahí es el de
-todos: cada cita de la agencia —nombre del cliente, dirección del inmueble y
-teléfono en la descripción— va a aterrizar en él.
+**Elegí bien la cuenta en ese paso, y mirá dos veces el selector de Google.**
+El CRM guarda los tokens de la cuenta que elijas **sin compararla con nada**:
+lo único que exige es que tu usuario del CRM sea propietario. Si tenés varias
+cuentas de Google abiertas en el navegador —lo normal— un clic en la
+equivocada manda a tu Gmail personal cada cita de la agencia, con el nombre
+del cliente, la dirección del inmueble y el teléfono en la descripción. Y la
+agencia deja de recibirlas.
+
+Después de conectar, comprobá qué cuenta quedó: sale en el aviso de «Il mio
+lavoro» y en la agenda.
+
+### ⚠️ Antes de conectar, decidí QUÉ calendario
+
+El CRM sincroniza con el calendario **`primary`** de la cuenta que se conecte,
+en los dos sentidos. Eso significa que **todo lo que haya en ese calendario se
+copia a Firestore** y lo ve cualquier agente del CRM: visitas médicas, asuntos
+de familia, lo que sea.
+
+Se mitiga en parte —los eventos marcados como **privados** en Google no se
+importan— pero no es lo mismo que separarlos.
+
+**Mi recomendación: crear un calendario aparte** («Agenzia») en la cuenta de
+Google y compartirlo con quien deba verlo, en vez de usar el personal. Hoy el
+código usa `primary`; apuntar a otro calendario es un cambio de una línea, pero
+**es una decisión tuya** y cambia lo que hay que hacer al conectar. Si preferís
+seguir con `primary`, sabelo: la agenda personal de Francesco pasa a estar en
+el CRM.
 
 ### Paso 6 — `CRON_SECRET`
 
@@ -243,6 +267,46 @@ Si no estuviera, el cron responde 401 y **no sincroniza nada en silencio**.
 
 ---
 
+---
+
+## Cómo se revisó esto
+
+Es la parte con más riesgo del encargo, así que fue a una revisión adversarial
+antes de darse por hecha: 6 revisores con enfoques distintos (bucle infinito,
+destrucción de datos, OAuth y tokens, cron y concurrencia, huérfanos en la
+interfaz, y qué se le cuenta al usuario), y 3 escépticos por hallazgo
+intentando tumbarlo. **57 hallazgos en bruto, 34 sobrevivieron** — 7 críticos.
+
+Los que más importaban, todos arreglados:
+
+1. **El estado se escribía con claves con punto y `set(merge)`**, y Firestore
+   solo parte las claves por el punto en `update`. Resultado: el `syncToken`
+   **no se guardaba nunca** —cada vuelta rehacía la sincronización completa de
+   doce meses— y `sync.desconectado` tampoco existía, así que **el aviso rojo
+   no podía salir**. Un fallo que dejaba sin efecto medio diseño.
+2. **El nombre del cliente se corrompía en cada ida y vuelta.** Al bajar una
+   edición hecha en Google se escribía `clientName = summary`, y el título que
+   el CRM sube es «Appuntamento CRM: <cliente>». El prefijo se acumulaba:
+   «Appuntamento CRM: Appuntamento CRM: Mario Rossi». Ahora de una cita del CRM
+   Google solo manda **cuándo** es.
+3. **Dos vueltas a la vez duplicaban las citas.** El cron y el botón llaman a
+   la misma función y el id del documento era automático. Ahora hay turno con
+   transacción y el id se deriva del id del evento, así que la operación es
+   idempotente.
+4. **Editar una cita re-creaba el evento ante CUALQUIER fallo de Google**, no
+   solo cuando ya no existía: un 403 de cuota dejaba dos eventos y el viejo
+   fuera del alcance del CRM para siempre.
+5. **Borrar un huérfano desde el CRM borraba el evento real de Google.** Un
+   huérfano siempre tiene `googleEventId`, así que quitar de la agenda la fila
+   «Comunione di mia figlia» la borraba del calendario y avisaba a los
+   invitados. Ahora el CRM **solo borra en Google lo que el CRM creó**.
+6. **Editar un huérfano reescribía el evento entero** —`events.update` es un
+   reemplazo—: le cambiaba el título, le vaciaba la ubicación y le borraba
+   invitados y recurrencia.
+7. **Un evento pasado a «todo el día» destruía la hora real** de una cita del
+   CRM (00:00 y 1440 minutos), y **la hora se recortaba de la cadena** en vez
+   de convertirse a la zona de la agencia.
+
 ## Lo que queda fuera
 
 - **No se tocó ni una cita existente.** Todo esto es código.
@@ -251,3 +315,10 @@ Si no estuviera, el cron responde 401 y **no sincroniza nada en silencio**.
   decisión tuya.
 - No hay UI para desconectar la cuenta. Hoy se haría borrando el documento
   `calendar_configs/default_admin`.
+- **Los eventos de día completo de varios días solo bloquean el primer día.**
+  Se importan con `allDay` y `dateEnd`, así que el dato está, pero la agenda
+  agrupa por `date`: unas vacaciones del 10 al 14 se ven solo el día 10. Cubrir
+  el rango en la vista es un cambio aparte.
+- **No se valida qué cuenta de Google se conecta.** Ver el aviso del paso 5.
+  Añadir una comprobación contra una cuenta esperada es fácil, pero exige
+  decidir cuál es y ponerla en Vercel: es tuyo.

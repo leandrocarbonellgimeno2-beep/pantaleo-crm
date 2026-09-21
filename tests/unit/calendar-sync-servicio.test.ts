@@ -22,6 +22,9 @@ const { estado } = vi.hoisted(() => ({
     escrituras: [] as any[],
     tokenGuardado: undefined as any,
     commits: 0,
+    turnoLibre: true,
+    turnoSoltado: false,
+    falloAnotado: undefined as any,
   },
 }));
 
@@ -35,6 +38,10 @@ vi.mock('@/lib/google-calendar', async () => {
         : { eventos: estado.eventos, proximoSyncToken: estado.proximoSyncToken, fueCompleta: false },
     ),
     guardarSyncOk: vi.fn(async (t: string | null) => { estado.tokenGuardado = t; }),
+    tomarTurnoDeSync: vi.fn(async () => estado.turnoLibre),
+    soltarTurnoDeSync: vi.fn(async () => { estado.turnoSoltado = true; }),
+    anotarIntentoDeSync: vi.fn(async () => {}),
+    anotarFalloDeSync: vi.fn(async (m: string) => { estado.falloAnotado = m; }),
   };
 });
 
@@ -46,7 +53,18 @@ vi.mock('@/lib/firebase-admin', () => {
     commit: async () => { estado.commits++; },
   });
   const consulta: any = {
-    where: () => consulta,
+    where: (_c: string, _op: string, valor: any) => {
+      // `where('googleEventId','in',[...])`: solo devuelve las citas cuyo id
+      // de evento esta en el lote, como haria Firestore.
+      const filtrada: any = { ...consulta, get: async () => ({
+        docs: estado.citas
+          .filter((c) => !Array.isArray(valor) || valor.includes(c.googleEventId))
+          .map((c) => ({ id: c.id, ref: hacerRef(c.id), data: () => c })),
+      }) };
+      filtrada.select = () => filtrada;
+      filtrada.where = consulta.where;
+      return filtrada;
+    },
     select: () => consulta,
     get: async () => ({
       docs: estado.citas.map((c) => ({ id: c.id, ref: hacerRef(c.id), data: () => c })),
@@ -54,7 +72,15 @@ vi.mock('@/lib/firebase-admin', () => {
     doc: (id?: string) => hacerRef(id || 'nueva-' + (estado.escrituras.length + 1)),
   };
   return {
-    db: { collection: () => consulta, batch },
+    db: {
+      collection: () => consulta,
+      batch,
+      // `getAll` busca las citas importadas por su id derivado del evento.
+      getAll: async (...refs: any[]) => refs.map((r) => {
+        const cita = estado.citas.find((c) => c.id === r.id);
+        return { exists: Boolean(cita), ref: r, data: () => cita };
+      }),
+    },
     admin: { firestore: { FieldValue: { serverTimestamp: () => 'ts' } } },
   };
 });
@@ -83,6 +109,9 @@ beforeEach(() => {
   estado.escrituras = [];
   estado.tokenGuardado = undefined;
   estado.commits = 0;
+  estado.turnoLibre = true;
+  estado.turnoSoltado = false;
+  estado.falloAnotado = undefined;
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -104,11 +133,13 @@ describe('el eco no crea nada: no hay rebote', () => {
     expect(estado.escrituras).toEqual([]);
   });
 
-  it('pero si lo editaron en Google despues, la cita del CRM se actualiza', async () => {
+  it('pero si lo editaron en Google despues, la HORA de la cita se actualiza', async () => {
     estado.citas = [{ id: 'cita-1', googleEventId: 'ev-crm', googleSyncedAt: AHORA }];
     estado.eventos = [evento({
       id: 'ev-crm',
-      summary: 'Visita movida a las 12',
+      summary: 'Appuntamento CRM: Mario Rossi',
+      start: { dateTime: '2026-09-21T12:00:00+02:00' },
+      end: { dateTime: '2026-09-21T13:00:00+02:00' },
       updated: iso(AHORA + 7200_000),
       extendedProperties: { private: { origin: ORIGEN_CRM, crmAppointmentId: 'cita-1' } },
     })];
@@ -120,7 +151,80 @@ describe('el eco no crea nada: no hay rebote', () => {
     const w = estado.escrituras[0];
     expect(w.tipo).toBe('update');
     expect(w.id).toBe('cita-1');
-    expect(w.campos.clientName).toBe('Visita movida a las 12');
+    expect(w.campos.time).toBe('12:00');
+  });
+
+  it('y el NOMBRE DEL CLIENTE no se toca: es del CRM, no de Google', async () => {
+    // Aplicar el titulo del evento sobre `clientName` convertia al cliente en
+    // «Appuntamento CRM: Mario Rossi», y a la vuelta siguiente en
+    // «Appuntamento CRM: Appuntamento CRM: Mario Rossi». El prefijo se
+    // acumulaba en un campo de negocio en cada ida y vuelta.
+    estado.citas = [{ id: 'cita-1', googleEventId: 'ev-crm', googleSyncedAt: AHORA }];
+    estado.eventos = [evento({
+      id: 'ev-crm',
+      summary: 'Appuntamento CRM: Mario Rossi',
+      updated: iso(AHORA + 7200_000),
+      extendedProperties: { private: { origin: ORIGEN_CRM, crmAppointmentId: 'cita-1' } },
+    })];
+
+    await sincronizarDesdeGoogle();
+
+    const campos = estado.escrituras[0].campos;
+    expect(campos.clientName).toBeUndefined();
+    expect(campos.propertyAddress).toBeUndefined();
+  });
+
+  it('en cambio una cita NACIDA en Google si recibe su titulo', async () => {
+    estado.citas = [{ id: 'gcal_ev-movil', googleEventId: 'ev-movil', googleSyncedAt: AHORA, source: 'google_calendar' }];
+    estado.eventos = [evento({ id: 'ev-movil', summary: 'Dentista (spostato)', updated: iso(AHORA + 7200_000) })];
+
+    await sincronizarDesdeGoogle();
+
+    expect(estado.escrituras[0].campos.clientName).toBe('Dentista (spostato)');
+  });
+});
+
+describe('no se duplica ni se corrompe el nombre', () => {
+  it('el id del documento sale del id del evento: dos vueltas no duplican', async () => {
+    // Con un id automatico, dos vueltas simultaneas creaban DOS citas para el
+    // mismo evento, y solo una volvia a recibir actualizaciones jamas.
+    estado.eventos = [evento({ id: 'ev-movil', summary: 'Dentista' })];
+    await sincronizarDesdeGoogle();
+    expect(estado.escrituras[0].id).toBe('gcal_ev-movil');
+  });
+
+  it('un huerfano con el titulo del CRM entra SIN el prefijo', async () => {
+    estado.eventos = [evento({ id: 'ev-suelto', summary: 'Appuntamento CRM: Anna' })];
+    await sincronizarDesdeGoogle();
+    expect(estado.escrituras[0].campos.clientName).toBe('Anna');
+  });
+
+  it('lo marcado como privado en Google NO se copia a Firestore', async () => {
+    // El calendario de la agencia es el personal de quien lo conecto: ahi hay
+    // visitas medicas y asuntos de familia, y en Firestore los leeria
+    // cualquier agente.
+    estado.eventos = [evento({ id: 'ev-privado', summary: 'Visita medica', visibility: 'private' })];
+    const r = await sincronizarDesdeGoogle();
+    expect(r.creados).toBe(0);
+    expect(r.saltados).toBe(1);
+    expect(estado.escrituras).toEqual([]);
+  });
+});
+
+describe('un turno a la vez', () => {
+  it('si ya hay una vuelta en curso, la segunda no escribe nada', async () => {
+    estado.turnoLibre = false;
+    estado.eventos = [evento()];
+    const r = await sincronizarDesdeGoogle();
+    expect(r.ok).toBe(false);
+    expect(estado.escrituras).toEqual([]);
+    expect(estado.tokenGuardado).toBeUndefined();
+  });
+
+  it('el turno se suelta siempre, tambien cuando la vuelta falla', async () => {
+    estado.devolverNull = true;
+    await sincronizarDesdeGoogle();
+    expect(estado.turnoSoltado).toBe(true);
   });
 });
 

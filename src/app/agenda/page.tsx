@@ -374,7 +374,10 @@ export default function AgendaPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground capitalize">{headerLabel}</h1>
           <p className="text-muted-foreground mt-1 text-lg font-medium">
-            {filtered.length} appuntamenti nel periodo.
+            {/* Las anuladas no cuentan. Una cita que Francesco borro en Google
+                se marca «Annullato» —no se destruye— pero seguirla contando
+                como trabajo del dia es contar lo que ya no hay. */}
+            {filtered.filter((a: any) => a.status !== "Annullato").length} appuntamenti nel periodo.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -599,8 +602,17 @@ export default function AgendaPage() {
                       <div className={cn("w-1.5 shrink-0", getTypeColor(app.tipo || "Altro"))} />
                       {/* Time */}
                       <div className="w-20 shrink-0 bg-slate-50/80 flex flex-col items-center justify-center p-2 border-r border-border">
-                        <span className="text-base font-black text-primary">{app.time || "—"}</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase">{app.duration || 60} min</span>
+                        {/* Un evento de dia completo no tiene hora. Pintarlo
+                            como «00:00 · 1440 min» lo colocaba ademas el
+                            primero del dia, por delante de las visitas reales. */}
+                        {app.allDay ? (
+                          <span className="text-[10px] font-black text-primary text-center leading-tight">Tutto il giorno</span>
+                        ) : (
+                          <>
+                            <span className="text-base font-black text-primary">{app.time || "—"}</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase">{app.duration || 60} min</span>
+                          </>
+                        )}
                       </div>
                       {/* Body */}
                       <div className="flex-1 p-3 flex items-center justify-between gap-4">

@@ -36,6 +36,9 @@ export async function GET(request: Request) {
       .select(
         'clientName', 'propertyAddress', 'date', 'time',
         'duration', 'tipo', 'status', 'googleEventLink',
+        // Un evento de dia completo no tiene hora: la agenda pinta «Tutto il
+        // giorno» en vez de «00:00 · 1440 min».
+        'allDay',
         // `source` distingue las citas nacidas en Google de las del CRM. Sin
         // el, una cita creada desde el movil de Francesco se veia igual que
         // una del CRM y el agente buscaba una ficha de cliente que no existe.
@@ -96,6 +99,11 @@ export async function POST(request: Request) {
       // corta el rebote cuando la sincronizacion vuelva a leerlo.
       const gcalRes = await createCalendarEvent(newAppointment, ref.id);
       if (gcalRes) {
+        // `true` EN CUANTO Google confirma el evento, no despues de guardar el
+        // enlace. Si el `update` de abajo fallara, el evento YA esta en el
+        // calendario; decirle al agente «NON aggiunto» le invita a crearlo
+        // otra vez a mano y a acabar con dos.
+        enGoogle = true;
         await ref.update({
           googleEventId: gcalRes.id,
           googleEventLink: gcalRes.htmlLink,
@@ -103,7 +111,6 @@ export async function POST(request: Request) {
           // saber si lo que vuelve es nuestro eco o una edicion de verdad.
           googleSyncedAt: Date.now(),
         });
-        enGoogle = true;
       }
     } catch (gcalError) {
       console.error('Failed to sync with Google Calendar, but saved in CRM.', gcalError);
@@ -165,21 +172,41 @@ export async function PATCH(request: Request) {
       const fresco = await ref.get();
       const cita = fresco.data() || {};
 
-      if (cita.googleEventId) {
-        let evento = await updateCalendarEvent(cita.googleEventId, cita, idSeguro);
+      // ──────────────────────────────────────────────────────────────────
+      // UNA CITA NACIDA EN GOOGLE NO SE REESCRIBE EN GOOGLE.
+      //
+      // `events.update` es un REEMPLAZO: lo que no va en el cuerpo se borra. Y
+      // `eventoDesdeCita` construye el cuerpo entero desde cero. Aplicarlo a
+      // un evento que el CRM no creó —la comunión de una hija, una visita
+      // médica— le cambiaba el título a «Appuntamento CRM: …», le vaciaba la
+      // ubicacion, le borraba la descripcion, los invitados y la recurrencia.
+      //
+      // Del calendario personal de la agencia el CRM solo LEE. Escribe
+      // unicamente en los eventos que el mismo creo.
+      if (cita.source === 'google_calendar') {
+        enGoogle = null;
+      } else if (cita.googleEventId) {
+        const r = await updateCalendarEvent(cita.googleEventId, cita, idSeguro);
 
-        // Si el evento ya no esta en Google —lo borraron alli— se vuelve a
-        // crear en vez de dejar la cita del CRM sin reflejo.
-        if (!evento) {
-          evento = await createCalendarEvent(cita, idSeguro);
-          if (evento) {
-            await ref.update({ googleEventId: evento.id, googleEventLink: evento.htmlLink });
-          }
-        }
-
-        if (evento) {
+        if (r.estado === 'ok') {
           await ref.update({ googleSyncedAt: Date.now() });
           enGoogle = true;
+        } else if (r.estado === 'no_existe') {
+          // SOLO cuando Google confirma que el evento ya no esta. Antes se
+          // re-creaba ante CUALQUIER fallo, asi que un 403 de cuota o un corte
+          // de red dejaba DOS eventos para la misma cita, y el viejo quedaba
+          // fuera del alcance del CRM para siempre.
+          const evento = await createCalendarEvent(cita, idSeguro);
+          if (evento) {
+            await ref.update({
+              googleEventId: evento.id,
+              googleEventLink: evento.htmlLink,
+              googleSyncedAt: Date.now(),
+            });
+            enGoogle = true;
+          } else {
+            enGoogle = false;
+          }
         } else {
           enGoogle = false;
         }
@@ -224,26 +251,47 @@ export async function DELETE(request: Request) {
 
     const apptData = doc.data() || {};
     const googleEventId = apptData.googleEventId;
-    await docRef.delete();
+    const nacioEnGoogle = apptData.source === 'google_calendar';
 
-    // Best-effort GCal deletion — non blocca la cancellazione CRM se fallisce.
+    // ────────────────────────────────────────────────────────────────────
+    // BORRAR UNA CITA DE GOOGLE DESDE EL CRM NO PUEDE BORRAR EL EVENTO.
     //
-    // Ya no se pasa ningun `agentId`: el calendario es UNO, el de la agencia.
-    // Antes salia de `apptData.agentName`, que es un campo de texto que el
-    // formulario deja escribir; si no coincidia con el id del documento de
-    // configuracion, el evento se quedaba en Google para siempre.
+    // Antes se borraba el evento siempre que hubiera `googleEventId`, y un
+    // huerfano SIEMPRE lo tiene. O sea: quitar de la agenda del CRM la fila
+    // «Visita medica» o «Comunione di mia figlia» —eventos que el CRM no creo,
+    // que viven en el calendario personal de la agencia— los borraba de Google
+    // para siempre, y a los invitados les llegaba la cancelacion.
+    //
+    // El CRM solo borra en Google lo que el CRM creo.
+    //
+    // Y para lo que si creo, PRIMERO Google y despues Firestore: al reves, un
+    // fallo de Google dejaba el documento ya borrado, sin el `googleEventId` y
+    // sin ningun sitio desde donde reintentar; el evento fantasma se quedaba
+    // en el calendario de la agencia sin nada que lo referenciara.
     let quitadoDeGoogle: boolean | null = null;
-    if (googleEventId) {
+
+    if (googleEventId && !nacioEnGoogle) {
       try {
         quitadoDeGoogle = await deleteCalendarEvent(googleEventId);
-        if (!quitadoDeGoogle) {
-          console.warn(`[appointments] el evento ${googleEventId} sigue en Google.`);
-        }
       } catch (gcalError) {
         console.error('[appointments] Failed to delete Google Calendar event:', gcalError);
         quitadoDeGoogle = false;
       }
+
+      if (!quitadoDeGoogle) {
+        console.warn(`[appointments] el evento ${googleEventId} sigue en Google; no se borra la cita.`);
+        return NextResponse.json(
+          {
+            error: 'Non è stato possibile rimuovere l\'evento da Google Calendar. '
+              + 'L\'appuntamento NON è stato eliminato: riprova più tardi.',
+            sincronizzatoConGoogle: false,
+          },
+          { status: 502 },
+        );
+      }
     }
+
+    await docRef.delete();
 
     return NextResponse.json({ success: true, sincronizzatoConGoogle: quitadoDeGoogle });
   } catch (error: any) {

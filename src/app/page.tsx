@@ -80,7 +80,16 @@ export default function DashboardPage() {
 
   const recentImmobili = (immData?.data || []).slice(0, 4);
   const recentClienti = (Array.isArray(cliData) ? cliData : (cliData?.data || [])).slice(0, 4);
-  const todayAppointments = (Array.isArray(agendaData) ? agendaData : []).slice(0, 4);
+  // Ordenadas por hora y sin las anuladas ANTES de recortar a cuatro.
+  //
+  // El GET no lleva orderBy, asi que Firestore las devuelve por id: cortar a
+  // las cuatro primeras sin ordenar podia tapar la visita de las 17:00 con
+  // tres eventos personales bajados de Google. Y una cita anulada ocupando
+  // uno de los cuatro huecos es un hueco perdido.
+  const todayAppointments = (Array.isArray(agendaData) ? agendaData : [])
+    .filter((a: any) => a?.status !== 'Annullato')
+    .sort((a: any, b: any) => String(a?.time || '').localeCompare(String(b?.time || '')))
+    .slice(0, 4);
   const userName = sessionData?.nome ? sessionData.nome.split(' ')[0] : 'Utente';
 
   // La administración dejó de ser una pantalla aparte y vive aquí, en su propia
@@ -197,20 +206,28 @@ export default function DashboardPage() {
           Solo sale cuando Google ha RECHAZADO las credenciales, no ante un
           fallo de red pasajero: un aviso rojo que salta solo se deja de mirar.
         */}
-        {calendarStatus?.desconectado && (
+        {calendarStatus && calendarStatus.healthy === false && (
           <div
             role="alert"
             className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800"
           >
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <div className="flex-1">
-              <p className="font-black text-sm">L&apos;agenda non è collegata a Google</p>
+              <p className="font-black text-sm">
+                {calendarStatus.desconectado
+                  ? 'L’agenda non è collegata a Google'
+                  : 'L’agenda non si sincronizza con Google'}
+              </p>
               <p className="text-sm font-medium text-red-700 mt-0.5">
                 Gli appuntamenti si salvano nel CRM ma <strong>non arrivano al calendario condiviso</strong>.
                 {calendarStatus.email ? ` Account: ${calendarStatus.email}.` : ''}
+                {calendarStatus.motivo ? ` (${calendarStatus.motivo})` : ''}
               </p>
             </div>
-            {esPropietario ? (
+            {/* El botón de reconectar solo cuando hace falta reconectar. Si lo
+                que pasa es que la sincronización está atascada, volver a
+                autorizar no arregla nada y manda al propietario a dar vueltas. */}
+            {esPropietario && calendarStatus.desconectado ? (
               <a
                 href="/api/calendar/auth"
                 className="shrink-0 inline-flex items-center justify-center h-11 px-5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
@@ -222,7 +239,9 @@ export default function DashboardPage() {
               // que a los demas se les dice a quien avisar en vez de darles un
               // boton que les va a contestar 403.
               <span className="shrink-0 text-xs font-bold text-red-700">
-                Avvisa l&apos;amministratore
+                {calendarStatus.desconectado
+                  ? 'Avvisa l’amministratore'
+                  : 'Sincronizzazione in errore'}
               </span>
             )}
           </div>
