@@ -21,12 +21,22 @@ export default function ImmobiliLoading() {
         ))}
       </div>
 
-      {/* Property card grid — 3 columns on desktop */}
-      <div className="px-4 pb-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+      {/*
+        Rejilla y medidas IDENTICAS a las de la tarjeta real.
+
+        Habia tres alturas de foto encadenadas: este esqueleto pintaba h-44, el
+        esqueleto interno de PropertyGrid h-52 y la tarjeta de verdad h-64. El
+        agente veia la pantalla reacomodarse DOS veces seguidas antes de
+        asentarse. Las columnas tampoco coincidian (xl vs lg) ni la separacion
+        (gap-4 vs gap-8).
+
+        Si algun dia cambia la tarjeta, estos tres sitios cambian juntos.
+      */}
+      <div className="px-4 pb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-2">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             {/* Image placeholder */}
-            <div className="h-44 bg-slate-200" />
+            <div className="h-64 bg-slate-200" />
             {/* Card body */}
             <div className="p-4 space-y-3">
               {/* Codice + status badges */}

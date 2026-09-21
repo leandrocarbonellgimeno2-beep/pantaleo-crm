@@ -18,9 +18,17 @@ export default function ClientiLoading() {
         <div className="h-8 w-24 bg-slate-200 rounded-full" />
       </div>
 
-      {/* Client list */}
-      <div className="px-4 pb-6 space-y-3 mt-2">
-        {Array.from({ length: 10 }).map((_, i) => (
+      {/*
+        Rejilla, NO lista de una columna.
+
+        El esqueleto pintaba diez tarjetas apiladas y el contenido real es una
+        rejilla de hasta cuatro columnas. En un portatil eso significa que al
+        llegar los datos TODO se reordena: el salto de maquetacion no era un
+        detalle, era la pantalla entera moviendose. Las clases son las mismas
+        que usa la rejilla de verdad, a proposito.
+      */}
+      <div className="px-4 pb-6 mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+        {Array.from({ length: 12 }).map((_, i) => (
           <div key={i} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
             <div className="flex items-start gap-4">
               {/* Avatar */}

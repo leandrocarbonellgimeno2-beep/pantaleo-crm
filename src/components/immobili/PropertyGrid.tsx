@@ -25,7 +25,9 @@ function GridSkeleton() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="rounded-3xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-          <div className="h-52 bg-slate-100" />
+          {/* h-64, la misma altura que la foto de PropertyCard. Con h-52 la
+              rejilla daba un salto al llegar los datos. */}
+          <div className="h-64 bg-slate-100" />
           <div className="p-4 space-y-3">
             <div className="h-3 bg-slate-100 rounded-full w-1/4" />
             <div className="h-5 bg-slate-100 rounded-full w-2/3" />

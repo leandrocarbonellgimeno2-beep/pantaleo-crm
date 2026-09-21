@@ -458,32 +458,32 @@ export default function ProprietariPage() {
         <div className="flex-1 overflow-y-auto p-8">
           <div className="max-w-7xl mx-auto w-full">
             {loading ? (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                     <tr className="border-b border-slate-100">
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-400">Contatto</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-400">Telefono</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-400">Email / Indirizzo</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-400">Immobili</th>
-                        <th className="py-4 px-6 font-bold text-xs uppercase tracking-widest text-slate-400 text-right">Azioni</th>
-                     </tr>
-                  </thead>
-                  <tbody>
-                    {[...Array(5)].map((_, i) => (
-                      <tr key={i} className="border-b border-slate-50 animate-pulse">
-                        <td className="py-5 px-6">
-                           <div className="h-5 bg-slate-200 rounded w-48 mb-2"></div>
-                           <div className="h-3 bg-slate-100 rounded w-24"></div>
-                        </td>
-                        <td className="py-5 px-6"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
-                        <td className="py-5 px-6"><div className="h-4 bg-slate-200 rounded w-40"></div></td>
-                        <td className="py-5 px-6"><div className="h-8 w-8 bg-slate-200 rounded-full"></div></td>
-                        <td className="py-5 px-6 text-right"><div className="h-10 bg-slate-200 rounded-xl w-24 ml-auto"></div></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              /*
+                Rejilla de tarjetas, no una tabla de cinco columnas.
+
+                El esqueleto pintaba una TABLA y el contenido real es una
+                rejilla de hasta cuatro tarjetas. Al llegar los datos no se
+                movia una fila: se rehacia la pantalla entera. Las clases son
+                las mismas que las de la rejilla de verdad, tres lineas mas
+                abajo, para que sigan coincidiendo si alguien cambia una.
+              */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 animate-pulse">
+                    <div className="flex items-start gap-4">
+                      <div className="h-11 w-11 bg-slate-200 rounded-full flex-shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-5 bg-slate-200 rounded w-3/4" />
+                        <div className="h-3 bg-slate-100 rounded w-1/2" />
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-3 bg-slate-100 rounded w-2/3" />
+                      <div className="h-3 bg-slate-100 rounded w-1/2" />
+                    </div>
+                    <div className="mt-4 h-9 bg-slate-100 rounded-xl" />
+                  </div>
+                ))}
               </div>
             ) : filteredProprietari.length === 0 ? (
               <div className="text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
