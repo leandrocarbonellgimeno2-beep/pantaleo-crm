@@ -23,12 +23,24 @@
 /**
  * Formas de ruta que siguen sirviendose con token publico.
  *
- * Las dos legacy no las escribe nadie en el codigo actual, asi que
- * clasificarlas de una forma u otra no cambia nada para los ficheros nuevos.
- * Se dejan como publicas porque por lo que se sabe solo contuvieron fotos.
+ * `propiedades_fotos/` NO ES UNA SUPOSICION: son 443 ficheros image/jpeg
+ * contados en el bucket, que pintan las fotos de 110 inmuebles vivos. Estaba
+ * fuera de esta lista porque las tres primeras formas se dedujeron de la
+ * allowlist de `sanitize.ts`, que nombra `inmuebles/` y `propiedades/` — y
+ * resulta que de esos dos prefijos no hay UN SOLO objeto en el bucket. El
+ * unico prefijo legacy con datos reales es justo el que faltaba, y el guion
+ * bajo impide que `/^propiedades\//` lo reconozca.
+ *
+ * Si esto se hubiera quedado como estaba, el script de revocacion habria
+ * quitado el token a esas 443 fotos y habria dejado en blanco la galeria de
+ * 110 inmuebles, en el CRM y en el escaparate de Idealista.
+ *
+ * Ninguna ruta de subida escribe hoy en estos tres prefijos legacy: es
+ * historico de la migracion, y se queda publico porque solo contiene fotos.
  */
 const FORMAS_PUBLICAS: RegExp[] = [
   /^immobili\/[^/]+\/foto\//,
+  /^propiedades_fotos\//,
   /^inmuebles\//,
   /^propiedades\//,
 ];

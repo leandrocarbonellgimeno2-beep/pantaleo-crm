@@ -27,6 +27,23 @@ describe('urlDeDescarga — por dónde se pide cada fichero', () => {
     expect(esRutaPublica('immobili/abc123/foto/imagen1.jpg')).toBe(true);
   });
 
+  it('propiedades_fotos/ TAMBIÉN es pública: son las fotos de 110 inmuebles vivos', () => {
+    // El caso que casi se revoca. Este prefijo no aparecía en ninguna lista del
+    // proyecto —ni aquí ni en la allowlist de sanitize.ts— y sin embargo es el
+    // ÚNICO prefijo heredado con ficheros de verdad: 443 image/jpeg contados en
+    // el bucket. El guion bajo hace que `/^propiedades\//` no lo reconozca, así
+    // que se clasificaba como documento privado.
+    const ruta = 'propiedades_fotos/10532/Rif.10532+imagen1.jpg';
+    expect(esRutaPublica(ruta)).toBe(true);
+    const u = publica(ruta);
+    expect(urlDeDescarga(u)).toBe(u);
+  });
+
+  it('y el guion bajo no se cuela al revés: propiedades_docs/ NO es pública', () => {
+    // Que el arreglo no se haya pasado de ancho con un `startsWith`.
+    expect(esRutaPublica('propiedades_docs/1/contrato.pdf')).toBe(false);
+  });
+
   it('las dos rutas de fotos heredadas también siguen públicas', () => {
     for (const ruta of ['inmuebles/x/1.jpg', 'propiedades/y/2.jpg']) {
       const u = publica(ruta);
