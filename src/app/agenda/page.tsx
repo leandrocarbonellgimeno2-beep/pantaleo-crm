@@ -77,13 +77,6 @@ export default function AgendaPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState<any>(null);
-  // Separado de `syncResult` a proposito: meter el error en la misma variable
-  // es justo lo que hacia que un fallo se pintara con el aviso de exito.
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [calendarAuth, setCalendarAuth] = useState<{ connected: boolean; email?: string }>({ connected: false });
-  const agentId = "default_admin";
 
   // New Appointment Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -139,11 +132,6 @@ export default function AgendaPage() {
 
   useEffect(() => { fetchAppointments(); }, [fetchAppointments]);
 
-  useEffect(() => {
-    fetch(`/api/calendar/get-status?agentId=${agentId}`)
-      .then(r => r.json()).then(setCalendarAuth).catch(console.error);
-  }, []);
-
   // Navigation
   const navigate = (dir: number) => {
     if (viewMode === "day") setCurrentDate(d => dir > 0 ? addDays(d, 1) : subDays(d, 1));
@@ -161,39 +149,6 @@ export default function AgendaPage() {
     return format(currentDate, "MMMM yyyy", { locale: it });
   }, [viewMode, currentDate]);
 
-  // Sync from Google Calendar
-  //
-  // No se miraba `res.ok`: la respuesta de error se metia tal cual en
-  // `syncResult` y el aviso VERDE de exito decia «Importati undefined eventi.
-  // Nuovi: undefined». Y como el enlace con Google esta caducado, eso es lo
-  // que salia SIEMPRE: el agente pulsaba, veia el tic verde, y no se importaba
-  // ni una cita.
-  const handleSync = async () => {
-    setIsSyncing(true); setSyncResult(null); setSyncError(null);
-    try {
-      const res = await fetch("/api/calendar/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId, timeMin: "2023-03-02T00:00:00Z" }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setSyncError(data?.error || "Sincronizzazione non riuscita.");
-        // Si Google rechaza el enlace, la etiqueta no puede seguir diciendo
-        // que la sincronizacion esta activa durante el resto de la sesion.
-        if (res.status === 400 || res.status === 401) setCalendarAuth({ connected: false });
-        return;
-      }
-
-      setSyncResult(data);
-      fetchAppointments(); // refresh view
-    } catch (e) {
-      console.error(e);
-      setSyncError("Errore di rete durante la sincronizzazione.");
-    }
-    finally { setIsSyncing(false); }
-  };
 
   // Buscador de personas del modal.
   //
@@ -281,7 +236,7 @@ export default function AgendaPage() {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...newAppt, clientName: finalName, clientPhone: finalPhone, contactRole: finalRole, agentName: agentId }),
+        body: JSON.stringify({ ...newAppt, clientName: finalName, clientPhone: finalPhone, contactRole: finalRole, agentName: 'Pantaleo' }),
       });
       // Mismo caso: sin else, un fallo al guardar dejaba el modal abierto y
       // quieto, sin un solo mensaje. El agente volvia a pulsar Salva.
@@ -291,15 +246,6 @@ export default function AgendaPage() {
         alert(mensajeDeFallo(res, "Errore durante il salvataggio dell'appuntamento. Riprova.", delServidor));
         return;
       }
-      // La cita queda guardada en el CRM aunque Google falle, y eso esta bien.
-      // Lo que no puede ser es que nadie se entere: con el enlace caducado,
-      // NINGUNA cita llega al calendario compartido y el agente lo da por
-      // hecho.
-      const guardada = await res.json().catch(() => null);
-      if (guardada && guardada.sincronizzatoConGoogle === false) {
-        setSyncError("Appuntamento salvato nel CRM, ma NON aggiunto al calendario Google.");
-      }
-
       setIsModalOpen(false);
       setNewAppt({ clientName: "", propertyAddress: "", date: format(new Date(), "yyyy-MM-dd"), time: "10:00", duration: 60, tipo: "Visita", clientPhone: "", agentName: "Pantaleo", notes: "", contactRole: "cliente", newNome: "", newCognome: "", newPhone: "" });
       setProfileMode("cliente");
@@ -381,24 +327,6 @@ export default function AgendaPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {calendarAuth.connected ? (
-            <button
-              onClick={handleSync}
-              disabled={isSyncing}
-              className="h-11 md:h-10 px-4 inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors shadow-sm font-bold text-sm disabled:opacity-50"
-            >
-              {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-              {isSyncing ? "Sincronizzando..." : "Sincronizza Google"}
-            </button>
-          ) : (
-            <button
-              onClick={() => window.location.href = `/api/calendar/auth?agentId=${agentId}`}
-              className="h-10 px-4 inline-flex items-center rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors shadow-sm font-bold text-sm"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Connetti Google Calendar
-            </button>
-          )}
           <button
             onClick={() => setIsModalOpen(true)}
             className="h-10 px-5 inline-flex items-center rounded-xl bg-primary text-white font-semibold transition-all hover:opacity-90 shadow-lg shadow-primary/25 text-sm"
@@ -409,35 +337,7 @@ export default function AgendaPage() {
         </div>
       </div>
 
-      {/* Sync Error Toast — en rojo, y diciendo lo que pasó de verdad. */}
-      {syncError && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium animate-in slide-in-from-top">
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <span>{syncError}</span>
-          <button
-            onClick={() => setSyncError(null)}
-            aria-label="Chiudi notifica di errore"
-            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
-      {/* Sync Result Toast */}
-      {syncResult && (
-        <div className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium animate-in slide-in-from-top">
-          <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <span>Importati {syncResult.totalFromGoogle} eventi. Nuovi: {syncResult.created}, Aggiornati: {syncResult.updated}.</span>
-          <button
-            onClick={() => setSyncResult(null)}
-            aria-label="Chiudi notifica di sincronizzazione"
-            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
 
       {/* View Switcher + Navigation + Search */}
       <div className="flex flex-col lg:flex-row gap-4">
@@ -632,15 +532,6 @@ export default function AgendaPage() {
                                 Annullato
                               </span>
                             )}
-                            {/* Las citas nacidas en Google no tienen cliente ni
-                                inmueble del CRM, y no los van a tener. Decirlo
-                                evita que alguien busque una ficha que no
-                                existe. */}
-                            {app.source === "google_calendar" && (
-                              <span className="shrink-0 text-[9px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
-                                Google
-                              </span>
-                            )}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-slate-500">
                             {app.propertyAddress && (
@@ -656,14 +547,6 @@ export default function AgendaPage() {
                               </span>
                             )}
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {app.googleEventLink && (
-                            <a href={app.googleEventLink} target="_blank" rel="noreferrer"
-                               className="text-[9px] font-bold text-blue-500 border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
-                              GCal
-                            </a>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -941,24 +824,7 @@ export default function AgendaPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 p-5 border-t border-border bg-card/95 backdrop-blur-sm rounded-b-2xl flex justify-between items-center">
-              <div className="flex items-center gap-2 text-xs text-slate-400">
-                {/*
-                  Decia «Sincronizzazione automatica attiva», y eso NO se sabe:
-                  el estado se decide mirando si en Firestore hay guardada una
-                  cadena de refresh_token, no si Google sigue aceptandola. El
-                  enlace lleva caducado desde marzo y la etiqueta seguia
-                  afirmando que todo iba bien. Ahora dice lo unico que consta.
-                */}
-                {calendarAuth.connected && (
-                  <>
-                    <CalendarIcon className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="font-bold">
-                      Account Google collegato{calendarAuth.email ? `: ${calendarAuth.email}` : ""}
-                    </span>
-                  </>
-                )}
-              </div>
+            <div className="sticky bottom-0 p-5 border-t border-border bg-card/95 backdrop-blur-sm rounded-b-2xl flex justify-end items-center">
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -972,7 +838,7 @@ export default function AgendaPage() {
                   className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/25 hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Salva & Sincronizza
+                  Salva
                 </button>
               </div>
             </div>

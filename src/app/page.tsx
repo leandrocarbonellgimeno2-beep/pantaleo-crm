@@ -8,7 +8,7 @@ import {
   Plus, MapPin, Loader2, Briefcase,
   Building2, CalendarDays, FileText, ChevronRight,
   Zap, Tag, KeyRound, PauseCircle,
-  ShieldCheck, LayoutDashboard, AlertTriangle
+  ShieldCheck, LayoutDashboard
 } from "lucide-react";
 import { hasAtLeast } from '@/lib/roles';
 import { AdminPanel } from '@/components/admin/AdminPanel';
@@ -63,9 +63,6 @@ export default function DashboardPage() {
   const { data: cliData, isLoading: cliLoading } = useSWR('/api/clienti?limit=4', jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
   const { data: agendaData, isLoading: agendaLoading } = useSWR(`/api/appointments?date=${today}`, jsonFetcher, { dedupingInterval: 30_000, revalidateOnFocus: false });
   const { data: sessionData } = useSWR('/api/auth/session', jsonFetcher, { revalidateOnFocus: false, dedupingInterval: 60_000 });
-  // Estado del enlace con Google. Cada cinco minutos basta: lo que se vigila
-  // es que la agenda siga conectada, no un dato que cambie a cada momento.
-  const { data: calendarStatus } = useSWR('/api/calendar/get-status', jsonFetcher, { revalidateOnFocus: false, dedupingInterval: 300_000 });
 
   // Contadores por agregacion: 8 count() en el servidor (~16 lecturas) en vez
   // de descargar las colecciones para contarlas en el navegador. La ruta ya
@@ -84,8 +81,8 @@ export default function DashboardPage() {
   //
   // El GET no lleva orderBy, asi que Firestore las devuelve por id: cortar a
   // las cuatro primeras sin ordenar podia tapar la visita de las 17:00 con
-  // tres eventos personales bajados de Google. Y una cita anulada ocupando
-  // uno de los cuatro huecos es un hueco perdido.
+  // otras tres. Y una cita anulada ocupando uno de los cuatro huecos es un
+  // hueco perdido.
   const todayAppointments = (Array.isArray(agendaData) ? agendaData : [])
     .filter((a: any) => a?.status !== 'Annullato')
     .sort((a: any, b: any) => String(a?.time || '').localeCompare(String(b?.time || '')))
@@ -195,55 +192,6 @@ export default function DashboardPage() {
         ═══════════════════════════════════════════════════ */}
 
         {/*
-          AVISO DE AGENDA DESCONECTADA.
-
-          Va aquí, en «Il mio lavoro», y no escondido en /agenda: cuando el
-          enlace con Google se cae, lo que deja de funcionar no avisa por sí
-          solo. Las citas se siguen guardando en el CRM y el calendario
-          compartido —el que mira Francesco desde el móvil— deja de recibirlas
-          en silencio. Llevaba así desde el 20 de marzo.
-
-          Solo sale cuando Google ha RECHAZADO las credenciales, no ante un
-          fallo de red pasajero: un aviso rojo que salta solo se deja de mirar.
-        */}
-        {calendarStatus && calendarStatus.healthy === false && (
-          <div
-            role="alert"
-            className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl bg-red-50 border border-red-200 text-red-800"
-          >
-            <AlertTriangle className="h-5 w-5 shrink-0" />
-            <div className="flex-1">
-              <p className="font-black text-sm">
-                {calendarStatus.desconectado
-                  ? 'L’agenda non è collegata a Google'
-                  : 'L’agenda non si sincronizza con Google'}
-              </p>
-              <p className="text-sm font-medium text-red-700 mt-0.5">
-                Gli appuntamenti si salvano nel CRM ma <strong>non arrivano al calendario condiviso</strong>.
-                {calendarStatus.email ? ` Account: ${calendarStatus.email}.` : ''}
-                {calendarStatus.motivo ? ` (${calendarStatus.motivo})` : ''}
-              </p>
-            </div>
-            {/* El botón de reconectar solo cuando hace falta reconectar. Si lo
-                que pasa es que la sincronización está atascada, volver a
-                autorizar no arregla nada y manda al propietario a dar vueltas. */}
-            {esPropietario && calendarStatus.desconectado ? (
-              <a
-                href="/api/calendar/auth"
-                className="shrink-0 inline-flex items-center justify-center h-11 px-5 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
-              >
-                Ricollega Google
-              </a>
-            ) : (
-              // Vincular la cuenta de la agencia exige rol propietario, asi
-              // que a los demas se les dice a quien avisar en vez de darles un
-              // boton que les va a contestar 403.
-              <span className="shrink-0 text-xs font-bold text-red-700">
-                {calendarStatus.desconectado
-                  ? 'Avvisa l’amministratore'
-                  : 'Sincronizzazione in errore'}
-              </span>
-            )}
           </div>
         )}
 
