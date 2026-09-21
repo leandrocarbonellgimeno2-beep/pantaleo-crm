@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { urlDeDescarga } from '@/lib/storage-urls';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import {
@@ -1250,7 +1251,7 @@ export default function ClientiPage() {
                                    <span className="text-sm font-medium text-slate-700 truncate">{name.substring(name.indexOf('_') + 1)}</span>
                                  </div>
                                  <div className="flex gap-2 flex-shrink-0">
-                                   <a href={url} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-11 w-11 md:h-9 md:w-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
+                                   <a href={urlDeDescarga(url)} target="_blank" rel="noopener noreferrer" aria-label="Apri il documento in una nuova scheda" className="h-11 w-11 md:h-9 md:w-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-colors"><Eye className="h-4 w-4" /></a>
                                    <button onClick={() => handleDocDelete(url)} aria-label="Elimina documento" className="h-9 w-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center hover:bg-rose-100 transition-colors"><Trash2 className="h-4 w-4" /></button>
                                  </div>
                                </div>

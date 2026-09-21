@@ -92,3 +92,39 @@ export function extraerRutaDeUrl(url: string, bucketName?: string): string | nul
     return null;
   }
 }
+
+/**
+ * La URL por la que hay que PEDIR un fichero, a partir de la que hay guardada.
+ *
+ * POR QUÉ NO BASTA CON ENLAZAR LO GUARDADO
+ * Los documentos subidos antes del 19 de septiembre llevan guardada una URL
+ * pública de Firebase con `?alt=media&token=…`. Ese token es el mecanismo de
+ * «cualquiera con el enlace»: no pasa por `storage.rules`, no caduca y no lo
+ * corta ni bloquear al usuario, ni degradarlo, ni cerrar su sesión. Son 320
+ * folios de visita firmados y 101 contratos y planimetrías.
+ *
+ * Esta función traduce en el momento de pintar: si la ruta es privada, se pide
+ * por el proxy autenticado; si es una foto de inmueble —que debe seguir siendo
+ * pública porque Idealista la descarga sin sesión— se deja como está.
+ *
+ * Y es lo que hace que revocar los tokens del bucket NO rompa nada dentro del
+ * CRM: para cuando se revoquen, la interfaz ya no depende de ellos. Ese es el
+ * orden correcto, y al revés dejaría a la agencia sin poder abrir sus propios
+ * documentos.
+ *
+ * NO se reescribe nada en Firestore. El campo guardado se queda como está: es
+ * un dato de negocio y aquí solo se decide por dónde se pide el fichero.
+ *
+ * Una URL que no se sepa interpretar se devuelve tal cual. Romper un enlace que
+ * hoy funciona sería peor que dejarlo pasar.
+ */
+export function urlDeDescarga(urlGuardada: string | null | undefined): string {
+  const url = typeof urlGuardada === 'string' ? urlGuardada : '';
+  if (!url) return '';
+
+  const ruta = extraerRutaDeUrl(url);
+  if (!ruta) return url;
+  if (esRutaPublica(ruta)) return url;
+
+  return urlPrivada(ruta);
+}

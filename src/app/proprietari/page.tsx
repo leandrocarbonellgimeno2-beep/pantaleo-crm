@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { urlDeDescarga } from '@/lib/storage-urls';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
@@ -845,7 +846,7 @@ export default function ProprietariPage() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                    <p className="text-sm font-bold text-slate-700 truncate">{fileObj.name || `Documento ${idx + 1}`}</p>
-                                                   <a href={fileObj.url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:text-blue-700">Scarica / Vedi PDF</a>
+                                                   <a href={urlDeDescarga(fileObj.url)} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-blue-600 hover:text-blue-700">Scarica / Vedi PDF</a>
                                                 </div>
                                                 <button onClick={() => handleDeleteFile(docType.id, fileObj.url)} className="w-9 h-9 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors shrink-0" title="Elimina Documento" aria-label={`Elimina il documento ${fileObj.name || `Documento ${idx + 1}`}`}>
                                                   <Trash2 className="w-4 h-4" />
