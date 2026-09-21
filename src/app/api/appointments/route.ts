@@ -80,16 +80,23 @@ export async function POST(request: Request) {
 
     const ref = await db.collection('appointments').add(newAppointment);
 
+    // Si Google falla, la cita SI queda guardada en el CRM y eso esta bien: la
+    // agenda del CRM es la fuente. Lo que estaba mal es que la respuesta dijera
+    // `success` a secas, sin distinguir los dos casos, asi que nadie se
+    // enteraba nunca de que la cita no habia llegado al calendario compartido.
+    // Con el enlace caducado desde marzo, eso es TODAS las citas.
+    let enGoogle = false;
     try {
       const gcalRes = await createCalendarEvent(agentId, newAppointment);
       if (gcalRes) {
         await ref.update({ googleEventId: gcalRes.id, googleEventLink: gcalRes.htmlLink });
+        enGoogle = true;
       }
     } catch (gcalError) {
       console.error('Failed to sync with Google Calendar, but saved in CRM.', gcalError);
     }
 
-    return NextResponse.json({ success: true, id: ref.id });
+    return NextResponse.json({ success: true, id: ref.id, sincronizzatoConGoogle: enGoogle });
   } catch (error: any) {
     console.error('[appointments POST]', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });
@@ -146,7 +153,18 @@ export async function DELETE(request: Request) {
 
     if (!id) return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
 
-    const docRef = db.collection('appointments').doc(id);
+    // El PATCH de este mismo fichero ya saneaba el id y el DELETE no. Un id con
+    // barras no apunta a un documento de `appointments`: apunta a una
+    // subcoleccion arbitraria, y aqui se BORRA.
+    let idSeguro: string;
+    try {
+      idSeguro = sanitizeFirestoreId(id);
+    } catch (e: any) {
+      console.warn('[appointments DELETE] id rechazado:', id, '→', e.message);
+      return NextResponse.json({ error: 'ID non valido' }, { status: 400 });
+    }
+
+    const docRef = db.collection('appointments').doc(idSeguro);
     const doc = await docRef.get();
 
     if (!doc.exists) return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });

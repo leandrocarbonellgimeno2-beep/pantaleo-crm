@@ -291,6 +291,15 @@ export default function AgendaPage() {
         alert(mensajeDeFallo(res, "Errore durante il salvataggio dell'appuntamento. Riprova.", delServidor));
         return;
       }
+      // La cita queda guardada en el CRM aunque Google falle, y eso esta bien.
+      // Lo que no puede ser es que nadie se entere: con el enlace caducado,
+      // NINGUNA cita llega al calendario compartido y el agente lo da por
+      // hecho.
+      const guardada = await res.json().catch(() => null);
+      if (guardada && guardada.sincronizzatoConGoogle === false) {
+        setSyncError("Appuntamento salvato nel CRM, ma NON aggiunto al calendario Google.");
+      }
+
       setIsModalOpen(false);
       setNewAppt({ clientName: "", propertyAddress: "", date: format(new Date(), "yyyy-MM-dd"), time: "10:00", duration: 60, tipo: "Visita", clientPhone: "", agentName: "Pantaleo", notes: "", contactRole: "cliente", newNome: "", newCognome: "", newPhone: "" });
       setProfileMode("cliente");

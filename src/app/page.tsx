@@ -15,6 +15,7 @@ import { AdminPanel } from '@/components/admin/AdminPanel';
 import { MiPassword } from '@/components/account/MiPassword';
 import Link from 'next/link';
 import NextImage from 'next/image';
+import { hoyEnLaAgencia } from '@/lib/wall-clock';
 
 // Helper to format date in Italian
 const formatDateItalian = () => {
@@ -43,7 +44,7 @@ interface StatsResponse {
 
 export default function DashboardPage() {
   // today must be inside the component so it refreshes if the tab stays open past midnight
-  const today = new Date().toISOString().split('T')[0];
+  const today = hoyEnLaAgencia();
 
   // SWR cache: re-navigating to dashboard skips all 4 fetches for 30s
   //
