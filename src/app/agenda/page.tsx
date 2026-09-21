@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useDialog } from "@/hooks/useDialog";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { listaDeRespuesta } from "@/lib/lista-respuesta";
+import { nombrePersona, telefonoPersona, direccionInmueble, refInmueble } from "@/lib/etiquetas";
 import {
   format,
   addDays,
@@ -172,13 +173,26 @@ export default function AgendaPage() {
     finally { setIsSyncing(false); }
   };
 
-  // Search people (clients or owners) in modal
-  const searchPeople = async (q: string) => {
-    setPersonSearch(q);
-    if (q.length < 2) { setPersonResults([]); return; }
-    const endpoint = profileMode === "cliente" ? "clienti" : "proprietari";
+  // Buscador de personas del modal.
+  //
+  // Era el ultimo de los seis sin debounce, y en modo «Proprietario» ademas
+  // ignoraba por completo lo tecleado: /api/proprietari no miraba el parametro
+  // `q`, asi que devolvia los 726 propietarios enteros y el desplegable
+  // enseñaba los cinco primeros del padron, siempre los mismos. Cada pulsacion
+  // costaba ~1.596 lecturas de Firestore (726 propietarios + 870 inmuebles del
+  // recuento) para tirar el resultado.
+  //
+  // Ahora la ruta filtra de verdad y esto espera 300 ms, como los otros cinco.
+  const fetchPeople = useDebouncedCallback(async (q: string, modo: string) => {
+    const endpoint = modo === "cliente" ? "clienti" : "proprietari";
     const res = await fetch(`/api/${endpoint}?q=${encodeURIComponent(q)}&limit=5`);
     setPersonResults(listaDeRespuesta(await res.json()));
+  }, 300);
+
+  const searchPeople = (q: string) => {
+    setPersonSearch(q);
+    if (q.length < 2) { setPersonResults([]); return; }
+    fetchPeople(q, profileMode);
   };
   // DOS fallos en cuatro lineas, y los dos invisibles desde la interfaz:
   //
@@ -229,11 +243,17 @@ export default function AgendaPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nome: newAppt.newNome, cognome: newAppt.newCognome, cell1: newAppt.newPhone }),
         });
-        if (clientRes.ok) {
-          finalName = `${newAppt.newNome} ${newAppt.newCognome}`.trim();
-          finalPhone = newAppt.newPhone;
-          finalRole = "cliente";
+        // Antes este `if` no tenia rama else: si el alta del cliente fallaba,
+        // la cita se creaba igual y SIN NOMBRE, porque `finalName` seguia
+        // siendo la cadena vacia del modo «nuovo». Quedaba una cita anonima en
+        // la agenda y nadie se enteraba.
+        if (!clientRes.ok) {
+          alert("Non è stato possibile creare il cliente. L'appuntamento non è stato salvato.");
+          return;
         }
+        finalName = `${newAppt.newNome} ${newAppt.newCognome}`.trim();
+        finalPhone = newAppt.newPhone;
+        finalRole = "cliente";
       }
 
       const res = await fetch("/api/appointments", {
@@ -241,15 +261,34 @@ export default function AgendaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...newAppt, clientName: finalName, clientPhone: finalPhone, contactRole: finalRole, agentName: agentId }),
       });
-      if (res.ok) {
-        setIsModalOpen(false);
-        setNewAppt({ clientName: "", propertyAddress: "", date: format(new Date(), "yyyy-MM-dd"), time: "10:00", duration: 60, tipo: "Visita", clientPhone: "", agentName: "Pantaleo", notes: "", contactRole: "cliente", newNome: "", newCognome: "", newPhone: "" });
-        setProfileMode("cliente");
-        fetchAppointments();
+      // Mismo caso: sin else, un fallo al guardar dejaba el modal abierto y
+      // quieto, sin un solo mensaje. El agente volvia a pulsar Salva.
+      if (!res.ok) {
+        alert("Errore durante il salvataggio dell'appuntamento. Riprova.");
+        return;
       }
-    } catch (e) { console.error(e); }
+      setIsModalOpen(false);
+      setNewAppt({ clientName: "", propertyAddress: "", date: format(new Date(), "yyyy-MM-dd"), time: "10:00", duration: 60, tipo: "Visita", clientPhone: "", agentName: "Pantaleo", notes: "", contactRole: "cliente", newNome: "", newCognome: "", newPhone: "" });
+      setProfileMode("cliente");
+      fetchAppointments();
+    } catch (e) {
+      console.error(e);
+      alert("Errore di rete durante il salvataggio. Riprova.");
+    }
     finally { setIsSaving(false); }
   };
+
+  /**
+   * Si el boton Salva puede pulsarse.
+   *
+   * En modo «Nuovo Cliente» la condicion era `!newAppt.clientName`, y
+   * `clientName` se vacia justo al entrar en ese modo y solo se rellena DENTRO
+   * de handleSave. O sea: en «Nuovo Cliente» el boton no se habilitaba jamas y
+   * no habia forma de crear la cita.
+   */
+  const puedeGuardar = profileMode === "nuovo"
+    ? newAppt.newNome.trim().length > 0
+    : newAppt.clientName.trim().length > 0;
 
   // Filter by search
   const filtered = useMemo(() => {
@@ -645,14 +684,19 @@ export default function AgendaPage() {
                           <button
                             key={p.id}
                             onClick={() => {
-                              setNewAppt({ ...newAppt, clientName: `${p.nome} ${p.cognome}`, clientPhone: p.cell1 || p.cellulare || "" });
-                              setPersonResults([]); setPersonSearch(`${p.nome} ${p.cognome}`);
+                              // `${p.nome} ${p.cognome}` acertaba con los
+                              // propietarios y guardaba «undefined undefined»
+                              // como nombre de la cita cuando era un cliente,
+                              // porque ahi el nombre vive en DatiPersonali.
+                              const nombre = nombrePersona(p);
+                              setNewAppt({ ...newAppt, clientName: nombre, clientPhone: telefonoPersona(p) });
+                              setPersonResults([]); setPersonSearch(nombre);
                             }}
                             className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2 border-b border-border last:border-0"
                           >
                             <User className="h-4 w-4 text-slate-300" />
-                            <span className="font-bold">{p.nome} {p.cognome}</span>
-                            <span className="text-xs text-slate-400 ml-auto">{p.cell1 || p.cellulare || ""}</span>
+                            <span className="font-bold">{nombrePersona(p) || "Senza nome"}</span>
+                            <span className="text-xs text-slate-400 ml-auto">{telefonoPersona(p)}</span>
                           </button>
                         ))}
                       </div>
@@ -737,14 +781,24 @@ export default function AgendaPage() {
                       <button
                         key={i.id}
                         onClick={() => {
-                          setNewAppt({ ...newAppt, propertyAddress: i.indirizzo || i.titolo || "" });
+                          // `i.indirizzo` no existe en lo que devuelve
+                          // /api/immobili —la direccion vive en DatiBase—, asi
+                          // que esto escribia cadena vacia y BORRABA la
+                          // direccion que el agente hubiera puesto a mano.
+                          const direccion = direccionInmueble(i);
+                          if (!direccion) return;
+                          setNewAppt({ ...newAppt, propertyAddress: direccion });
                           setImmResults([]); setImmSearch("");
                         }}
                         className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2 border-b border-border last:border-0"
                       >
                         <HomeIcon className="h-4 w-4 text-slate-300" />
-                        <span className="font-bold truncate">{i.indirizzo || i.titolo}</span>
-                        <span className="text-[10px] font-bold text-primary ml-auto">RIF {i.rif || "N/A"}</span>
+                        {/* Antes estas filas salian EN BLANCO: el campo que se
+                            leia no existe en esta forma. */}
+                        <span className="font-bold truncate">{direccionInmueble(i) || "Senza indirizzo"}</span>
+                        <span className="text-[10px] font-bold text-primary ml-auto">
+                          {refInmueble(i) ? `RIF ${refInmueble(i)}` : ""}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -824,7 +878,7 @@ export default function AgendaPage() {
                 </button>
                 <button
                   onClick={handleCreate}
-                  disabled={isSaving || !newAppt.clientName}
+                  disabled={isSaving || !puedeGuardar}
                   className="px-6 py-2.5 rounded-xl bg-primary text-white text-sm font-black shadow-lg shadow-primary/25 hover:opacity-90 disabled:opacity-50 transition-all flex items-center gap-2"
                 >
                   {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

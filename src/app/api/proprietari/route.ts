@@ -28,6 +28,56 @@ export async function GET(request: Request) {
       return NextResponse.json({ id: doc.id, ...doc.data() });
     }
 
+    // BUSQUEDA POR TEXTO (typeahead).
+    //
+    // `q` y `limit` se recibian y se IGNORABAN. El buscador de personas de la
+    // agenda pedia `?q=rossi&limit=5` y se llevaba los 726 propietarios
+    // enteros, asi que el desplegable enseñaba los cinco primeros del padron
+    // —siempre los mismos, escribieras lo que escribieras—, y cada pulsacion
+    // costaba ~1.596 lecturas (726 propietarios + 870 inmuebles del recuento)
+    // para tirar el resultado.
+    //
+    // Este camino se atiende aparte y SIN el join de inmuebles: un typeahead no
+    // necesita el contador, y saltarselo quita 870 lecturas de las 1.596.
+    // Sigue leyendo el padron entero porque Firestore no sabe buscar subcadenas
+    // en once campos de nombre distintos; lo que se evita es pagarlo dos veces
+    // y en cada tecla.
+    const q = (searchParams.get('q') || '').trim();
+    if (q) {
+      const limite = Math.min(Math.max(Number(searchParams.get('limit')) || 10, 1), 50);
+      const snap = await db.collection('proprietari')
+        .select(
+          'nome', 'Nome', 'NomeCompleto', 'nominativo', 'name',
+          'cognome', 'Cognome', 'surname',
+          'cellulare', 'Cellulare', 'telefono', 'Telefono',
+          'cell1', 'cell2', 'tel1', 'tel2',
+          'email', 'Email', '_status',
+        )
+        .limit(2000)
+        .get();
+
+      const normaliza = (s: string) =>
+        s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+      const aguja = normaliza(q);
+
+      const encontrados = snap.docs
+        .filter((d: any) => d.data()._status !== 'pendente_cancellazione')
+        .map((d: any) => ({ id: d.id, ...d.data() }))
+        .filter((p: any) => {
+          const pajar = normaliza([
+            p.nome, p.Nome, p.NomeCompleto, p.nominativo, p.name,
+            p.cognome, p.Cognome, p.surname,
+            p.telefono, p.Telefono, p.cellulare, p.Cellulare,
+            p.cell1, p.cell2, p.tel1, p.tel2,
+            p.email, p.Email,
+          ].filter(Boolean).join(' '));
+          return pajar.includes(aguja);
+        })
+        .slice(0, limite);
+
+      return NextResponse.json(encontrados);
+    }
+
     // Fetch ALL proprietari WITHOUT orderBy — using orderBy('createdAt') would
     // silently exclude documents that lack the createdAt field (Firestore treats
     // orderBy as an implicit "field exists" filter). Migrated records without
