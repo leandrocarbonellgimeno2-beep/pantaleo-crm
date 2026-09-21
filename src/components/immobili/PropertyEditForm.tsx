@@ -10,6 +10,13 @@ import { AreaDeSubida } from "@/components/immobili/AreaDeSubida";
 import { cn } from "@/lib/utils";
 import { extractImageUrls as extractImages } from "@/lib/imageUtils";
 import zonasData from "@/lib/zonas.json";
+import {
+  OPCIONES_TIPOLOGIA,
+  OPCIONES_STATO_FINITURE,
+  OPCIONES_CLASSE_ENERGETICA,
+  SUGERENCIAS_PIANO,
+  conValorActual,
+} from "@/lib/immobili/vocabularios";
 import { getOwnerDisplayName } from "@/lib/immobili/owner";
 
 // react-dropzone pesa y solo hace falta aquí dentro, o sea dentro de un modal.
@@ -202,17 +209,11 @@ export function PropertyEditForm({
           value={property.DatiBase?.Tipologia || "Appartamento"}
           onChange={(e) => updateNested('DatiBase', 'Tipologia', e.target.value)}
         >
-          <option value="Appartamento">Appartamento</option>
-          <option value="Casa/Villa">Casa/Villa</option>
-          <option value="Locale o Capannone">Locale o Capannone</option>
-          <option value="Terreni">Terreni</option>
-          <option value="Garage o Posto auto">Garage o Posto auto</option>
-          <option value="Edificio">Edificio</option>
-          <option value="Ufficio">Ufficio</option>
-          <option value="Rustico">Rustico</option>
-          <option value="Stanza">Stanza</option>
-          <option value="Cessione Di Attivita">Cessione Di Attivita</option>
-          <option value="Cantina">Cantina</option>
+          {/* Las mismas tipologías que filtra el buscador, mas la que el
+              inmueble ya tenga si no estuviera en la lista. */}
+          {conValorActual(OPCIONES_TIPOLOGIA, property.DatiBase?.Tipologia).map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
         </select>
       </div>
       <div className="space-y-2">
@@ -234,7 +235,24 @@ export function PropertyEditForm({
       
       <div className="space-y-2">
         <label htmlFor="edit-piano" className="text-xs font-bold text-slate-500 uppercase">Piano</label>
-        <input id="edit-piano" type="text" className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" value={property.DettagliFisici?.Piano || ""} onChange={(e) => updateNested('DettagliFisici', 'Piano', e.target.value)} />
+        {/* Sugerencias, no lista cerrada.
+            De este campo salen los ~70 valores distintos que el buscador tiene
+            que adivinar con expresiones regulares. Ofrecer las 14 formas que
+            SI entiende hace que los inmuebles nuevos nazcan buscables, y
+            dejarlo escribible evita reescribir lo que ya hay guardado. */}
+        <input
+          id="edit-piano"
+          type="text"
+          list="opciones-piano"
+          autoComplete="off"
+          placeholder="Es. Piano Terra, 2° Piano, Attico…"
+          className="w-full h-11 px-3 rounded-lg border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          value={property.DettagliFisici?.Piano || ""}
+          onChange={(e) => updateNested('DettagliFisici', 'Piano', e.target.value)}
+        />
+        <datalist id="opciones-piano">
+          {SUGERENCIAS_PIANO.map((p) => <option key={p} value={p} />)}
+        </datalist>
       </div>
       <div className="space-y-2">
         <label htmlFor="edit-stato-finiture" className="text-xs font-bold text-slate-500 uppercase">Stato Finiture</label>
@@ -244,11 +262,12 @@ export function PropertyEditForm({
           value={property.DettagliFisici?.StatoFiniture || "Abitabile"}
           onChange={(e) => updateNested('DettagliFisici', 'StatoFiniture', e.target.value)}
         >
-          <option value="Nuovo">Nuovo</option>
-          <option value="Ottime">Ottime</option>
-          <option value="Buono">Buono</option>
-          <option value="Abitabile">Abitabile</option>
-          <option value="Da Ristrutturare">Da Ristrutturare</option>
+          {/* Los 8 que reconoce el buscador, no los 5 de antes. Faltaban
+              «Normali» —299 inmuebles—, «Ristrutturato» y «Da Sistemare», y
+              donde ponia «Buono» el canon es «Buone». */}
+          {conValorActual(OPCIONES_STATO_FINITURE, property.DettagliFisici?.StatoFiniture).map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
         </select>
       </div>
       <div className="space-y-2">
@@ -295,16 +314,11 @@ export function PropertyEditForm({
         <label htmlFor="edit-classe-energetica" className="text-xs font-bold text-slate-500 uppercase">Classe Energetica (APE)</label>
         <select id="edit-classe-energetica" className="w-full h-11 px-3 rounded-lg border border-green-300 bg-green-50 font-black text-green-800 focus:outline-none focus:ring-2 focus:ring-green-400/20 focus:border-green-500" value={property.DettagliFisici?.ClasseEnergetica || ""} onChange={(e) => updateNested('DettagliFisici', 'ClasseEnergetica', e.target.value)}>
           <option value="">Seleziona APE...</option>
-          <option value="A4">A4 (Massima Efficienza)</option>
-          <option value="A3">A3</option>
-          <option value="A2">A2</option>
-          <option value="A1">A1</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-          <option value="E">E</option>
-          <option value="F">F</option>
-          <option value="G">G</option>
+          {/* La lista completa. Faltaba «A», asi que un inmueble que la
+              tuviera la PERDIA al guardar la ficha. */}
+          {conValorActual(OPCIONES_CLASSE_ENERGETICA, property.DettagliFisici?.ClasseEnergetica).map((c) => (
+            <option key={c} value={c}>{c === 'A4' ? 'A4 (Massima Efficienza)' : c}</option>
+          ))}
         </select>
       </div>
    </div>
