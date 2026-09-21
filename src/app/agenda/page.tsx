@@ -78,6 +78,9 @@ export default function AgendaPage() {
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  // Separado de `syncResult` a proposito: meter el error en la misma variable
+  // es justo lo que hacia que un fallo se pintara con el aviso de exito.
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [calendarAuth, setCalendarAuth] = useState<{ connected: boolean; email?: string }>({ connected: false });
   const agentId = "default_admin";
 
@@ -158,8 +161,14 @@ export default function AgendaPage() {
   }, [viewMode, currentDate]);
 
   // Sync from Google Calendar
+  //
+  // No se miraba `res.ok`: la respuesta de error se metia tal cual en
+  // `syncResult` y el aviso VERDE de exito decia «Importati undefined eventi.
+  // Nuovi: undefined». Y como el enlace con Google esta caducado, eso es lo
+  // que salia SIEMPRE: el agente pulsaba, veia el tic verde, y no se importaba
+  // ni una cita.
   const handleSync = async () => {
-    setIsSyncing(true); setSyncResult(null);
+    setIsSyncing(true); setSyncResult(null); setSyncError(null);
     try {
       const res = await fetch("/api/calendar/sync", {
         method: "POST",
@@ -167,9 +176,21 @@ export default function AgendaPage() {
         body: JSON.stringify({ agentId, timeMin: "2023-03-02T00:00:00Z" }),
       });
       const data = await res.json();
+
+      if (!res.ok) {
+        setSyncError(data?.error || "Sincronizzazione non riuscita.");
+        // Si Google rechaza el enlace, la etiqueta no puede seguir diciendo
+        // que la sincronizacion esta activa durante el resto de la sesion.
+        if (res.status === 400 || res.status === 401) setCalendarAuth({ connected: false });
+        return;
+      }
+
       setSyncResult(data);
       fetchAppointments(); // refresh view
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      setSyncError("Errore di rete durante la sincronizzazione.");
+    }
     finally { setIsSyncing(false); }
   };
 
@@ -372,6 +393,21 @@ export default function AgendaPage() {
           </button>
         </div>
       </div>
+
+      {/* Sync Error Toast — en rojo, y diciendo lo que pasó de verdad. */}
+      {syncError && (
+        <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium animate-in slide-in-from-top">
+          <AlertCircle className="h-5 w-5 shrink-0" />
+          <span>{syncError}</span>
+          <button
+            onClick={() => setSyncError(null)}
+            aria-label="Chiudi notifica di errore"
+            className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Sync Result Toast */}
       {syncResult && (
@@ -862,10 +898,19 @@ export default function AgendaPage() {
             {/* Modal Footer */}
             <div className="sticky bottom-0 p-5 border-t border-border bg-card/95 backdrop-blur-sm rounded-b-2xl flex justify-between items-center">
               <div className="flex items-center gap-2 text-xs text-slate-400">
+                {/*
+                  Decia «Sincronizzazione automatica attiva», y eso NO se sabe:
+                  el estado se decide mirando si en Firestore hay guardada una
+                  cadena de refresh_token, no si Google sigue aceptandola. El
+                  enlace lleva caducado desde marzo y la etiqueta seguia
+                  afirmando que todo iba bien. Ahora dice lo unico que consta.
+                */}
                 {calendarAuth.connected && (
                   <>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    <span className="font-bold">Sincronizzazione automatica attiva</span>
+                    <CalendarIcon className="h-3.5 w-3.5 text-slate-400" />
+                    <span className="font-bold">
+                      Account Google collegato{calendarAuth.email ? `: ${calendarAuth.email}` : ""}
+                    </span>
                   </>
                 )}
               </div>
