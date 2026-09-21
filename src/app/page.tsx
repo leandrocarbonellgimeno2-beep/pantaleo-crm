@@ -191,9 +191,6 @@ export default function DashboardPage() {
             1. HEADER CON SALUTO PERSONALIZZATO
         ═══════════════════════════════════════════════════ */}
 
-        {/*
-          </div>
-        )}
 
         <div className="relative">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">

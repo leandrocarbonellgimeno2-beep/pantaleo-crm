@@ -577,7 +577,7 @@ export default function AgendaPage() {
             <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-border bg-card/95 backdrop-blur-sm rounded-t-2xl">
               <div>
                 <h3 id="titolo-nuovo-appuntamento" className="text-lg font-black">Nuovo Appuntamento</h3>
-                <p className="text-xs text-muted-foreground font-medium">Compila i dettagli e sincronizza con Google Calendar</p>
+                <p className="text-xs text-muted-foreground font-medium">Compila i dettagli del nuovo appuntamento</p>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
