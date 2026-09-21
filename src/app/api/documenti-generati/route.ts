@@ -36,20 +36,59 @@ export async function GET(request: Request) {
     // completo del form, incl. firme base64) viene ESCLUSO dal payload della
     // lista: con 200 documenti era la causa del picco di memoria. Si recupera
     // on-demand via ?id= solo quando l'utente apre un documento per modificarlo.
-    const snapshot = await db.collection(COLLECTION)
+    //
+    // PAGINAZIONE A CURSORE, e non è un dettaglio di prestazioni.
+    //
+    // Il `limit(200)` fisso non era un tetto prudente: era un MURO. In
+    // Firestore ci sono 320 documenti, quindi i 120 più vecchi —59 dei quali
+    // CON la firma del cliente— non si potevano elencare, né cercare, né
+    // scaricare, né riaprire dall'applicazione. La ricerca filtra in memoria
+    // su quello che è già arrivato, quindi nemmeno cercarli per nome li
+    // trovava. Per reclamare una provvigione con un foglio di maggio bisognava
+    // entrare nella console di Firebase.
+    //
+    // E peggiorava da solo: al ritmo di ~65 documenti al mese, ogni due mesi
+    // altri 120 finivano fuori portata.
+    //
+    // `dataCreazione` è una stringa ISO in tutti e 320, quindi l'ordinamento è
+    // coerente e `startAfter` è affidabile. Se un giorno convivessero tipi
+    // diversi, Firestore ordinerebbe prima per TIPO e il cursore salterebbe
+    // documenti: vedi lib/fecha-ms.ts per lo stesso problema nella lista
+    // clienti.
+    const PAGINA = 100;
+    const cursor = searchParams.get('cursor');
+
+    let consulta = db.collection(COLLECTION)
       .orderBy('dataCreazione', 'desc')
-      .limit(200)
       .select(
         'nomeFile', 'categoria', 'urlDownload', 'dataCreazione',
         'clienteNome', 'clienteId', 'sezione', 'azione',
         'fileName', 'size', '_status',
-      )
-      .get();
+      );
+
+    if (cursor) consulta = consulta.startAfter(cursor);
+
+    // Si chiede uno in più del necessario: è così che si sa se c'è un'altra
+    // pagina senza pagare una seconda query di conteggio.
+    const snapshot = await consulta.limit(PAGINA + 1).get();
+
+    const docs = snapshot.docs.slice(0, PAGINA);
+    const hayMas = snapshot.docs.length > PAGINA;
+
     // Esclude i soft-deleted per coerenza con immobili/clienti/proprietari.
-    const data = snapshot.docs
+    // Il filtro è DOPO il taglio della pagina, di proposito: il cursore deve
+    // avanzare sulla posizione reale nella collezione, altrimenti una pagina
+    // piena di soft-deleted farebbe credere che non c'è altro.
+    const data = docs
       .filter((doc: any) => doc.data()._status !== 'pendente_cancellazione')
       .map(doc => ({ id: doc.id, ...doc.data() }));
-    return NextResponse.json(data);
+
+    const ultimo = docs[docs.length - 1];
+    const proximoCursor = hayMas && ultimo ? (ultimo.data() as any).dataCreazione ?? null : null;
+
+    // `data` y no `documenti`: es la forma que ya usa /api/immobili, y asi
+    // `listaDeRespuesta` la entiende sin tocarla.
+    return NextResponse.json({ data, cursor: proximoCursor, hayMas });
   } catch (error: any) {
     console.error('GET /api/documenti-generati error:', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });

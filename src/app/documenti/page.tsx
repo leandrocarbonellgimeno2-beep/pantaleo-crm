@@ -11,6 +11,7 @@ import {
   ChevronRight, Clock, User, CheckCircle2, Trash2, Filter, Upload, Loader2, Eye, Wand2, Home as HomeIcon, Users, Building2, Sparkles, Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 import { DocumentoTemplate } from "@/types/documento";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 
@@ -67,6 +68,10 @@ export default function DocumentiPage() {
   const [generatedDocs, setGeneratedDocs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingGen, setLoadingGen] = useState(true);
+  // Paginación por cursor de los documentos generados. `cursorGen` es la
+  // `dataCreazione` del último traído; null significa que ya no hay más.
+  const [cursorGen, setCursorGen] = useState<string | null>(null);
+  const [loadingMasGen, setLoadingMasGen] = useState(false);
   
   // Upload states
   const [uploading, setUploading] = useState(false);
@@ -141,16 +146,38 @@ export default function DocumentiPage() {
     }
   }, []);
 
-  const fetchGeneratedDocs = useCallback(async () => {
-    setLoadingGen(true);
+  /**
+   * Trae una página de documentos generados.
+   *
+   * Sin `cursor` empieza de cero y REEMPLAZA la lista: es lo que hace la carga
+   * inicial y lo que hace al cerrarse un formulario. Con `cursor` añade al
+   * final, que es «Carica altri».
+   *
+   * Antes esto pedía los 200 primeros y ahí se acababa el CRM: los 120
+   * documentos más antiguos no había forma de verlos desde la aplicación.
+   */
+  const fetchGeneratedDocs = useCallback(async (cursor?: string | null) => {
+    if (cursor) setLoadingMasGen(true); else setLoadingGen(true);
     try {
-      const res = await fetch('/api/documenti-generati');
+      const url = cursor
+        ? `/api/documenti-generati?cursor=${encodeURIComponent(cursor)}`
+        : '/api/documenti-generati';
+      const res = await fetch(url);
       const data = await res.json();
-      setGeneratedDocs(Array.isArray(data) ? data : []);
+
+      // La ruta devolvía un array pelado y ahora devuelve { data, cursor }.
+      // `listaDeRespuesta` entiende las dos, así que una pestaña abierta
+      // durante el despliegue no se queda con la lista en blanco.
+      const pagina = listaDeRespuesta(data);
+      const siguiente = Array.isArray(data) ? null : (data?.cursor ?? null);
+
+      setGeneratedDocs(prev => (cursor ? [...prev, ...pagina] : pagina));
+      setCursorGen(siguiente);
     } catch (error) {
       console.error("Error fetching generated docs:", error);
     } finally {
       setLoadingGen(false);
+      setLoadingMasGen(false);
     }
   }, []);
 
@@ -583,6 +610,27 @@ export default function DocumentiPage() {
             )}
           </div>
         </div>
+
+        {/*
+          Sin esto, la pantalla se quedaba en los 200 mas recientes y los 120
+          anteriores no habia forma de verlos. El aviso dice que la busqueda
+          solo mira lo ya cargado, que es justo lo que despistaba: buscar un
+          folio de mayo por nombre no lo encontraba y parecia que no existia.
+        */}
+        {cursorGen && (
+          <div className="flex flex-col items-center gap-2 pt-2">
+            <Button
+              variant="secondary"
+              onClick={() => fetchGeneratedDocs(cursorGen)}
+              loading={loadingMasGen}
+            >
+              Carica altri documenti
+            </Button>
+            <p className="text-xs text-slate-400 font-medium">
+              La ricerca filtra solo i documenti già caricati.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ═══ TEMPLATE FILES TABLE ═══ */}
