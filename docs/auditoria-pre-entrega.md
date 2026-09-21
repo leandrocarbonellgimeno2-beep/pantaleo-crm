@@ -5,6 +5,13 @@
 - **Alcance**: funcionalidad, responsive, accesibilidad, rendimiento, firma y
   documentos, formularios, búsqueda, seguridad y consistencia visual
 
+> **Este informe es la foto del 20 de septiembre.** Los estados de más abajo NO
+> se han ido actualizando. Lo arreglado después —y lo que espera decisión— está
+> en [`remediacion-post-auditoria.md`](remediacion-post-auditoria.md), que
+> además corrige dos cifras de aquí: los ficheros privados expuestos son **320
+> y no 421**, y `propiedades_fotos/` (443 fotos de 110 inmuebles) figuraba por
+> error como ruta privada.
+
 ---
 
 ## Cómo se hizo
