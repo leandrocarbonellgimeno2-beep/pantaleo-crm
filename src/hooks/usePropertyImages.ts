@@ -98,10 +98,23 @@ export function usePropertyImages({
       }
 
       // Desde la lista VIGENTE, no desde la capturada al empezar el drop.
-      const finalImages = [...imagesRef.current, ...successfulUrls];
+      const antes = imagesRef.current;
+      const finalImages = [...antes, ...successfulUrls];
       imagesRef.current = finalImages;
       onImagesChange(finalImages);
-      await persist(finalImages);
+
+      // `persist` devuelve si el guardado salio bien, y aqui se TIRABA el
+      // valor. Si Firestore rechazaba el PATCH, las fotos seguian pintadas en
+      // la ficha como si estuvieran guardadas: el agente cerraba, volvia a
+      // abrir y no estaban. Con la sesion caducada pasaba con cada foto.
+      //
+      // El borrado ya lo hacia bien y deshacia el cambio local; ahora el alta
+      // hace lo mismo.
+      if (!(await persist(finalImages))) {
+        imagesRef.current = antes;
+        onImagesChange(antes);
+        toast.error('Le foto non sono state salvate sull\'immobile. Riprova.');
+      }
     } catch (err) {
       console.error('Errore onDrop', err);
       toast.error('Errore durante il caricamento. Riprova.');

@@ -215,3 +215,57 @@
     min-height: 44px;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ANIMACIONES DE ENTRADA
+
+   El proyecto usa 92 veces las clases `animate-in`, `fade-in`, `zoom-in-95` y
+   `slide-in-from-*`, que son del plugin `tailwindcss-animate`. Ese plugin NO
+   ESTA INSTALADO: son clases de Tailwind v4, no hay nada que las genere, y
+   compilaban a la nada.
+
+   Consecuencia: los 18 overlays del CRM —fichas, modales, confirmaciones,
+   avisos— aparecian de golpe, sin fundido. No fallaba nada, simplemente no
+   pasaba nada, que es por lo que nadie lo noto en tres años.
+
+   Se definen aqui en vez de añadir la dependencia porque hacen falta seis
+   utilidades contadas y este es el conjunto exacto que el proyecto usa. El
+   mecanismo es el del plugin original: `animate-in` arranca el fotograma
+   `enter`, y las demas clases solo ajustan las variables que ese fotograma
+   lee. Asi componen entre si igual que antes y no hay que tocar ni un JSX.
+
+   `duration-*` y `prefers-reduced-motion` ya los trae Tailwind.
+   ───────────────────────────────────────────────────────────────────────── */
+@keyframes enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform:
+      translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+
+.animate-in {
+  animation-name: enter;
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.fade-in,
+.fade-in-0 { --tw-enter-opacity: 0; }
+
+.zoom-in { --tw-enter-scale: 0.95; }
+.zoom-in-95 { --tw-enter-scale: 0.95; }
+
+.slide-in-from-top { --tw-enter-translate-y: -0.5rem; }
+.slide-in-from-top-2 { --tw-enter-translate-y: -0.5rem; }
+.slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
+.slide-in-from-right { --tw-enter-translate-x: 1.25rem; }
+.slide-in-from-right-5 { --tw-enter-translate-x: 1.25rem; }
+
+/* Quien pide menos movimiento no recibe ninguno. La ficha sigue apareciendo,
+   simplemente ya esta ahi. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in { animation: none; }
+}
