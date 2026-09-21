@@ -4,6 +4,7 @@
  *
  * Used by all document forms (FoglioVisita, IncaricoAcquisto, etc.)
  */
+import { extraerRutaDeUrl } from '@/lib/storage-urls';
 
 export interface SaveDocumentOptions {
   /** The react-pdf Document element (already created via React.createElement) */
@@ -22,6 +23,21 @@ export interface SaveDocumentOptions {
   azione: string;
   /** Full form data snapshot — persisted to Firestore so the form can be reopened with all fields (including signatures) restored */
   formData?: Record<string, unknown>;
+  /**
+   * Id del documento que se esta REABRIENDO, si lo hay.
+   *
+   * Con esto, guardar actualiza ese documento y pisa su PDF en Storage en vez
+   * de crear un registro y un fichero nuevos. Sin esto —que es como estaba—
+   * cada reapertura dejaba un duplicado: 171 visitas habian generado 320
+   * documentos.
+   */
+  documentoId?: string;
+  /**
+   * La URL guardada de ese documento. Sirve para recuperar su ruta en Storage
+   * y sobrescribir el MISMO fichero, en lugar de dejar el viejo huerfano en el
+   * bucket pagando sin que nada lo referencie.
+   */
+  urlExistente?: string;
 }
 
 export interface SaveDocumentResult {
@@ -44,7 +60,13 @@ export async function saveDocumentToCloud(opts: SaveDocumentOptions): Promise<Sa
       .replace(/[^a-zA-Z0-9àèéìòù\s_-]/gi, '')
       .replace(/\s+/g, '_')
       .substring(0, 80);
-    const storagePath = `documenti_generati/${safeName}_${timestamp}.pdf`;
+    // Al reabrir se reutiliza la ruta del PDF original, asi que /api/upload lo
+    // sobrescribe. Si la URL guardada no se pudiera interpretar, se cae a una
+    // ruta nueva: mejor un fichero de mas que perder el documento.
+    const rutaOriginal = opts.documentoId && opts.urlExistente
+      ? extraerRutaDeUrl(opts.urlExistente)
+      : null;
+    const storagePath = rutaOriginal || `documenti_generati/${safeName}_${timestamp}.pdf`;
 
     // 4. Upload to Firebase Storage via the existing /api/upload endpoint
     const formData = new FormData();
@@ -65,22 +87,37 @@ export async function saveDocumentToCloud(opts: SaveDocumentOptions): Promise<Sa
     const downloadUrl = uploadData.url;
 
     // 5. Save metadata to Firestore via /api/documenti-generati
+    //
+    // Reabrir ACTUALIZA. Antes esto era siempre un POST, asi que cada vez que
+    // un agente reabria un folio para firmarlo quedaban dos documentos en el
+    // archivo, indistinguibles salvo por la hora.
+    const reapertura = Boolean(opts.documentoId);
+
+    const cuerpo: Record<string, unknown> = {
+      nomeFile: opts.nomeFile,
+      categoria: opts.categoria,
+      urlDownload: downloadUrl,
+      clienteNome: opts.clienteNome || '',
+      clienteId: opts.clienteId || '',
+      sezione: opts.sezione,
+      azione: opts.azione,
+      fileName: `${safeName}.pdf`,
+      size: blob.size,
+      formData: opts.formData || null,
+    };
+
+    if (reapertura) {
+      cuerpo.id = opts.documentoId;
+    } else {
+      // Solo al crear. Al reabrir, el servidor la ignora igualmente: es la
+      // fecha de la visita y es por donde se ordena y pagina el archivo.
+      cuerpo.dataCreazione = new Date().toISOString();
+    }
+
     const metadataRes = await fetch('/api/documenti-generati', {
-      method: 'POST',
+      method: reapertura ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nomeFile: opts.nomeFile,
-        categoria: opts.categoria,
-        urlDownload: downloadUrl,
-        dataCreazione: new Date().toISOString(),
-        clienteNome: opts.clienteNome || '',
-        clienteId: opts.clienteId || '',
-        sezione: opts.sezione,
-        azione: opts.azione,
-        fileName: `${safeName}.pdf`,
-        size: blob.size,
-        formData: opts.formData || null,
-      }),
+      body: JSON.stringify(cuerpo),
     });
 
     if (!metadataRes.ok) {

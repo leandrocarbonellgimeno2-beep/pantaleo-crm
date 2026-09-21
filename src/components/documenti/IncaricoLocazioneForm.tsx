@@ -35,9 +35,14 @@ interface Props {
   sezione: string;
   azione: string;
   initialData?: Record<string, any>;
+  /** Id del documento que se esta reabriendo. Si viene, guardar ACTUALIZA ese
+   *  documento y pisa su PDF, en vez de crear un duplicado. */
+  documentoId?: string;
+  /** URL guardada de ese documento, para reutilizar su ruta en Storage. */
+  urlExistente?: string;
 }
 
-export default function IncaricoLocazioneForm({ onClose, sezione, azione, initialData }: Props) {
+export default function IncaricoLocazioneForm({ onClose, sezione, azione, initialData, documentoId, urlExistente }: Props) {
   const [form, setForm] = useState(() => ({
     /* Locatore */
     locatoreNome: '', locatoreCF: '', locatoreNascita: '', locatoreResidenza: '', locatoreVia: '',
@@ -375,7 +380,9 @@ export default function IncaricoLocazioneForm({ onClose, sezione, azione, initia
                   categoria: 'Incarico Locazione', 
                   clienteNome: form.locatoreNome,
                   sezione,
-                  azione
+                  azione,
+                  documentoId,
+                  urlExistente
                 });
                 if (result.success) { setToast('✅ Documento salvato in Cloud!'); setTimeout(() => onClose(), 1200); }
                 else { setToast(`❌ ${result.error}`); }

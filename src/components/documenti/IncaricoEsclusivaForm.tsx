@@ -35,6 +35,11 @@ interface Props {
   sezione: string;
   azione: string;
   initialData?: Record<string, any>;
+  /** Id del documento que se esta reabriendo. Si viene, guardar ACTUALIZA ese
+   *  documento y pisa su PDF, en vez de crear un duplicado. */
+  documentoId?: string;
+  /** URL guardada de ese documento, para reutilizar su ruta en Storage. */
+  urlExistente?: string;
 }
 
 const TIPO_OPTIONS = [
@@ -45,7 +50,7 @@ const TIPO_OPTIONS = [
   { value: 'commerciale', label: 'Attività Commerciale', emoji: '🏪', color: 'from-violet-500 to-purple-600' },
 ];
 
-export default function IncaricoEsclusivaForm({ onClose, sezione, azione, initialData }: Props) {
+export default function IncaricoEsclusivaForm({ onClose, sezione, azione, initialData, documentoId, urlExistente }: Props) {
   const [form, setForm] = useState(() => ({
     /* Tipo */
     tipoIncarico: 'vendita',
@@ -355,7 +360,9 @@ export default function IncaricoEsclusivaForm({ onClose, sezione, azione, initia
                   categoria: 'Incarico Esclusiva', 
                   clienteNome: form.proprietarioNome,
                   sezione,
-                  azione
+                  azione,
+                  documentoId,
+                  urlExistente
                 });
                 if (result.success) { setToast('✅ Documento salvato in Cloud!'); setTimeout(() => onClose(), 1200); }
                 else { setToast(`❌ ${result.error}`); }

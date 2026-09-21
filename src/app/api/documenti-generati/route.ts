@@ -1,9 +1,31 @@
 import { NextResponse } from 'next/server';
-import { guard } from '@/lib/api-guard';
-import { db } from '@/lib/firebase-admin';
-import { sanitizeBody, DOCUMENTI_GENERATI_ALLOWED } from '@/lib/sanitize';
+import { guard, sesionActual } from '@/lib/api-guard';
+import { db, admin } from '@/lib/firebase-admin';
+import { sanitizeBody, sanitizeFirestoreId, DOCUMENTI_GENERATI_ALLOWED } from '@/lib/sanitize';
+import { markForSoftDelete } from '@/lib/services/soft-delete';
+import { getClientIp } from '@/lib/rate-limit';
 
 const COLLECTION = 'documenti_generati';
+
+/**
+ * Si el documento lleva una firma trazada de verdad.
+ *
+ * El umbral de 100 caracteres no es arbitrario: las firmas se guardan como
+ * `data:image/png;base64,…`, que para cualquier trazo real pasa de los miles
+ * de caracteres. Una cadena corta es un campo inicializado a vacio o un
+ * `data:` degenerado, no una firma.
+ *
+ * Medido sobre los 320 documentos de produccion: 154 con firma del cliente,
+ * 0 con la del agente —el recuadro «Firma Agente» existe y no se ha usado
+ * nunca—. Se miran las dos igualmente: lo que decide es que haya ALGUNA firma.
+ */
+export function tieneFirma(datos: any): boolean {
+  const fd = datos?.formData;
+  if (!fd || typeof fd !== 'object') return false;
+  return Object.entries(fd).some(
+    ([clave, valor]) => /firma/i.test(clave) && typeof valor === 'string' && valor.length > 100,
+  );
+}
 
 /**
  * GET  → Fetch all generated documents (ordered by date desc)
@@ -118,6 +140,71 @@ export async function POST(request: Request) {
   }
 }
 
+/**
+ * Actualiza un documento YA EXISTENTE, en vez de crear otro.
+ *
+ * EL PROBLEMA QUE CIERRA. Reabrir un folio y volver a guardarlo creaba un
+ * documento nuevo, con su propio PDF. Medido en produccion: los 320 documentos
+ * del archivo son en realidad 171 visitas; sobran 149 copias, el 47 % del
+ * archivo. Y no son visitas repetidas: el 95 % de los pares se crean el mismo
+ * dia y 130 de 149 siguen el patron borrador-sin-firma -> copia-firmada en
+ * menos de 24 h. Buscar un folio devolvia dos resultados casi identicos y nada
+ * decia cual era el bueno.
+ *
+ * NO toca los 149 duplicados que ya existen: limpiarlos es otra decision y
+ * otro script. Esto solo hace que de aqui en adelante haya UNO por visita.
+ */
+export async function PATCH(request: Request) {
+  const denegado = await guard(request, 'vendedor');
+  if (denegado) return denegado;
+
+  try {
+    const raw = await request.json();
+
+    // El id va aparte del cuerpo saneado: `sanitizeBody` lo descarta siempre
+    // (esta en ALWAYS_FORBIDDEN) para que nadie pueda reescribirlo.
+    let idSeguro: string;
+    try {
+      idSeguro = sanitizeFirestoreId(raw?.id);
+    } catch (e: any) {
+      console.warn('[documenti-generati PATCH] id rechazado:', raw?.id, '→', e.message);
+      return NextResponse.json({ error: 'ID non valido' }, { status: 400 });
+    }
+
+    const ref = db.collection(COLLECTION).doc(idSeguro);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return NextResponse.json({ error: 'Documento non trovato' }, { status: 404 });
+    }
+
+    // Un documento marcado para eliminar no se resucita por la puerta de
+    // atras: si alguien lo reabre, que se decida antes que hacer con el.
+    if (doc.data()?._status === 'pendente_cancellazione') {
+      return NextResponse.json(
+        { error: 'Il documento è stato eliminato e non può essere aggiornato.' },
+        { status: 409 },
+      );
+    }
+
+    const body = sanitizeBody(raw, DOCUMENTI_GENERATI_ALLOWED, 'documenti_generati.PATCH');
+
+    // `dataCreazione` NO se toca: es la fecha de la visita y es la clave por la
+    // que se ordena y se pagina el archivo. Reabrir un folio de mayo en
+    // septiembre no lo convierte en un folio de septiembre.
+    delete (body as any).dataCreazione;
+
+    await ref.update({
+      ...body,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return NextResponse.json({ success: true, id: idSeguro });
+  } catch (error: any) {
+    console.error('PATCH /api/documenti-generati error:', error);
+    return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: Request) {
   const denegado = await guard(request, 'secretaria');
   if (denegado) return denegado;
@@ -130,8 +217,53 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
-    await db.collection(COLLECTION).doc(id).delete();
-    return NextResponse.json({ success: true });
+    let idSeguro: string;
+    try {
+      idSeguro = sanitizeFirestoreId(id);
+    } catch (e: any) {
+      console.warn('[documenti-generati DELETE] id rechazado:', id, '→', e.message);
+      return NextResponse.json({ error: 'ID non valido' }, { status: 400 });
+    }
+
+    const ref = db.collection(COLLECTION).doc(idSeguro);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return NextResponse.json({ error: 'Documento non trovato' }, { status: 404 });
+    }
+
+    const datos = doc.data() || {};
+
+    // Ya estaba marcado: no se vuelve a marcar ni se duplica el registro.
+    if (datos._status === 'pendente_cancellazione') {
+      return NextResponse.json({ success: true, yaEliminado: true, firmato: tieneFirma(datos) });
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // AQUI YA NO SE BORRA NADA FISICAMENTE.
+    //
+    // Antes esto era `.doc(id).delete()` y el cliente borraba ademas el PDF
+    // del bucket justo despues. Dos clics —papelera y confirmar— y un verbale
+    // firmado, con la firma manuscrita del cliente y el importe de la
+    // provvigione, desaparecia de Firestore y de Storage a la vez. Sin
+    // papelera, sin purga diferida como en las otras tres colecciones y sin
+    // constancia de quien lo hizo.
+    //
+    // Lo llamativo es que la propia ruta estaba escrita COMO SI el soft-delete
+    // existiera: los dos GET filtran `_status !== 'pendente_cancellazione'` y
+    // nadie escribia nunca ese centinela.
+    //
+    // Ahora se marca, y ya esta. El PDF se queda en el bucket: un documento
+    // firmado no se destruye, y menos desde un boton de la lista.
+    // ────────────────────────────────────────────────────────────────────
+    const sesion = await sesionActual(request);
+    await markForSoftDelete(COLLECTION, idSeguro, {
+      email: sesion?.email ?? 'sconosciuto',
+      role: sesion?.ruolo ?? 'sconosciuto',
+      ip: getClientIp(request),
+      label: String(datos.nomeFile || idSeguro),
+    });
+
+    return NextResponse.json({ success: true, firmato: tieneFirma(datos) });
   } catch (error: any) {
     console.error('DELETE /api/documenti-generati error:', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });

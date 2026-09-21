@@ -35,9 +35,14 @@ interface Props {
   sezione: string;
   azione: string;
   initialData?: Record<string, any>;
+  /** Id del documento que se esta reabriendo. Si viene, guardar ACTUALIZA ese
+   *  documento y pisa su PDF, en vez de crear un duplicado. */
+  documentoId?: string;
+  /** URL guardada de ese documento, para reutilizar su ruta en Storage. */
+  urlExistente?: string;
 }
 
-export default function IncaricoStagionaleForm({ onClose, sezione, azione, initialData }: Props) {
+export default function IncaricoStagionaleForm({ onClose, sezione, azione, initialData, documentoId, urlExistente }: Props) {
   const [form, setForm] = useState(() => ({
     /* Conduttore */
     conduttoreNome: '', conduttoreCF: '', conduttoreNascita: '', conduttoreResidenza: '', conduttoreVia: '',
@@ -332,7 +337,9 @@ export default function IncaricoStagionaleForm({ onClose, sezione, azione, initi
                   categoria: 'Incarico Stagionale', 
                   clienteNome: form.conduttoreNome,
                   sezione,
-                  azione
+                  azione,
+                  documentoId,
+                  urlExistente
                 });
                 if (result.success) { setToast('✅ Documento salvato in Cloud!'); setTimeout(() => onClose(), 1200); }
                 else { setToast(`❌ ${result.error}`); }

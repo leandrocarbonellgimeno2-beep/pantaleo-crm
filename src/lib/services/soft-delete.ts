@@ -11,7 +11,28 @@
 import { db } from '@/lib/firebase-admin';
 import { audit } from '@/lib/services/audit';
 
-export type SoftDeletableCollection = 'immobili' | 'clienti' | 'proprietari';
+/**
+ * `documenti_generati` entra aqui, pero NO en el cron de purga, y eso es
+ * deliberado.
+ *
+ * Para las otras tres colecciones «soft-delete» significa «treinta minutos
+ * para deshacer y luego se borra de verdad». Para un folio de visita firmado
+ * no puede significar eso: es un documento con la firma manuscrita del
+ * cliente, respalda una provvigione y no debe desaparecer nunca.
+ *
+ * Asi que aqui marcar es el final del camino: el documento deja de verse en la
+ * pantalla —los dos GET ya filtran `pendente_cancellazione`— y se queda en
+ * Firestore, con su PDF intacto en Storage.
+ *
+ * SI ALGUIEN AÑADE ESTA COLECCION AL CRON DE PURGA, ROMPE ESA GARANTIA.
+ * Purgar aqui borraria folios firmados a los treinta minutos, que es
+ * exactamente lo que este cambio vino a impedir.
+ */
+export type SoftDeletableCollection =
+  | 'immobili'
+  | 'clienti'
+  | 'proprietari'
+  | 'documenti_generati';
 
 /**
  * Quien borra. El parametro es OBLIGATORIO a proposito.

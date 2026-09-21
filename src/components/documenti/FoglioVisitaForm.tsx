@@ -59,6 +59,11 @@ export interface FoglioVisitaFormProps {
   azione: string;
   /** Pre-populate the form with a previously saved document (restores all fields including signatures) */
   initialData?: Partial<FoglioVisitaData>;
+  /** Id del documento que se esta reabriendo. Si viene, guardar ACTUALIZA ese
+   *  documento y pisa su PDF, en vez de crear un duplicado. */
+  documentoId?: string;
+  /** URL guardada de ese documento, para reutilizar su ruta en Storage. */
+  urlExistente?: string;
 }
 
 const TIPO_SCHEDA_OPTIONS = [
@@ -98,7 +103,7 @@ function FormInput({ label, htmlFor, children, className }: { label: string; htm
 
 const inputClasses = "w-full h-11 px-4 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 font-medium text-sm text-slate-800 transition-all placeholder:text-slate-300";
 
-export default function FoglioVisitaForm({ onClose, sezione, azione, initialData }: FoglioVisitaFormProps) {
+export default function FoglioVisitaForm({ onClose, sezione, azione, initialData, documentoId, urlExistente }: FoglioVisitaFormProps) {
   const [form, setForm] = useState<FoglioVisitaData>(() => ({ ...INITIAL_DATA, ...initialData }));
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -552,6 +557,8 @@ export default function FoglioVisitaForm({ onClose, sezione, azione, initialData
                     sezione,
                     azione,
                     formData: form as unknown as Record<string, unknown>,
+                    documentoId,
+                    urlExistente,
                   });
                   if (result.success) {
                     setToast('✅ Documento salvato in Cloud!');

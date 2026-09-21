@@ -100,6 +100,8 @@ export default function DocumentiPage() {
   const [activeForm, setActiveForm] = useState<FormType | null>(null);
   // Saved form data for "Edit" mode (restores all fields + signatures)
   const [editFormData, setEditFormData] = useState<Record<string, unknown> | null>(null);
+  // Documento que se esta reabriendo: su id y su URL guardada. null = alta nueva.
+  const [editDocumento, setEditDocumento] = useState<{ id: string; urlDownload: string } | null>(null);
   // Increments on every open so the same form type always remounts fresh
   const [formKey, setFormKey] = useState(0);
 
@@ -190,6 +192,7 @@ export default function DocumentiPage() {
   const handleFormClose = useCallback(() => {
     setActiveForm(null);
     setEditFormData(null);
+    setEditDocumento(null);
     fetchGeneratedDocs();
   }, [fetchGeneratedDocs]);
 
@@ -568,6 +571,10 @@ export default function DocumentiPage() {
                                   }
                                   setFormKey(k => k + 1);
                                   setEditFormData(full.formData as Record<string, unknown>);
+                                  // El id y la URL viajan con el formulario para
+                                  // que guardar ACTUALICE este documento y pise su
+                                  // PDF, en vez de dejar un duplicado.
+                                  setEditDocumento({ id: doc.id, urlDownload: full.urlDownload || doc.urlDownload || '' });
                                   setActiveForm(ft);
                                 } catch {
                                   setToast('❌ Errore nel caricamento del modulo');
@@ -583,15 +590,24 @@ export default function DocumentiPage() {
                           <button onClick={async () => {
                             const ok = await confirm({
                               title: 'Eliminare il documento?',
-                              message: 'Il documento generato sarà rimosso definitivamente.',
+                              message: 'Il documento sparirà dall\'archivio. Il PDF firmato NON viene distrutto: resta conservato e recuperabile.',
                               danger: true,
                             });
                             if (!ok) return;
                             try {
-                              await fetch(`/api/documenti-generati?id=${doc.id}`, { method: 'DELETE' });
-                              await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: doc.urlDownload }) });
+                              // Ya NO se borra el PDF del bucket.
+                              //
+                              // Antes esta llamada destruia el fichero de Storage
+                              // justo despues de borrar el registro: dos clics y un
+                              // verbale firmado desaparecia de los dos sitios a la
+                              // vez, sin papelera y sin rastro de quien lo hizo.
+                              const res = await fetch(`/api/documenti-generati?id=${doc.id}`, { method: 'DELETE' });
+                              if (!res.ok) { setToast('❌ Errore eliminazione'); return; }
+                              const r = await res.json().catch(() => null);
                               setGeneratedDocs(prev => prev.filter(d => d.id !== doc.id));
-                              setToast('🗑️ Documento eliminato');
+                              setToast(r?.firmato
+                                ? '🗃️ Documento firmato archiviato (il PDF è conservato)'
+                                : '🗑️ Documento eliminato dall\'archivio');
                             } catch { setToast('❌ Errore eliminazione'); }
                           }} className="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors text-slate-400 hover:text-rose-500 border border-transparent hover:border-rose-200" aria-label="Elimina il documento generato" title="Elimina">
                             <Trash2 className="h-4 w-4" />
@@ -907,11 +923,11 @@ export default function DocumentiPage() {
       )}
 
       {/* ═══ FORM OVERLAYS — key=formKey forces fresh mount on every open ═══ */}
-      {activeForm === 'foglio-visita' && <FoglioVisitaForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} />}
-      {activeForm === 'incarico-locazione' && <IncaricoLocazioneForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} />}
-      {activeForm === 'incarico-stagionale' && <IncaricoStagionaleForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} />}
-      {activeForm === 'incarico-acquisto' && <IncaricoAcquistoForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} />}
-      {activeForm === 'incarico-esclusiva' && <IncaricoEsclusivaForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} />}
+      {activeForm === 'foglio-visita' && <FoglioVisitaForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} documentoId={editDocumento?.id} urlExistente={editDocumento?.urlDownload} />}
+      {activeForm === 'incarico-locazione' && <IncaricoLocazioneForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} documentoId={editDocumento?.id} urlExistente={editDocumento?.urlDownload} />}
+      {activeForm === 'incarico-stagionale' && <IncaricoStagionaleForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} documentoId={editDocumento?.id} urlExistente={editDocumento?.urlDownload} />}
+      {activeForm === 'incarico-acquisto' && <IncaricoAcquistoForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} documentoId={editDocumento?.id} urlExistente={editDocumento?.urlDownload} />}
+      {activeForm === 'incarico-esclusiva' && <IncaricoEsclusivaForm key={formKey} onClose={handleFormClose} sezione={mainTab} azione={subTab} initialData={editFormData as any ?? undefined} documentoId={editDocumento?.id} urlExistente={editDocumento?.urlDownload} />}
     </div>
   );
 }
