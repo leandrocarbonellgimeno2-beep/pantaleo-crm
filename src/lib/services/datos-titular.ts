@@ -23,8 +23,15 @@
  * Por eso `leerDatosTitular` devuelve los campos vacíos ante cualquier
  * problema en lugar de lanzar: la página se pinta igual, con los marcadores de
  * «da completare», que es exactamente lo que se ve antes de rellenarlos.
+ *
+ * Y por eso `firebase-admin` se importa PEREZOSAMENTE, dentro del `try`.
+ * `lib/firebase-admin.ts` lanza en la EVALUACIÓN DEL MÓDULO si falta alguna
+ * variable de entorno de la service account. Con un import estático ese throw
+ * ocurriría antes de que existiera el `try`, así que una credencial mal puesta
+ * en Vercel tumbaría `/privacy` y `/terms` con un 500 — justo lo que esta
+ * función promete que no puede pasar. Es el mismo patrón que ya usa
+ * `services/audit.ts`.
  */
-import { db, admin } from '@/lib/firebase-admin';
 import { audit } from '@/lib/services/audit';
 import {
   DATOS_VACIOS,
@@ -50,11 +57,15 @@ export interface DatosTitularGuardados {
   errorDeLectura: boolean;
 }
 
-const ref = () => db.collection(COLECCION).doc(DOCUMENTO);
+/** El documento, con el SDK cargado en el momento y no al importar. */
+async function ref() {
+  const { db } = await import('@/lib/firebase-admin');
+  return db.collection(COLECCION).doc(DOCUMENTO);
+}
 
 export async function leerDatosTitular(): Promise<DatosTitularGuardados> {
   try {
-    const doc = await ref().get();
+    const doc = await (await ref()).get();
 
     if (!doc.exists) {
       return {
@@ -121,7 +132,8 @@ export async function guardarDatosTitular(
     (k) => datos[k] !== anterior.datos[k],
   );
 
-  await ref().set(
+  const { admin } = await import('@/lib/firebase-admin');
+  await (await ref()).set(
     {
       ...datos,
       actualizadoAt: Date.now(),

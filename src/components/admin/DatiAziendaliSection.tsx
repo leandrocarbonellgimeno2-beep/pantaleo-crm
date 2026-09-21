@@ -79,9 +79,21 @@ export default function DatiAziendaliSection() {
     setErrores((e) => ({ ...e, [clave]: undefined }));
   };
 
-  // Se calcula sobre lo que hay EN PANTALLA, no sobre lo guardado: así el
-  // contador baja mientras Francesco escribe, antes de darle a guardar.
-  const faltan = camposQueFaltan(form);
+  // DOS CUENTAS, y no son la misma.
+  //
+  // `faltanEnPantalla` sale de lo que hay escrito ahora: sirve para ir
+  // marcando los campos en ámbar mientras Francesco los rellena.
+  //
+  // `faltanGuardados` sale de lo que hay EN FIRESTORE, y es la única que puede
+  // decir algo sobre las páginas publicadas. El cartel verde afirma «le pagine
+  // legali sono pronte»: calcularlo sobre el formulario haría que se pusiera
+  // verde con los campos escritos y SIN GUARDAR —o incluso tras un guardado
+  // rechazado por un correo mal escrito— mientras /privacy sigue publicando
+  // «[Ragione sociale da completare]». Es justo el error que esta cuenta
+  // existe para impedir.
+  const faltanEnPantalla = camposQueFaltan(form);
+  const faltanGuardados = data?.datos ? camposQueFaltan(data.datos) : null;
+  const hayCambiosSinGuardar = tocado;
 
   const guardar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,8 +124,29 @@ export default function DatiAziendaliSection() {
           ? `Salvato. Mancano ancora ${body.faltan.length} campi.`
           : "Dati aziendali salvati. Le pagine legali sono aggiornate.",
       );
+
+      // LA CACHÉ SE SIEMBRA CON LO QUE ACABA DE GUARDARSE, antes de soltar
+      // `tocado`.
+      //
+      // Sin esto, `setTocado(false)` disparaba el efecto de arriba con el
+      // `data` VIEJO —`mutate()` revalida pero no cambia la caché al
+      // instante—, así que el formulario se repintaba con los valores
+      // anteriores. En el caso más frecuente, la primera vez, los anteriores
+      // están vacíos: Francesco rellenaba los ocho campos, veía «salvato» y
+      // acto seguido el formulario EN BLANCO hasta que volvía la respuesta.
+      // Parecía que guardar lo había borrado todo.
+      await mutate(
+        (previo) => ({
+          ...(previo as Respuesta),
+          datos: body.datos,
+          faltan: body.faltan ?? [],
+          existe: true,
+          actualizadoAt: Date.now(),
+          errorDeLectura: false,
+        }),
+        { revalidate: false },
+      );
       setTocado(false);
-      mutate();
     } catch {
       toast.error("Errore di rete. Riprova.");
     } finally {
@@ -165,30 +198,48 @@ export default function DatiAziendaliSection() {
         </div>
       )}
 
-      {error && !isLoading && (
+      {/* El cartel de error solo cuando NO hay nada que enseñar. Antes salía
+          con `error` a secas, así que una revalidación fallida —un corte de
+          red al volver a la pestaña— desmontaba el formulario entero con lo
+          que el usuario llevara escrito dentro. */}
+      {error && !isLoading && !data && (
         <div className="py-16 text-center px-6">
           <p className="font-bold text-slate-700">Impossibile caricare i dati aziendali.</p>
           <p className="text-sm text-slate-400 mt-1">Riprova fra un momento.</p>
         </div>
       )}
 
-      {!isLoading && !error && (
+      {!isLoading && (!error || data) && (
         <form onSubmit={guardar} className="p-6 space-y-5">
-          {/* Estado: qué falta, o que ya está todo. Es lo primero que se ve. */}
-          {faltan.length > 0 ? (
+          {/*
+            El cartel habla SIEMPRE de lo publicado, nunca de lo escrito. Si la
+            lectura falló no se afirma nada: el formulario está vacío pero los
+            datos podrían estar completos en Firestore.
+          */}
+          {data?.errorDeLectura ? (
+            <div role="alert" className="flex gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-900">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <p className="text-sm font-medium">
+                <strong className="font-black">Dati non leggibili.</strong> Non è stato
+                possibile leggere i dati salvati: il modulo è vuoto ma i dati potrebbero
+                esistere. <strong>Non salvare</strong> finché la pagina non si ricarica
+                correttamente, altrimenti li sovrascrivi.
+              </p>
+            </div>
+          ) : faltanGuardados === null ? null : faltanGuardados.length > 0 ? (
             <div role="status" className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
               <AlertTriangle className="h-5 w-5 shrink-0" />
               <div className="text-sm font-medium">
                 <p>
                   <strong className="font-black">
-                    Mancano {faltan.length} {faltan.length === 1 ? "campo" : "campi"}.
+                    Mancano {faltanGuardados.length} {faltanGuardados.length === 1 ? 'campo' : 'campi'}.
                   </strong>{' '}
-                  Finché non sono compilati, le pagine legali mostrano un avviso e{' '}
-                  <strong>non vanno pubblicate</strong>.
+                  Finché non sono <strong>salvati</strong>, le pagine legali mostrano un
+                  avviso e <strong>non vanno pubblicate</strong>.
                 </p>
                 <p className="mt-1.5 text-[13px]">
                   Da completare:{' '}
-                  {faltan
+                  {faltanGuardados
                     .map((k) => CAMPOS_TITULAR.find((c) => c.clave === k)?.etiqueta ?? k)
                     .join(' · ')}
                 </p>
@@ -198,16 +249,22 @@ export default function DatiAziendaliSection() {
             <div role="status" className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
               <CheckCircle2 className="h-5 w-5 shrink-0" />
               <p className="text-sm font-medium">
-                <strong className="font-black">Dati completi.</strong> Le pagine legali sono
-                pronte per essere pubblicate e per essere indicate a Google.
+                <strong className="font-black">Dati completi e salvati.</strong> Le pagine
+                legali sono pronte per essere pubblicate e per essere indicate a Google.
               </p>
             </div>
           )}
 
-          {data?.errorDeLectura && (
-            <p className="text-[13px] font-semibold text-rose-600">
-              Attenzione: non è stato possibile leggere i dati salvati. Il modulo è vuoto ma
-              i dati potrebbero esistere — non salvare finché non si ricarica correttamente.
+          {/* Pista secundaria: lo que falta AQUÍ, en el formulario, y si hay
+              cambios todavía sin guardar. No dice nada de lo publicado. */}
+          {(hayCambiosSinGuardar || faltanEnPantalla.length > 0) && !data?.errorDeLectura && (
+            <p className="text-[13px] font-semibold text-slate-500">
+              {hayCambiosSinGuardar && <span className="text-indigo-600">Modifiche non salvate. </span>}
+              {faltanEnPantalla.length > 0 && (
+                <>
+                  {faltanEnPantalla.length} {faltanEnPantalla.length === 1 ? 'campo ancora vuoto' : 'campi ancora vuoti'} in questo modulo.
+                </>
+              )}
             </p>
           )}
 

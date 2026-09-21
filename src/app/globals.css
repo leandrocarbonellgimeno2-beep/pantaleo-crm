@@ -112,6 +112,22 @@
     visibility: hidden !important;
   }
 
+  /* 1-bis. EXCEPCIÓN: las páginas legales SÍ se imprimen.
+
+     La regla de arriba esconde el documento entero para que del cartel de
+     escaparate solo salga el cartel. Pero se aplica a TODAS las pantallas, y
+     desde que /privacy y /terms existen eso significa que una política de
+     privacidad sale EN BLANCO al imprimirla o al guardarla en PDF. Un
+     documento legal que no se puede archivar no sirve de mucho.
+
+     La especificidad de `.pagina-legale *` (una clase) gana a la de
+     `html body *` (tres tipos), así que basta con declararla después. */
+  .pagina-legale,
+  .pagina-legale * {
+    display: revert !important;
+    visibility: visible !important;
+  }
+
   /* 2. Reset pagina */
   @page {
     size: A4 portrait;

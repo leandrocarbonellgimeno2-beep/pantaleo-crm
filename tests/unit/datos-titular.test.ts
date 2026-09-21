@@ -303,6 +303,45 @@ describe('una lectura rota no puede tumbar las paginas publicas', () => {
   });
 });
 
+describe('las paginas legales no dependen de que Firebase arranque', () => {
+  const leer = (p: string) => require('node:fs').readFileSync(require('node:path').join(process.cwd(), p), 'utf8');
+
+  it('el servicio importa firebase-admin PEREZOSAMENTE', () => {
+    // `lib/firebase-admin.ts` lanza en la evaluacion del modulo si falta una
+    // variable de la service account. Con un import estatico ese throw
+    // ocurriria ANTES del try/catch y tumbaria /privacy y /terms con un 500,
+    // que es justo lo que el servicio promete que no puede pasar.
+    const fuente = leer('src/lib/services/datos-titular.ts');
+    expect(fuente).not.toMatch(/^import \{[^}]*\} from '@\/lib\/firebase-admin';/m);
+    expect(fuente).toContain("await import('@/lib/firebase-admin')");
+  });
+
+  it('y las dos se sirven fuera del armazon autenticado', () => {
+    // Dentro de el, un visitante sin sesion —el revisor de Google incluido—
+    // veia la barra lateral del CRM y un boton de «Logout» sobre la politica.
+    const layout = leer('src/components/AuthenticatedLayout.tsx');
+    expect(layout).toContain("pathname === \"/privacy\"");
+    expect(layout).toContain("pathname === \"/terms\"");
+  });
+
+  it('y se pueden imprimir: la regla que esconde todo las exime', () => {
+    // Una politica de privacidad que sale en blanco al guardarla en PDF no
+    // sirve para archivarla.
+    const css = leer('src/app/globals.css');
+    expect(css).toContain('.pagina-legale');
+    const marco = leer('src/components/legal/PaginaLegale.tsx');
+    expect(marco).toContain('pagina-legale');
+  });
+
+  it('la fecha del TEXTO legal no la pisa la de los datos', () => {
+    // Corregir un digito del telefono no puede anunciar que la politica
+    // cambio, ni ocultar que cambio de verdad.
+    const marco = leer('src/components/legal/PaginaLegale.tsx');
+    expect(marco).toContain('Ultimo aggiornamento: {ULTIMA_REVISION}');
+    expect(marco).toContain('Dati aziendali aggiornati il');
+  });
+});
+
 describe('normalizar lo que venga de la base', () => {
   it('un documento al que le falte una clave da cadena vacia, no undefined', () => {
     const r = normalizarDatos({ razonSocial: 'Solo esto' });

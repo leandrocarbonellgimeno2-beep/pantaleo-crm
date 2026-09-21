@@ -19,10 +19,31 @@ export default function AuthenticatedLayout({
   //
   // Se activa solo con sesion: sin ella el endpoint responderia 401 cada 45
   // segundos, y en la pantalla de login no hay a quien registrar.
-  usePresenceHeartbeat(Boolean(user?.email) && pathname !== "/login");
+  // Las pantallas que se ven SIN sesion. Coinciden con PUBLIC_PATHS del proxy
+  // y por eso estan aqui juntas: si una entra ahi y no aqui, se sirve con el
+  // armazon del CRM alrededor.
+  const esPublica =
+    pathname === "/login" || pathname === "/privacy" || pathname === "/terms";
 
-  // La pagina di login non mostra la sidebar
-  if (pathname === "/login") {
+  usePresenceHeartbeat(Boolean(user?.email) && !esPublica);
+
+  // ──────────────────────────────────────────────────────────────────────
+  // SIN SIDEBAR NI LATIDO EN LAS PANTALLAS PUBLICAS.
+  //
+  // Las dos paginas legales se sirven a visitantes SIN SESION —entre ellos el
+  // revisor de Google, que las abre para publicar la aplicacion OAuth—. Dentro
+  // de este armazon veian la barra lateral del CRM entera, con Dashboard,
+  // Clienti, Immobili y un boton de «Logout», y todos esos enlaces rebotan a
+  // /login: parece una pantalla rota de una aplicacion ajena en vez de un
+  // documento legal.
+  //
+  // Y hay un motivo mas concreto: este contenedor lleva `print:hidden`, y
+  // globals.css esconde ademas todo el cuerpo al imprimir salvo el cartel de
+  // escaparate. Una politica de privacidad que sale EN BLANCO al imprimirla o
+  // al guardarla en PDF no sirve para archivarla, que es justo para lo que se
+  // imprime un documento legal.
+  // ──────────────────────────────────────────────────────────────────────
+  if (esPublica) {
     return <>{children}</>;
   }
 

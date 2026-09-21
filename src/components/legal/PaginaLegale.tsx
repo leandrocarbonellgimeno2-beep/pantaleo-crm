@@ -44,7 +44,9 @@ export function PaginaLegale({
     : null;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    // `pagina-legale` es la marca que exime a estas dos pantallas de la regla
+    // de impresión que esconde todo el documento (ver globals.css).
+    <div className="pagina-legale min-h-screen bg-slate-50">
       <div className="mx-auto max-w-3xl px-5 py-10 sm:py-14">
         <Link
           href="/login"
@@ -62,9 +64,25 @@ export function PaginaLegale({
             {titulo}
           </h1>
           <p className="mt-2 text-base font-medium text-slate-500">{subtitulo}</p>
+          {/*
+            DOS FECHAS, porque son dos cosas distintas.
+
+            «Ultimo aggiornamento» es la del TEXTO legal, que es lo que el
+            apartado «Modifiche» promete indicar. Antes se pintaba
+            `fechaDatos ?? ULTIMA_REVISION`, y en cuanto existía un dato
+            guardado ganaba siempre: corregir un dígito del teléfono anunciaba
+            que la política había cambiado, y —peor— revisar de verdad el texto
+            no se veía, porque la fecha de los datos seguía siendo la que
+            mandaba.
+          */}
           <p className="mt-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-            Ultimo aggiornamento: {fechaDatos ?? ULTIMA_REVISION}
+            Ultimo aggiornamento: {ULTIMA_REVISION}
           </p>
+          {fechaDatos && (
+            <p className="mt-1 text-xs font-medium text-slate-400">
+              Dati aziendali aggiornati il {fechaDatos}
+            </p>
+          )}
         </header>
 
         {incompleta && (
