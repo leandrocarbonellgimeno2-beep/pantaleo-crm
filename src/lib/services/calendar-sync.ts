@@ -110,7 +110,7 @@ export async function sincronizarDesdeGoogle(): Promise<ResumenSync> {
       }
 
       // ── Eco de nuestra propia escritura ────────────────────────────────
-      if (esEcoDelCrm(evento, conocida?.datos?.googleSyncedAt)) {
+      if (esEcoDelCrm(evento, conocida?.datos?.googleSyncedAt, conocida?.datos)) {
         ecosIgnorados++;
         continue;
       }

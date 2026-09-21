@@ -61,6 +61,20 @@ import { CALENDAR_CONFIG_ID } from './calendar-config';
 export const ORIGEN_CRM = 'CRM';
 
 /**
+ * El título con el que el CRM ha venido creando sus eventos.
+ *
+ * Sirve para reconocer los eventos que subió el CRM ANTES de que existiera la
+ * marca `extendedProperties`. Sin esto, la primera sincronización completa los
+ * trataría como eventos ajenos y reescribiría el nombre del cliente con el
+ * título del evento —«Appuntamento CRM: Mario Rossi»—, que es exactamente el
+ * fallo que la auditoría encontró y que este cambio viene a cerrar.
+ *
+ * Es una heurística y se usa SOLO como red: en cuanto esa cita se edite una
+ * vez desde el CRM, el evento recibe la marca de verdad.
+ */
+export const PREFIJO_TITULO_CRM = 'Appuntamento CRM:';
+
+/**
  * Margen para decidir si un evento es nuestro propio eco.
  *
  * Entre que mandamos el evento y que Google sella su `updated` pasan unos
@@ -399,9 +413,23 @@ export async function guardarSyncOk(proximoSyncToken: string | null): Promise<vo
 export function esEcoDelCrm(
   evento: calendar_v3.Schema$Event,
   citaGoogleSyncedAt: number | null | undefined,
+  citaConocida?: { source?: string } | null,
 ): boolean {
   const marca = evento.extendedProperties?.private;
-  if (marca?.origin !== ORIGEN_CRM) return false;
+
+  if (marca?.origin !== ORIGEN_CRM) {
+    // LEGADO. Los eventos que el CRM subió antes de que existiera la marca no
+    // la llevan. Si el título es el que el CRM pone y la cita que le
+    // corresponde NO nació en Google, es nuestro: dejarlo pasar reescribiría
+    // el nombre del cliente con «Appuntamento CRM: …».
+    //
+    // Se exige que la cita ya exista y que no venga de Google: así un evento
+    // que alguien titulara a mano de esa forma, y que no tuviera cita, entra
+    // con normalidad.
+    const pareceDelCrm = (evento.summary || '').startsWith(PREFIJO_TITULO_CRM);
+    const esCitaDelCrm = Boolean(citaConocida) && citaConocida?.source !== 'google_calendar';
+    return pareceDelCrm && esCitaDelCrm;
+  }
 
   // Lo subimos nosotros pero no sabemos cuándo: por prudencia se trata como
   // eco. Crear una cita duplicada es peor que perderse una edición.

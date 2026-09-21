@@ -21,6 +21,7 @@ vi.mock('@/lib/firebase-admin', () => ({
 import { esEcoDelCrm, citaDesdeEvento, ORIGEN_CRM } from '@/lib/google-calendar';
 
 const AHORA = Date.UTC(2026, 8, 21, 10, 0, 0);
+const iso = (ms: number) => new Date(ms).toISOString();
 
 const eventoCrm = (updatedMs: number, crmId = 'cita-1') => ({
   id: 'ev-1',
@@ -68,6 +69,31 @@ describe('el corta-bucles: esEcoDelCrm', () => {
   it('una fecha `updated` ilegible tampoco crea una cita nueva', () => {
     const roto = { ...eventoCrm(AHORA), updated: 'no-es-una-fecha' };
     expect(esEcoDelCrm(roto, AHORA)).toBe(true);
+  });
+
+  it('LEGADO: un evento que subio el CRM antes de la marca no se reimporta', () => {
+    // Los eventos anteriores a este cambio no llevan extendedProperties. Sin
+    // esta red, la primera sincronizacion completa los trataria como ajenos y
+    // reescribiria el nombre del cliente con «Appuntamento CRM: …», que es
+    // justo el fallo que la auditoria encontro.
+    const viejo = {
+      id: 'ev-viejo',
+      summary: 'Appuntamento CRM: Mario Rossi',
+      updated: iso(AHORA + 3600_000),
+    } as any;
+    expect(esEcoDelCrm(viejo, AHORA, { source: undefined })).toBe(true);
+  });
+
+  it('pero si la cita nacio en Google, ese titulo no la protege', () => {
+    const viejo = {
+      id: 'ev-viejo', summary: 'Appuntamento CRM: Mario Rossi', updated: iso(AHORA + 3600_000),
+    } as any;
+    expect(esEcoDelCrm(viejo, AHORA, { source: 'google_calendar' })).toBe(false);
+  });
+
+  it('y un evento con ese titulo SIN cita conocida entra con normalidad', () => {
+    const suelto = { id: 'ev-x', summary: 'Appuntamento CRM: algo', updated: iso(AHORA) } as any;
+    expect(esEcoDelCrm(suelto, null, null)).toBe(false);
   });
 
   it('la marca tiene que ser exactamente la nuestra', () => {
