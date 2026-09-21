@@ -181,6 +181,25 @@ export default function LoginPage() {
         <p className="text-center text-white/20 text-xs font-medium mt-8 tracking-wide">
           © 2026 Immobiliare Pantaleo · Marsala (TP)
         </p>
+
+        {/*
+          Los dos enlaces legales van AQUI, en la unica pantalla que se ve sin
+          sesion. Google los visita desde su propia infraestructura para
+          publicar la aplicacion OAuth, y mientras esa app no este publicada el
+          token del calendario caduca cada siete dias.
+
+          `<a>` y no `<Link>`: son paginas estaticas fuera del arbol de la
+          aplicacion y esta pantalla no gana nada precargandolas.
+        */}
+        <nav className="mt-4 flex items-center justify-center gap-5 text-[11px] font-semibold tracking-wide">
+          <a href="/privacy" className="text-white/25 hover:text-white/60 transition-colors">
+            Privacy
+          </a>
+          <span className="text-white/10" aria-hidden="true">·</span>
+          <a href="/terms" className="text-white/25 hover:text-white/60 transition-colors">
+            Termini di Servizio
+          </a>
+        </nav>
       </div>
     </div>
   );

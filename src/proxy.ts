@@ -2,7 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth';
 
-const PUBLIC_PATHS = ['/login', '/api/auth'];
+/**
+ * Rutas que se sirven SIN sesión.
+ *
+ * `/privacy` y `/terms` tienen que ser públicas de verdad, y no por comodidad:
+ * Google exige poder abrirlas —desde su propia infraestructura, sin ninguna
+ * cookie— para publicar la aplicación OAuth. Si el proxy las mandara a
+ * /login, Google vería una redirección en vez de la política y rechazaría la
+ * publicación; y mientras la app no esté publicada, el refresh_token del
+ * calendario caduca cada 7 días.
+ *
+ * Son dos páginas de texto legal: no enseñan ni un dato de la agencia.
+ */
+const PUBLIC_PATHS = ['/login', '/api/auth', '/privacy', '/terms'];
 
 // Rutas que se autentican por su cuenta y no pueden depender de la cookie de
 // sesión: el cron de Vercel invoca el endpoint sin navegador ni cookies, y el
