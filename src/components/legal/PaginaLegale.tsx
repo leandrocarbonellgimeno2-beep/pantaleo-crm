@@ -7,8 +7,8 @@ import { ULTIMA_REVISION, faltanDatosPorRellenar, type DatosTitular } from '@/li
  *
  * Es un componente de SERVIDOR a propósito: son texto, no necesitan ni una
  * línea de JavaScript en el navegador. Y tienen que poder abrirse SIN sesión,
- * porque Google las visita desde su propia infraestructura para publicar la
- * aplicación OAuth (ver `PUBLIC_PATHS` en src/proxy.ts).
+ * porque son el texto legal al que se remite a clientes y proprietari, que no
+ * tienen acceso al CRM (ver `PUBLIC_PATHS` en src/proxy.ts).
  *
  * El aviso de «pendiente de completar» sale mientras falte algún dato
  * obligatorio de la agencia. Publicar una política con

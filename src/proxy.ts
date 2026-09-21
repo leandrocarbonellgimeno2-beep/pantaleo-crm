@@ -6,13 +6,12 @@ import { verifySession } from '@/lib/auth';
  * Rutas que se sirven SIN sesión.
  *
  * `/privacy` y `/terms` tienen que ser públicas de verdad, y no por comodidad:
- * Google exige poder abrirlas —desde su propia infraestructura, sin ninguna
- * cookie— para publicar la aplicación OAuth. Si el proxy las mandara a
- * /login, Google vería una redirección en vez de la política y rechazaría la
- * publicación; y mientras la app no esté publicada, el refresh_token del
- * calendario caduca cada 7 días.
+ * son el texto legal al que se remite a clientes y proprietari, y esas
+ * personas NO tienen acceso al CRM. Si el proxy las mandara a /login, el
+ * enlace de una informativa de privacidad llevaría a una pantalla de
+ * credenciales, que es tanto como no publicarla.
  *
- * Son dos páginas de texto legal: no enseñan ni un dato de la agencia.
+ * Son dos páginas de texto legal: no enseñan ni un dato de negocio.
  */
 const PUBLIC_PATHS = ['/login', '/api/auth', '/privacy', '/terms'];
 

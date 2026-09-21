@@ -17,10 +17,10 @@ export const metadata: Metadata = {
  * SIEMPRE EN VIVO, sin cache.
  *
  * Los datos de la agencia los edita Francesco desde Administracion, y un
- * cambio tiene que verse al recargar, no en el siguiente despliegue. Es
- * ademas la pagina que Google revisa a mano para publicar la aplicacion
- * OAuth: servir una version vieja ahi es servir un documento legal que no
- * es el vigente.
+ * cambio tiene que verse al recargar, no en el siguiente despliegue: servir
+ * una version vieja aqui es publicar un documento legal que no es el
+ * vigente, y estas dos paginas son el texto al que se remite a clientes y
+ * proprietari.
  *
  * El coste es una lectura de Firestore por visita, y estas dos paginas
  * reciben unas pocas. La ruta de guardado ademas invalida el cache por si
@@ -129,9 +129,9 @@ export default async function TermsPage() {
         aggiornamenti o cause non imputabili all&apos;Agenzia.
       </p>
       <p>
-        Le funzioni che dipendono da servizi esterni — in particolare la sincronizzazione con
-        il calendario e la pubblicazione sui portali immobiliari — possono risultare
-        temporaneamente indisponibili per cause riconducibili a tali servizi.
+        Le funzioni che dipendono da servizi esterni — in particolare la pubblicazione sui
+        portali immobiliari — possono risultare temporaneamente indisponibili per cause
+        riconducibili a tali servizi.
       </p>
 
       <h2>6. Proprietà intellettuale</h2>

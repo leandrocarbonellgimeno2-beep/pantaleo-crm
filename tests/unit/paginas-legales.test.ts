@@ -5,14 +5,11 @@ import { urlDelSitio, DOMINIO_POR_DEFECTO } from '@/lib/site-url';
 import { DATOS_VACIOS, faltanDatosPorRellenar } from '@/lib/datos-titular';
 
 /**
- * Las dos paginas legales existen para poder PUBLICAR la aplicacion OAuth de
- * Google. Mientras no este publicada, el refresh_token del calendario caduca
- * cada siete dias — que es, muy probablemente, lo que paso el 20 de marzo.
- *
- * Google las visita desde su propia infraestructura, sin ninguna cookie. Si el
- * proxy las mandara a /login, veria una redireccion en vez de la politica y
- * rechazaria la publicacion. Por eso lo que se fija aqui es sobre todo que
- * sean PUBLICAS.
+ * Las dos paginas legales son el texto al que se remite a clientes y
+ * proprietari, y esas personas NO tienen acceso al CRM. Por eso lo que se
+ * fija aqui es sobre todo que sean PUBLICAS: si el proxy las mandara a
+ * /login, el enlace de una informativa de privacidad llevaria a una pantalla
+ * de credenciales, que es tanto como no publicarla.
  */
 
 const leer = (p: string) => readFileSync(join(process.cwd(), p), 'utf8');
@@ -54,24 +51,25 @@ describe('las dos paginas se sirven SIN sesion', () => {
   });
 });
 
-describe('el contenido que Google va a revisar', () => {
+describe('el contenido de las dos paginas legales', () => {
   const privacy = leer('src/app/privacy/page.tsx');
   const terms = leer('src/app/terms/page.tsx');
 
-  it('la privacidad declara QUE datos de Google se usan y para que', () => {
-    // Es lo que mira el revisor de Google al publicar la app.
-    expect(privacy).toContain('auth/calendar');
-    expect(privacy).toContain('auth/userinfo.email');
-    expect(privacy).toMatch(/Google Calendar/);
+  it('la informativa NO declara ya ningun tratamiento de datos de Google', () => {
+    // Al quitar la integracion, el apartado que declaraba los scopes paso a
+    // ser FALSO: una informativa que dice tratar datos que no se tratan es
+    // peor que una incompleta, porque afirma algo que no ocurre.
+    expect(privacy).not.toContain('auth/calendar');
+    expect(privacy).not.toContain('auth/userinfo.email');
+    expect(privacy).not.toContain('Google Calendar');
   });
 
-  it('y dice expresamente que no se usan para publicidad ni se ceden', () => {
-    // El JSX parte las frases en varias lineas, asi que se compara sobre el
-    // texto con los espacios normalizados y sin etiquetas.
-    const texto = privacy.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    expect(texto).toMatch(/pubblicit/i);
-    expect(texto).toMatch(/non vengono venduti/i);
-    expect(texto).toMatch(/intelligenza artificiale/i);
+  it('y los apartados quedan numerados de corrido, sin huecos', () => {
+    // Quitar el apartado 5 y no renumerar dejaria «4, 6, 7…» en un documento
+    // legal que se remite a sus propios apartados.
+    const numeros = [...privacy.matchAll(/<h2>(\d+)\./g)].map((m) => Number(m[1]));
+    expect(numeros.length).toBeGreaterThan(5);
+    expect(numeros).toEqual(numeros.map((_, i) => i + 1));
   });
 
   it('cubre los puntos que el RGPD exige', () => {
@@ -184,7 +182,6 @@ describe('no queda ningun dominio viejo escrito a mano', () => {
       'src/lib/site-url.ts',
       'src/app/privacy/page.tsx',
       'src/app/terms/page.tsx',
-      'docs/adr/0003-calendario-bidireccional-con-google.md',
       'vercel.json',
     ];
     for (const ruta of sospechosos) {

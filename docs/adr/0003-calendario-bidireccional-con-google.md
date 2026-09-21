@@ -1,8 +1,25 @@
 # ADR 0003 — Calendario bidireccional con Google
 
 - **Fecha**: 2026-09-21
-- **Estado**: implementado en código; **falta la conexión OAuth, que solo puede
-  hacer una persona** (ver «Lo que tenés que hacer vos»)
+- **Estado**: ❌ **REVERTIDO el 21 de septiembre de 2026.** La integración se
+  implementó entera y se retiró el mismo día, por decisión de Leandro, antes
+  de llegar a conectarse.
+
+> **Este ADR se conserva como REGISTRO, no como descripción del sistema.**
+>
+> Nada de lo que describe está hoy en el código: no hay OAuth de calendario,
+> ni sincronización, ni cron, ni dependencia de `googleapis`. La agenda del
+> CRM es local y sus citas siguen intactas.
+>
+> Se deja porque documenta decisiones que costaron trabajo y que volverían a
+> hacer falta si algún día se retoma: por qué el token va a nivel de agencia,
+> cómo se corta el rebote con `extendedProperties` + `googleSyncedAt`, por qué
+> un cron y no webhooks, y los siete fallos críticos que encontró la revisión
+> adversarial —entre ellos que `set()` no parte las claves por el punto, que
+> borrar una cita importada borraba el evento real de Google, y que el título
+> del evento corrompía el nombre del cliente en cada ida y vuelta—.
+>
+> Lo que sigue describe cómo ERA, en pasado.
 
 ---
 

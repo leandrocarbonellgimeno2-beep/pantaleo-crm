@@ -16,10 +16,10 @@ export const metadata: Metadata = {
  * SIEMPRE EN VIVO, sin cache.
  *
  * Los datos de la agencia los edita Francesco desde Administracion, y un
- * cambio tiene que verse al recargar, no en el siguiente despliegue. Es
- * ademas la pagina que Google revisa a mano para publicar la aplicacion
- * OAuth: servir una version vieja ahi es servir un documento legal que no
- * es el vigente.
+ * cambio tiene que verse al recargar, no en el siguiente despliegue: servir
+ * una version vieja aqui es publicar un documento legal que no es el
+ * vigente, y estas dos paginas son el texto al que se remite a clientes y
+ * proprietari.
  *
  * El coste es una lectura de Firestore por visita, y estas dos paginas
  * reciben unas pocas. La ruta de guardado ademas invalida el cache por si
@@ -160,38 +160,7 @@ export default async function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>5. Integrazione con Google Calendar</h2>
-      <p>
-        Il CRM può essere collegato a un account Google dell&apos;Agenzia per mantenere
-        allineata l&apos;agenda degli appuntamenti. Il collegamento è effettuato una sola
-        volta da un responsabile dell&apos;Agenzia e riguarda{' '}
-        <strong>un unico account aziendale</strong>, non gli account personali dei
-        collaboratori.
-      </p>
-      <h3>Dati Google a cui accediamo e come li usiamo</h3>
-      <ul>
-        <li>
-          <strong>Calendario</strong> (<code>.../auth/calendar</code>): il CRM crea, modifica
-          ed elimina nel calendario collegato gli eventi corrispondenti agli appuntamenti
-          gestiti nel CRM, e importa nell&apos;agenda gli eventi creati direttamente su
-          Google, affinché la disponibilità risulti aggiornata.
-        </li>
-        <li>
-          <strong>Indirizzo e-mail dell&apos;account</strong>{' '}
-          (<code>.../auth/userinfo.email</code>): utilizzato unicamente per mostrare quale
-          account risulta collegato.
-        </li>
-      </ul>
-      <p>
-        I dati ottenuti da Google sono utilizzati <strong>esclusivamente</strong> per la
-        funzione di agenda descritta. <strong>Non</strong> vengono usati per pubblicità, non
-        vengono venduti né ceduti a terzi e non vengono impiegati per addestrare modelli di
-        intelligenza artificiale. Gli eventi contrassegnati come <em>privati</em> su Google
-        non vengono importati. Il collegamento può essere revocato in qualsiasi momento
-        dalle impostazioni di sicurezza dell&apos;account Google.
-      </p>
-
-      <h2>6. Destinatari dei dati</h2>
+      <h2>5. Destinatari dei dati</h2>
       <p>
         I dati non sono diffusi. Possono essere trattati, in qualità di responsabili del
         trattamento (art. 28 GDPR), dai fornitori che erogano l&apos;infrastruttura
@@ -200,7 +169,6 @@ export default async function PrivacyPage() {
       <ul>
         <li>fornitore di hosting e distribuzione dell&apos;applicazione;</li>
         <li>fornitore di base di dati e archiviazione documentale in cloud;</li>
-        <li>fornitore del servizio di calendario, se attivata l&apos;integrazione;</li>
         <li>portali immobiliari, limitatamente ai dati dell&apos;immobile pubblicato;</li>
         <li>
           consulenti, professionisti e autorità pubbliche quando previsto da un obbligo di
@@ -212,7 +180,7 @@ export default async function PrivacyPage() {
         scrivendo a {valorParaMostrar(datos, 'emailPrivacidad')}.
       </p>
 
-      <h2>7. Trasferimenti fuori dallo Spazio Economico Europeo</h2>
+      <h2>6. Trasferimenti fuori dallo Spazio Economico Europeo</h2>
       <p>
         Alcuni fornitori possono trattare i dati al di fuori dello SEE. In tal caso il
         trasferimento avviene sulla base di una decisione di adeguatezza della Commissione
@@ -220,7 +188,7 @@ export default async function PrivacyPage() {
         misure supplementari eventualmente necessarie.
       </p>
 
-      <h2>8. Periodo di conservazione</h2>
+      <h2>7. Periodo di conservazione</h2>
       <ul>
         <li>
           <strong>Dati contrattuali e documenti sottoscritti:</strong> per la durata del
@@ -250,7 +218,7 @@ export default async function PrivacyPage() {
         </em>
       </p>
 
-      <h2>9. Diritti dell&apos;interessato</h2>
+      <h2>8. Diritti dell&apos;interessato</h2>
       <p>
         Ai sensi degli articoli da 15 a 22 del GDPR, l&apos;interessato ha diritto di
         ottenere:
@@ -282,7 +250,7 @@ export default async function PrivacyPage() {
         ) o all&apos;autorità di controllo dello Stato in cui risiede.
       </p>
 
-      <h2>10. Decisioni automatizzate</h2>
+      <h2>9. Decisioni automatizzate</h2>
       <p>
         Il CRM calcola un punteggio di compatibilità tra le preferenze dichiarate dal cliente
         e gli immobili disponibili, al solo fine di <strong>ordinare</strong> le proposte da
@@ -291,7 +259,7 @@ export default async function PrivacyPage() {
         sull&apos;interessato: ogni proposta è valutata e selezionata da una persona.
       </p>
 
-      <h2>11. Misure di sicurezza</h2>
+      <h2>10. Misure di sicurezza</h2>
       <p>
         L&apos;accesso al CRM è riservato ai collaboratori autorizzati, con credenziali
         personali e profili di autorizzazione differenziati. Le password sono conservate
@@ -299,7 +267,7 @@ export default async function PrivacyPage() {
         attraverso il sistema autenticato. Le operazioni critiche sono registrate.
       </p>
 
-      <h2>12. Modifiche</h2>
+      <h2>11. Modifiche</h2>
       <p>
         La presente informativa può essere aggiornata. La versione vigente è sempre
         disponibile a questo indirizzo, con indicazione della data di ultimo aggiornamento.
