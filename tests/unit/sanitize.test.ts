@@ -151,6 +151,29 @@ describe('sanitizeBody — proprietari', () => {
     const result = sanitizeBody(body, PROPRIETARI_ALLOWED, 'test');
     expect(result).not.toHaveProperty('id');
   });
+
+  it('scarta i contatori derivati: il riempitivo del GET non torna a Firestore', () => {
+    // Il bug: il GET fabbrica `immobili_collegati: Array(n).fill('id')` per
+    // disegnare le card, la scheda rimanda indietro quel riempitivo nel PATCH,
+    // e Firestore si teneva `['id','id']` al posto degli ID veri. Ogni
+    // salvataggio distruggeva il collegamento proprietario↔immobili.
+    const body = {
+      nome: 'Francesco',
+      numero_immobili: 2,
+      immobili_collegati: ['id', 'id'],
+    };
+    const result = sanitizeBody(body, PROPRIETARI_ALLOWED, 'test');
+    expect(result).toEqual({ nome: 'Francesco' });
+    expect(result).not.toHaveProperty('immobili_collegati');
+    expect(result).not.toHaveProperty('numero_immobili');
+  });
+
+  it('e li scarta anche se arrivano con ID che sembrano veri', () => {
+    // Sono campi derivati: chi li deve scrivere lo fa da arrayUnion/increment,
+    // mai dal corpo di una richiesta.
+    const body = { nome: 'Francesco', immobili_collegati: ['P001', 'P002'] };
+    expect(sanitizeBody(body, PROPRIETARI_ALLOWED, 'test')).toEqual({ nome: 'Francesco' });
+  });
 });
 
 describe('sanitizeBody — edge cases', () => {

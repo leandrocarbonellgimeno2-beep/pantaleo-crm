@@ -205,9 +205,22 @@ export const PROPRIETARI_ALLOWED = [
   'stato', 'stato_chiavi',
   // firma e documenti
   'firmaDigitale', 'documenti',
-  // contatori vetrina (vengono ricalcolati lato server ma li accettiamo per
-  // compat retro — se arrivano stantii, vengono sovrascritti dal GET)
-  'numero_immobili', 'immobili_collegati',
+  //
+  // `numero_immobili` e `immobili_collegati` NON sono qui, ed è deliberato.
+  //
+  // Sono campi DERIVATI, mantenuti dal server: `numero_immobili` con
+  // FieldValue.increment e il servizio di ri-conteggio, `immobili_collegati`
+  // con arrayUnion/arrayRemove di ID reali.
+  //
+  // Il commento che stava qui diceva che, se arrivavano stantii, "vengono
+  // sovrascritti dal GET". È vero per quello che si VEDE, non per quello che
+  // resta scritto. Il GET fabbrica `immobili_collegati: Array(n).fill('id')`
+  // per disegnare le card; la scheda rimanda indietro quel riempitivo nel
+  // PATCH, e Firestore si teneva `['id','id']` al posto degli ID veri. Ogni
+  // salvataggio di una scheda distruggeva il collegamento proprietario↔immobili.
+  //
+  // Ora sanitizeBody li scarta e li registra. Chi li deve scrivere continua a
+  // farlo dalle rotte che li gestiscono.
 ] as const;
 
 export const DOCUMENTI_TEMPLATE_ALLOWED = [
