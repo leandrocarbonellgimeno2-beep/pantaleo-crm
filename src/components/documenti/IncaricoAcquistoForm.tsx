@@ -285,7 +285,15 @@ export default function IncaricoAcquistoForm({ onClose, sezione, azione, initial
               <SignaturePad
                 title="Firma Acquirente"
                 value={form.firmaCliente}
-                onSave={(b64) => { u('firmaAcquirente', b64); }}
+                // Escribia en `firmaAcquirente`, un campo que NO EXISTE: el
+                // estado, el `value` de dos lineas mas arriba, el `onClear` de
+                // una linea mas abajo y los otros cuatro formularios usan
+                // todos `firmaCliente`. `firmaAcquirente` aparecia UNA vez en
+                // todo el proyecto, justo aqui.
+                //
+                // Consecuencia: el comprador firmaba, el trazo se guardaba en
+                // una clave que nadie lee, y el incarico salia sin su firma.
+                onSave={(b64) => { u('firmaCliente', b64); }}
                 onClear={() => u('firmaCliente', '')}
               />
             </div>
