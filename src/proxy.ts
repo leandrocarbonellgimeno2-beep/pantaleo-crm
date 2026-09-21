@@ -16,7 +16,7 @@ const SELF_AUTHENTICATED_PATHS = ['/api/cron/'];
 const STATIC_FILE_EXT =
   /\.(png|jpe?g|gif|svg|webp|avif|ico|css|js|mjs|map|woff2?|ttf|otf|txt|xml|webmanifest)$/i;
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isApiRoute = pathname.startsWith('/api/');

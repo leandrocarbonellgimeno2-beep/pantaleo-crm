@@ -29,11 +29,11 @@ const directivasCSP = [
   // contra XSS. Es obligatorio hoy porque el App Router emite el payload RSC en
   // etiquetas <script> en linea SIN nonce (comprobado en el HTML generado: los
   // inline no llevan atributo nonce y el propio payload registra
-  // "nonce":"$undefined"), y src/middleware.ts no genera ninguno. Sin
+  // "nonce":"$undefined"), y src/proxy.ts no genera ninguno. Sin
   // unsafe-inline la aplicacion no hidrata y queda en blanco.
   //
   // Lo que si aporta: bloquea cargar scripts de dominios externos. El arreglo
-  // de verdad es generar un nonce por peticion en el middleware y entonces
+  // de verdad es generar un nonce por peticion en el proxy y entonces
   // QUITAR unsafe-inline; si se dejan los dos, el navegador ignora unsafe-inline
   // y rompe todo inline sin nonce. Es una tarea aparte, no un retoque de esta.
   `script-src 'self' 'unsafe-inline'${enDesarrollo ? " 'unsafe-eval'" : ""}`,

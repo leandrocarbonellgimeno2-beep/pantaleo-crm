@@ -5,7 +5,7 @@
  * login corre en Node, no en Edge, asi que esta disponible.
  *
  * POR QUE ESTE MODULO ESTA SEPARADO DE lib/auth.ts, que es donde uno lo
- * pondria: src/middleware.ts importa lib/auth.ts y el middleware corre en
+ * pondria: src/proxy.ts importa lib/auth.ts y el proxy corre en
  * EDGE, donde node:crypto no existe. Un import de node:crypto alli no rompe el
  * login: rompe el build del proyecto entero. lib/auth.ts esta escrito a
  * proposito solo con Web Crypto y sin Buffer, y esa frontera hay que
