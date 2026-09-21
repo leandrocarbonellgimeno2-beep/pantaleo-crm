@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { urlDeDescarga } from '@/lib/storage-urls';
 import { aMilisegundos } from '@/lib/fecha-ms';
+import { urlDelSitio } from '@/lib/site-url';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import {
@@ -247,7 +248,11 @@ export default function ClientiPage() {
       : descrizioneFull;
 
     // Link pubblico all'immobile
-    const siteUrl   = process.env.NEXT_PUBLIC_SITE_URL || 'https://pantaleo-crm.vercel.app';
+    // El dominio ya no se escribe aqui: ver lib/site-url.ts. Estaba a mano y
+    // ademas leia una variable de entorno que NO es la que hay configurada en
+    // Vercel, asi que cada cambio de dominio dejaba a los clientes recibiendo
+    // por WhatsApp un enlace a un sitio que ya no existia.
+    const siteUrl   = urlDelSitio();
     const propLink  = codice ? `${siteUrl}/immobili?codice=${codice}` : siteUrl;
 
     // 3. Costruire messaggio — solo testo ASCII puro (niente emoji, niente simboli)

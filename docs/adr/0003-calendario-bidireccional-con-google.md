@@ -157,7 +157,7 @@ En Google Cloud Console → *Credentials* → el cliente OAuth → **Authorized
 redirect URIs**, tiene que estar exactamente:
 
 ```
-https://<tu-dominio-de-produccion>/api/calendar/callback
+https://sistema-immobiliare-pantaleo.vercel.app/api/calendar/callback
 ```
 
 Y si querés probarlo en local, además:
@@ -178,6 +178,23 @@ conexión se hace bien y luego el refresco falla a las pocas horas.
 ### Paso 3 — La pantalla de consentimiento
 
 Google Cloud Console → *APIs & Services* → *OAuth consent screen*.
+
+Google pide dos enlaces obligatorios para publicar la app. **Ya existen y son
+públicos** (se abren sin iniciar sesión):
+
+```
+https://sistema-immobiliare-pantaleo.vercel.app/privacy
+https://sistema-immobiliare-pantaleo.vercel.app/terms
+```
+
+⚠️ **Antes de pegarlos ahí, completá los datos de la agencia** en
+`src/lib/datos-titular.ts`: razón social, dirección, P. IVA, correos y
+teléfono. Mientras queden marcadores, las dos páginas muestran un aviso de
+«documento da completare» — y Google revisa esas páginas a mano.
+
+La política de privacidad ya declara **qué datos de Google se usan y para
+qué** (calendario y correo de la cuenta), que es justo lo que mira el revisor
+de Google.
 
 - **User type**: si la cuenta de Francesco es de Google Workspace del mismo
   dominio del proyecto, elegí **Internal** y te ahorrás la verificación. Si es
