@@ -13,7 +13,7 @@ import SignaturePad from "@/components/ui/SignaturePad";
 import { Proprietario } from "@/types/proprietario";
 import { useProprietari } from "@/hooks/useProprietari";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useDialog, useCierreAlPinchoFuera } from "@/hooks/useDialog";
+import { useDialog } from "@/hooks/useDialog";
 import { useConfirm } from "@/contexts/ConfirmDialog";
 
 export default function ProprietariPage() {
@@ -87,6 +87,10 @@ export default function ProprietariPage() {
   // Form state
   const [formData, setFormData] = useState<Partial<Proprietario>>({});
   const [isSaving, setIsSaving] = useState(false);
+  // Qué tipo de documento se está subiendo ahora mismo, o null. Guarda el
+  // fieldName y no un booleano para que el spinner salga en SU recuadro y no
+  // en los cuatro a la vez.
+  const [subiendoDoc, setSubiendoDoc] = useState<string | null>(null);
 
   // Slide-over state
   const [isSlideOverOpen, setIsSlideOverOpen] = useState(false);
@@ -232,10 +236,17 @@ export default function ProprietariPage() {
     abierto: isSlideOverOpen,
     alCerrar: closeSlideOver,
   });
-  // Esta ficha ya se cerraba al pinchar el velo, así que el comportamiento se
-  // mantiene; el hook además exige que el clic empiece y acabe en el velo, de
-  // modo que arrastrar una selección de texto fuera del panel ya no la cierra.
-  const fondoScheda = useCierreAlPinchoFuera(closeSlideOver);
+  // ESTA FICHA YA NO SE CIERRA AL PINCHAR EL VELO.
+  //
+  // Es un formulario de edición, y lo que se pierde al cerrarlo sin guardar no
+  // es solo lo escrito: los documentos adjuntos SÍ se han subido a Storage,
+  // pero su URL solo vive en `formData` hasta que se pulsa Salva. Un clic
+  // fuera del panel los dejaba huérfanos en el bucket mientras la ficha volvía
+  // a verse sin ellos, y nada avisaba.
+  //
+  // Las demás fichas de edición del CRM tampoco se cierran así; las que sí lo
+  // hacen —filtros, match, confirmación de borrado— son de solo lectura y ahí
+  // no hay nada que perder.
 
   // Search is now client-side via useMemo — no debounce/fetch needed
 
@@ -319,7 +330,11 @@ export default function ProprietariPage() {
          alert("Devi prima salvare il proprietario per ottenere un ID prima di allegare documenti.");
          return;
       }
-      
+      // Mientras subía no se veía absolutamente nada: ni spinner, ni input
+      // bloqueado. Con un PDF de varios megas el agente pulsa otra vez, o
+      // cierra la ficha creyendo que no pasó nada.
+      setSubiendoDoc(fieldName);
+
       const newDocs: any[] = [];
       for(let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -358,6 +373,13 @@ export default function ProprietariPage() {
     } catch (error) {
       console.error("Upload error:", error);
       alert("Errore di rete durante l'upload");
+    } finally {
+      // En el finally: si la subida falla a medias, el input tiene que volver
+      // a estar disponible.
+      setSubiendoDoc(null);
+      // Y se limpia el input, o volver a elegir el MISMO fichero no dispara
+      // onChange y parece que la aplicación lo ignora.
+      e.target.value = '';
     }
   };
 
@@ -586,7 +608,7 @@ export default function ProprietariPage() {
       {/* MODAL CENTRAL */}
       {isSlideOverOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" {...fondoScheda} />
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" />
 
           <div
             ref={dialogoScheda.ref}
@@ -850,10 +872,32 @@ export default function ProprietariPage() {
                                     )}
 
                                     {/* Dropzone sempre attiva */}
-                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl hover:bg-white hover:border-slate-300 transition-colors cursor-pointer group">
-                                       <UploadCloud className="w-6 h-6 text-slate-300 group-hover:text-primary transition-colors mb-2" />
-                                       <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600">Clicca per caricare altri File</span>
-                                       <input id={`prop-doc-${docType.id}`} type="file" multiple accept=".pdf, image/*" className="hidden" onChange={(e) => handleFileUpload(e, docType.id)} />
+                                    <label className={cn(
+                                      "flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl transition-colors group",
+                                      subiendoDoc === docType.id
+                                        ? "border-primary/40 bg-primary/5 cursor-wait"
+                                        : "border-slate-200 hover:bg-white hover:border-slate-300 cursor-pointer",
+                                    )}>
+                                       {subiendoDoc === docType.id ? (
+                                         <>
+                                           <Loader2 className="w-6 h-6 text-primary animate-spin mb-2" />
+                                           <span className="text-xs font-bold text-primary">Caricamento in corso…</span>
+                                         </>
+                                       ) : (
+                                         <>
+                                           <UploadCloud className="w-6 h-6 text-slate-300 group-hover:text-primary transition-colors mb-2" />
+                                           <span className="text-xs font-bold text-slate-400 group-hover:text-slate-600">Clicca per caricare altri File</span>
+                                         </>
+                                       )}
+                                       <input
+                                         id={`prop-doc-${docType.id}`}
+                                         type="file"
+                                         multiple
+                                         accept=".pdf, image/*"
+                                         className="hidden"
+                                         disabled={subiendoDoc !== null}
+                                         onChange={(e) => handleFileUpload(e, docType.id)}
+                                       />
                                     </label>
                                  </div>
                                );
