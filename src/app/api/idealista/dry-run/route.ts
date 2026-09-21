@@ -14,6 +14,7 @@
 import { NextResponse }     from 'next/server';
 import { db }               from '@/lib/firebase-admin';
 import { mapPropertyToIdealista, mapImagesToIdealista } from '@/lib/idealista-mapper';
+import { guard }            from '@/lib/api-guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,9 @@ function getNestedValue(obj: any, path: string): any {
 }
 
 export async function GET(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const codice           = searchParams.get('codice') || searchParams.get('propertyId');

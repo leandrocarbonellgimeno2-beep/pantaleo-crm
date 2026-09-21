@@ -81,6 +81,9 @@ export async function PUT(request: Request) {
  * Fetches all images for a property from Idealista.
  */
 export async function GET(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const propertyId = searchParams.get('propertyId');

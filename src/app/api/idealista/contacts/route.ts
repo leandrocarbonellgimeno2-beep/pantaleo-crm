@@ -108,6 +108,9 @@ export async function PUT(request: Request) {
  * GET /api/idealista/contacts?contactId=xxx OR ?page=0&size=20
  */
 export async function GET(request: Request) {
+  const denegado = await guard(request, 'secretaria');
+  if (denegado) return denegado;
+
   try {
     const { searchParams } = new URL(request.url);
     const contactId = searchParams.get('contactId');
