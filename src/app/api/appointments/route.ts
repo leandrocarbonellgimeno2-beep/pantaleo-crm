@@ -3,7 +3,7 @@ import { guard } from '@/lib/api-guard';
 import { buildUpdateArgs } from '@/lib/firestore-update';
 import { sanitizeFirestoreId } from '@/lib/sanitize';
 import { db, admin } from '@/lib/firebase-admin';
-import { createCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
+import { createCalendarEvent, updateCalendarEvent, deleteCalendarEvent } from '@/lib/google-calendar';
 import { sanitizeBody, APPOINTMENTS_ALLOWED } from '@/lib/sanitize';
 
 export async function GET(request: Request) {
@@ -36,6 +36,10 @@ export async function GET(request: Request) {
       .select(
         'clientName', 'propertyAddress', 'date', 'time',
         'duration', 'tipo', 'status', 'googleEventLink',
+        // `source` distingue las citas nacidas en Google de las del CRM. Sin
+        // el, una cita creada desde el movil de Francesco se veia igual que
+        // una del CRM y el agente buscaba una ficha de cliente que no existe.
+        'source',
       )
       .limit(limitCount)
       .get();
@@ -81,15 +85,24 @@ export async function POST(request: Request) {
     const ref = await db.collection('appointments').add(newAppointment);
 
     // Si Google falla, la cita SI queda guardada en el CRM y eso esta bien: la
-    // agenda del CRM es la fuente. Lo que estaba mal es que la respuesta dijera
-    // `success` a secas, sin distinguir los dos casos, asi que nadie se
-    // enteraba nunca de que la cita no habia llegado al calendario compartido.
-    // Con el enlace caducado desde marzo, eso es TODAS las citas.
+    // agenda del CRM es la fuente, y tirar el trabajo del agente porque un
+    // servicio externo no responde seria peor. Lo que estaba mal es que la
+    // respuesta dijera `success` a secas, sin distinguir los dos casos, asi
+    // que nadie se enteraba de que la cita no habia llegado al calendario
+    // compartido. Con el enlace caducado desde marzo, eso es TODAS las citas.
     let enGoogle = false;
     try {
-      const gcalRes = await createCalendarEvent(agentId, newAppointment);
+      // El id de la cita viaja DENTRO del evento de Google: es la marca que
+      // corta el rebote cuando la sincronizacion vuelva a leerlo.
+      const gcalRes = await createCalendarEvent(newAppointment, ref.id);
       if (gcalRes) {
-        await ref.update({ googleEventId: gcalRes.id, googleEventLink: gcalRes.htmlLink });
+        await ref.update({
+          googleEventId: gcalRes.id,
+          googleEventLink: gcalRes.htmlLink,
+          // Cuando lo subimos. La sincronizacion compara contra esto para
+          // saber si lo que vuelve es nuestro eco o una edicion de verdad.
+          googleSyncedAt: Date.now(),
+        });
         enGoogle = true;
       }
     } catch (gcalError) {
@@ -129,14 +142,54 @@ export async function PATCH(request: Request) {
     // migrar a rutas de campo, y es el mismo patron que ya causo tres perdidas
     // de datos en inmuebles y clientes. buildUpdateArgs aplana a FieldPath, de
     // modo que Firestore solo toca las hojas recibidas.
-    await (db.collection('appointments').doc(idSeguro).update as any)(
+    const ref = db.collection('appointments').doc(idSeguro);
+
+    await (ref.update as any)(
       ...buildUpdateArgs({
         ...updates,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }),
     );
 
-    return NextResponse.json({ success: true });
+    // ────────────────────────────────────────────────────────────────────
+    // EDITAR UNA CITA NO TOCABA GOOGLE. En absoluto.
+    //
+    // Crear subia el evento y borrar lo quitaba, pero cambiar la hora o la
+    // direccion se quedaba solo en el CRM: el calendario compartido —el que
+    // mira Francesco desde el movil— conservaba la hora vieja, y nadie se
+    // enteraba. Con sincronizacion en los dos sentidos eso es peor todavia,
+    // porque la vuelta siguiente bajaria la hora vieja y PISARIA la nueva.
+    // ────────────────────────────────────────────────────────────────────
+    let enGoogle: boolean | null = null;
+    try {
+      const fresco = await ref.get();
+      const cita = fresco.data() || {};
+
+      if (cita.googleEventId) {
+        let evento = await updateCalendarEvent(cita.googleEventId, cita, idSeguro);
+
+        // Si el evento ya no esta en Google —lo borraron alli— se vuelve a
+        // crear en vez de dejar la cita del CRM sin reflejo.
+        if (!evento) {
+          evento = await createCalendarEvent(cita, idSeguro);
+          if (evento) {
+            await ref.update({ googleEventId: evento.id, googleEventLink: evento.htmlLink });
+          }
+        }
+
+        if (evento) {
+          await ref.update({ googleSyncedAt: Date.now() });
+          enGoogle = true;
+        } else {
+          enGoogle = false;
+        }
+      }
+    } catch (gcalError) {
+      console.error('[appointments PATCH] no se pudo reflejar en Google:', gcalError);
+      enGoogle = false;
+    }
+
+    return NextResponse.json({ success: true, sincronizzatoConGoogle: enGoogle });
   } catch (error: any) {
     console.error('[appointments PATCH]', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });
@@ -171,22 +224,28 @@ export async function DELETE(request: Request) {
 
     const apptData = doc.data() || {};
     const googleEventId = apptData.googleEventId;
-    const agentId = apptData.agentName || 'default_admin';
     await docRef.delete();
 
     // Best-effort GCal deletion — non blocca la cancellazione CRM se fallisce.
+    //
+    // Ya no se pasa ningun `agentId`: el calendario es UNO, el de la agencia.
+    // Antes salia de `apptData.agentName`, que es un campo de texto que el
+    // formulario deja escribir; si no coincidia con el id del documento de
+    // configuracion, el evento se quedaba en Google para siempre.
+    let quitadoDeGoogle: boolean | null = null;
     if (googleEventId) {
       try {
-        const removed = await deleteCalendarEvent(agentId, googleEventId);
-        if (!removed) {
-          console.warn(`[appointments] GCal event ${googleEventId} not removed for agent ${agentId}.`);
+        quitadoDeGoogle = await deleteCalendarEvent(googleEventId);
+        if (!quitadoDeGoogle) {
+          console.warn(`[appointments] el evento ${googleEventId} sigue en Google.`);
         }
       } catch (gcalError) {
         console.error('[appointments] Failed to delete Google Calendar event:', gcalError);
+        quitadoDeGoogle = false;
       }
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, sincronizzatoConGoogle: quitadoDeGoogle });
   } catch (error: any) {
     console.error('[appointments DELETE]', error);
     return NextResponse.json({ error: 'Operazione non riuscita. Riprova più tardi.' }, { status: 500 });

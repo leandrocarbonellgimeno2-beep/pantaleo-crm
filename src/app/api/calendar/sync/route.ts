@@ -1,144 +1,47 @@
+/**
+ * El botón «Sincronizza Google» de la agenda.
+ *
+ * Solo dispara a mano lo mismo que hace el cron cada 15 minutos. Toda la
+ * lógica vive en `services/calendar-sync.ts`: si estuviera duplicada aquí,
+ * uno de los dos caminos acabaría con una versión vieja de las reglas que
+ * cortan el rebote, y ese fallo no se vería hasta que el calendario empezara
+ * a rebotar solo.
+ */
 import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
-import { google } from 'googleapis';
-import { db, admin } from '@/lib/firebase-admin';
+import { sincronizarDesdeGoogle } from '@/lib/services/calendar-sync';
 
-function getOAuth2Client() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+export const dynamic = 'force-dynamic';
 
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error('[Calendar Sync] Variabili d\'ambiente OAuth mancanti: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI');
-  }
-
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-}
-
-// Import events FROM Google Calendar INTO our CRM (with pagination + upsert)
 export async function POST(request: Request) {
   const denegado = await guard(request, 'vendedor');
   if (denegado) return denegado;
 
   try {
-    const body = await request.json();
-    const agentId = body.agentId || 'default_admin';
-    const timeMin = body.timeMin || '2023-03-02T00:00:00Z';
-    const timeMax = body.timeMax || new Date().toISOString();
+    const resumen = await sincronizarDesdeGoogle();
 
-    // Get stored tokens
-    const configDoc = await db.collection('calendar_configs').doc(agentId).get();
-    if (!configDoc.exists || !configDoc.data()?.tokens?.refresh_token) {
-      return NextResponse.json({ error: 'Calendar not connected for this agent' }, { status: 400 });
-    }
-
-    const oauth2Client = getOAuth2Client();
-    oauth2Client.setCredentials(configDoc.data()!.tokens);
-
-    // Auto-refresh tokens
-    oauth2Client.on('tokens', (newTokens) => {
-      db.collection('calendar_configs').doc(agentId).set({
-        tokens: { ...configDoc.data()!.tokens, ...newTokens }
-      }, { merge: true }).catch(console.error);
-    });
-
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-
-    let allEvents: any[] = [];
-    let pageToken: string | undefined = undefined;
-
-    // Paginate through ALL events
-    do {
-      const res: any = await calendar.events.list({
-        calendarId: 'primary',
-        timeMin,
-        timeMax,
-        maxResults: 250,
-        singleEvents: true,
-        orderBy: 'startTime',
-        pageToken,
-      });
-
-      const events = res.data.items || [];
-      allEvents = allEvents.concat(events);
-      pageToken = res.data.nextPageToken;
-    } while (pageToken);
-
-    // Preload all existing appointments from Firestore in ONE query.
-    // Builds a Map<googleEventId, DocumentReference> so each upsert check
-    // is an O(1) in-memory lookup instead of an individual Firestore query.
-    const existingSnap = await db.collection('appointments')
-      .where('googleEventId', '!=', '')
-      .select('googleEventId')
-      .get();
-    const existingByGoogleId = new Map<string, FirebaseFirestore.DocumentReference>();
-    for (const doc of existingSnap.docs) {
-      const gid = doc.data().googleEventId;
-      if (gid) existingByGoogleId.set(gid, doc.ref);
-    }
-
-    // Upsert into Firestore
-    let created = 0;
-    let updated = 0;
-    let skipped = 0;
-
-    // Process in batches of 400 (Firestore batch write limit)
-    for (let i = 0; i < allEvents.length; i += 400) {
-      const chunk = allEvents.slice(i, i + 400);
-      const batch = db.batch();
-
-      for (const event of chunk) {
-        if (!event.id) { skipped++; continue; }
-
-        const startDt = event.start?.dateTime || event.start?.date || '';
-        const endDt = event.end?.dateTime || event.end?.date || '';
-
-        const dateStr = startDt ? startDt.substring(0, 10) : '';
-        const timeStr = startDt.length > 10 ? startDt.substring(11, 16) : '00:00';
-
-        const endDate = new Date(endDt);
-        const startDate = new Date(startDt);
-        const durationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000) || 60;
-
-        const appointmentData: any = {
-          clientName: event.summary || 'Evento Google Calendar',
-          propertyAddress: event.location || '',
-          date: dateStr,
-          time: timeStr,
-          duration: durationMinutes,
-          status: event.status === 'cancelled' ? 'Annullato' : 'Confermato',
-          googleEventId: event.id,
-          googleEventLink: event.htmlLink || '',
-          source: 'google_calendar',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        };
-
-        const existingRef = existingByGoogleId.get(event.id);
-        if (existingRef) {
-          // Update existing — ref already known from preloaded map
-          batch.update(existingRef, appointmentData);
-          updated++;
-        } else {
-          // Create new
-          appointmentData.createdAt = admin.firestore.FieldValue.serverTimestamp();
-          const newRef = db.collection('appointments').doc();
-          batch.set(newRef, appointmentData);
-          created++;
-        }
-      }
-      await batch.commit();
+    if (!resumen.ok) {
+      // 400 y no 200: la pantalla pintaba un aviso VERDE de éxito con lo que
+      // devolviera esta ruta, así que un fallo salía como «Importati
+      // undefined eventi». Ahora un fallo es un fallo.
+      return NextResponse.json(
+        { error: resumen.motivo || 'Sincronizzazione non riuscita' },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({
       success: true,
-      totalFromGoogle: allEvents.length,
-      created,
-      updated,
-      skipped,
+      totalFromGoogle: resumen.traidos,
+      created: resumen.creados,
+      updated: resumen.actualizados,
+      cancelled: resumen.anulados,
+      skipped: resumen.saltados,
+      echoesIgnored: resumen.ecosIgnorados,
+      fullSync: resumen.fueCompleta,
     });
-
   } catch (error: any) {
-    console.error('Calendar sync error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[calendar sync]', error?.message);
+    return NextResponse.json({ error: 'Sincronizzazione non riuscita' }, { status: 500 });
   }
 }

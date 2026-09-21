@@ -607,7 +607,28 @@ export default function AgendaPage() {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className={cn("h-2 w-2 rounded-full shrink-0", getStatusColor(app.status))} style={{ backgroundColor: "currentColor" }} />
-                            <h4 className="font-bold text-sm text-slate-900 truncate">{app.clientName || "Evento"}</h4>
+                            <h4 className={cn(
+                              "font-bold text-sm truncate",
+                              app.status === "Annullato" ? "text-slate-400 line-through" : "text-slate-900",
+                            )}>{app.clientName || "Evento"}</h4>
+                            {/* Un evento borrado en Google deja la cita marcada
+                                como anulada en vez de destruirla. Sin esto se
+                                veria igual que una viva y el agente se
+                                presentaria a una visita que ya no existe. */}
+                            {app.status === "Annullato" && (
+                              <span className="shrink-0 text-[9px] font-black uppercase text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                                Annullato
+                              </span>
+                            )}
+                            {/* Las citas nacidas en Google no tienen cliente ni
+                                inmueble del CRM, y no los van a tener. Decirlo
+                                evita que alguien busque una ficha que no
+                                existe. */}
+                            {app.source === "google_calendar" && (
+                              <span className="shrink-0 text-[9px] font-black uppercase text-blue-600 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded">
+                                Google
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 text-xs text-slate-500">
                             {app.propertyAddress && (
