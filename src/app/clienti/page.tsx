@@ -149,7 +149,16 @@ export default function ClientiPage() {
     if (!selectedCliente?.id) return;
     const ok = await confirm({
       title: 'Eliminare il cliente?',
-      message: 'Il cliente verr\u00e0 eliminato definitivamente dal CRM. L\'azione non pu\u00f2 essere annullata.',
+      // El CRM tiene un candado que impide borrar un cliente con documentos
+      // generados asociados (api/clienti DELETE, 409). Ese candado compara
+      // `clienteId`, y NINGUN formulario de documentos lo escribe: los 320
+      // documentos guardados tienen el campo vacio, asi que el candado no ha
+      // saltado nunca y no va a saltar. Vincularlos exigiria un selector de
+      // cliente en los cinco formularios, que es un cambio de producto.
+      //
+      // Mientras tanto el aviso dice la verdad, en vez de dejar creer que
+      // alguien esta comprobando algo.
+      message: 'Il cliente verr\u00e0 eliminato definitivamente dal CRM. L\'azione non pu\u00f2 essere annullata. Attenzione: eventuali fogli di visita o incarichi gi\u00e0 firmati NON verranno eliminati e resteranno nella sezione Documenti, intestati al nome scritto a mano.',
       danger: true,
     });
     if (!ok) return;

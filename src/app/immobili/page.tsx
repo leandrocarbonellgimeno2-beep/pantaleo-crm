@@ -246,12 +246,16 @@ export default function ImmobiliPage() {
 
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, pathPrefix: string, fieldToUpdateCategory: string, fieldToUpdate: string) => {
-    try {
-      const file = e.target.files?.[0];
-      if (!file || !selectedProperty) return;
+    const file = e.target.files?.[0];
+    if (!file || !selectedProperty) return;
 
-      // Optional user feedback logic could be placed here (like `setIsUploading`)
-      alert(`Caricamento di ${file.name} in corso... Attendi per favore.`);
+    // Antes aqui habia un `alert()` como indicador de carga. Un alert BLOQUEA
+    // el hilo: la subida ni siquiera empezaba hasta que el agente pulsaba
+    // «Aceptar», asi que el aviso de «in corso» salia ANTES de que hubiera
+    // nada en curso. Y en movil tapa la pantalla entera.
+    const aviso = toast.loading(`Caricamento di ${file.name} in corso…`);
+
+    try {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("path", `immobili/${selectedProperty.DatiBase?.Codice}/${pathPrefix}/${file.name}`);
@@ -263,13 +267,21 @@ export default function ImmobiliPage() {
       const data = await res.json();
       if (res.ok && data.url) {
         updateNested(fieldToUpdateCategory, fieldToUpdate, data.url);
-        alert("File generico caricato con successo!");
+        // Decia «caricato con successo», y no era verdad: `updateNested` solo
+        // toca el formulario en memoria. Si el agente cierra la ficha sin
+        // pulsar Salva, el fichero se queda huerfano en Storage y el inmueble
+        // no lo tiene. El mensaje ahora dice lo que falta por hacer.
+        toast.success('File allegato. Premi Salva per registrarlo sull\'immobile.', { id: aviso });
       } else {
-        alert("Errore caricamento: " + data.error);
+        toast.error("Errore caricamento: " + (data?.error || 'riprova'), { id: aviso });
       }
     } catch (err) {
       console.error("Upload error:", err);
-      alert("Errore durante il caricamento. Riprova.");
+      toast.error("Errore durante il caricamento. Riprova.", { id: aviso });
+    } finally {
+      // Sin esto, volver a elegir el MISMO fichero no dispara onChange y
+      // parece que la aplicacion lo ignora.
+      e.target.value = '';
     }
   };
 
