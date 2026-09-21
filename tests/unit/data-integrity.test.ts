@@ -307,7 +307,20 @@ const FULL_PROPRIETARIO = {
     atto: [],
     extra: [{ url: 'https://storage.example.com/doc.pdf', name: 'Altro.pdf' }],
   },
-  // Contadores (server los recalcula, pero se aceptan por retro-compat)
+};
+
+/**
+ * Campos DERIVADOS: el cliente puede mandarlos, pero no deben guardarse nunca.
+ *
+ * Los mantiene el servidor con FieldValue.increment y arrayUnion/arrayRemove.
+ * Este test decia antes que tenian que sobrevivir a sanitizeBody «por
+ * retro-compat», y esa expectativa es justo la que dejo entrar la corrupcion:
+ * el GET fabrica `immobili_collegati: Array(n).fill('id')` para pintar las
+ * tarjetas, la ficha lo reenviaba en el PATCH, y Firestore se quedaba con
+ * `['id','id']` encima de los IDs reales. 17 de los 726 propietarios acabaron
+ * asi. Ahora la expectativa es la contraria.
+ */
+const PROPRIETARIO_DERIVADOS = {
   numero_immobili: 3,
   immobili_collegati: ['imm001', 'imm002', 'imm003'],
 };
@@ -318,6 +331,19 @@ describe('Proprietario Full — persistencia completa', () => {
     for (const key of Object.keys(FULL_PROPRIETARIO)) {
       expect(result, `Campo '${key}' fue eliminado por sanitizeBody`).toHaveProperty(key);
     }
+    expect(result).toMatchObject(FULL_PROPRIETARIO);
+  });
+
+  it('y descarta los contadores derivados aunque los mande el formulario', () => {
+    const result = sanitizeBody(
+      { ...FULL_PROPRIETARIO, ...PROPRIETARIO_DERIVADOS },
+      PROPRIETARI_ALLOWED,
+      'test.proprietario',
+    );
+    for (const key of Object.keys(PROPRIETARIO_DERIVADOS)) {
+      expect(result, `Campo derivado '${key}' NO deberia guardarse`).not.toHaveProperty(key);
+    }
+    // Y no se lleva por delante nada de lo demas.
     expect(result).toMatchObject(FULL_PROPRIETARIO);
   });
 
@@ -475,11 +501,21 @@ describe('Campos Huerfanos — frontend vs whitelist', () => {
       'interessato_vendita', 'interessato_locazione', 'in_esclusiva', 'privacy_accettata',
       'stato', 'stato_chiavi',
       'firmaDigitale', 'documenti',
-      'numero_immobili', 'immobili_collegati',
+      // `numero_immobili` e `immobili_collegati` NO van aqui: son derivados y
+      // estan fuera de la whitelist a proposito. Ver PROPRIETARIO_DERIVADOS.
     ];
     const allowed = PROPRIETARI_ALLOWED as readonly string[];
     const orphans = frontendKeys.filter(k => !allowed.includes(k));
     expect(orphans, `Campos del frontend NO en whitelist: ${orphans.join(', ')}`).toEqual([]);
+  });
+
+  it('y los dos contadores derivados siguen FUERA de la whitelist', () => {
+    // Al reves que el resto: este test protege una ausencia. Si alguien los
+    // vuelve a meter «por retro-compat», guardar una ficha volvera a borrar el
+    // vinculo proprietario<->immobili.
+    const allowed = PROPRIETARI_ALLOWED as readonly string[];
+    expect(allowed).not.toContain('numero_immobili');
+    expect(allowed).not.toContain('immobili_collegati');
   });
 
   it('documenti template: todos los campos estan en DOCUMENTI_TEMPLATE_ALLOWED', () => {
