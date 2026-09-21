@@ -1,33 +1,33 @@
-# Despliegue programado a producción, cada 4 horas.
+# Despliegue MANUAL a producción.
 #
 # QUÉ HACE
 # Llama al Deploy Hook de Vercel, que construye y publica en producción lo que
 # haya en la rama principal EN ESE MOMENTO. No hace merge ni push: solo
 # redespliega.
 #
-# QUÉ NO HACE, Y CONVIENE SABERLO
-# Vercel ya despliega solo en cada push a master. Este cron NO sustituye a eso:
-# se suma. Su utilidad real es refrescar el contenido que se genera en tiempo
-# de build (las páginas prerenderizadas y /api/get-all-rifs, que tiene
-# revalidate). Si en las últimas 4 horas nadie tocó el repositorio, este
-# workflow reconstruye código idéntico y consume minutos de build.
+# CUÁNDO USARLO
+# Casi nunca. Vercel ya despliega solo en cada push a master, así que esto solo
+# hace falta para forzar una reconstrucción sin tocar el repositorio: por
+# ejemplo, después de cambiar una variable de entorno en el panel de Vercel,
+# que por sí sola no redespliega nada.
 #
-# LIMITACIONES DE LOS CRON DE GITHUB ACTIONS
-# - Solo se ejecutan desde la RAMA POR DEFECTO del repositorio (aquí, master).
-# - GitHub los DESACTIVA automáticamente tras 60 días sin actividad en el
-#   repositorio. Hay que reactivarlos a mano desde la pestaña Actions.
-# - El horario es de mejor esfuerzo: bajo carga, GitHub retrasa la ejecución.
-#   No sirve para nada que dependa de un minuto exacto.
-# - El cron va en UTC.
+# POR QUÉ YA NO CORRE CADA 4 HORAS
+# Llevaba un `schedule` de '0 */4 * * *' que se ha retirado. Se justificaba
+# diciendo que refrescaba el contenido generado en tiempo de build, y citaba
+# «/api/get-all-rifs, que tiene revalidate». Esa ruta hoy es `force-dynamic`
+# (src/app/api/get-all-rifs/route.ts), o sea que se calcula en cada petición y
+# no hay nada que refrescar. El cron reconstruía código idéntico seis veces al
+# día y gastaba minutos de build para nada.
+#
+# Si alguna vez vuelve a hacer falta, es devolver el bloque `schedule` aquí
+# debajo. Y conviene saber que los cron de GitHub Actions solo corren desde la
+# rama por defecto, que GitHub los desactiva tras 60 días sin actividad en el
+# repositorio, que el horario es de mejor esfuerzo y que van en UTC.
 
-name: Despliegue programado a producción
+name: Despliegue manual a producción
 
 on:
-  schedule:
-    # Cada 4 horas, en punto: 00:00, 04:00, 08:00, 12:00, 16:00 y 20:00 UTC.
-    - cron: '0 */4 * * *'
-  # Permite lanzarlo a mano desde la pestaña Actions, útil para probar que el
-  # secret está bien configurado sin esperar a la siguiente franja.
+  # Se lanza a mano desde la pestaña Actions (botón «Run workflow»).
   workflow_dispatch:
 
 # Si se solapan dos ejecuciones, se cancela la anterior: no tiene sentido
