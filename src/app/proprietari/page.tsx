@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { urlDeDescarga } from '@/lib/storage-urls';
+import { aMilisegundos } from '@/lib/fecha-ms';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
@@ -29,18 +30,10 @@ export default function ProprietariPage() {
 
   // Client-side filter + sort — instant, zero network requests
   const filteredProprietari = useMemo(() => {
-    // Resolve any createdAt shape → milliseconds (0 if absent/unparseable).
-    // Handles Firebase Timestamp objects ({ _seconds, seconds }), toMillis(),
-    // ISO strings, and numeric timestamps.
-    const createdAtMs = (p: any): number => {
-      const ca = p.createdAt;
-      if (!ca) return 0;
-      const s = ca._seconds ?? ca.seconds;
-      if (s != null) return s * 1000;
-      if (typeof ca.toMillis === 'function') return ca.toMillis();
-      if (typeof ca === 'string' || typeof ca === 'number') return new Date(ca).getTime() || 0;
-      return 0;
-    };
+    // Esta conversion estaba escrita cuatro veces en el proyecto, cada copia
+    // entendiendo un subconjunto distinto de las formas. Ahora es una sola,
+    // en lib/fecha-ms.ts, y con tests.
+    const createdAtMs = (p: any): number => aMilisegundos(p.createdAt);
 
     const THIRTY_MIN_MS = 30 * 60 * 1000;
 

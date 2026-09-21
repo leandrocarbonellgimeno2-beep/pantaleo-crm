@@ -5,6 +5,7 @@ import { db, admin } from '@/lib/firebase-admin';
 import { sanitizeBody, PROPRIETARI_ALLOWED } from '@/lib/sanitize';
 import { buildUpdateArgs } from '@/lib/firestore-update';
 import { markForSoftDelete } from '@/lib/services/soft-delete';
+import { aMilisegundos } from '@/lib/fecha-ms';
 
 export async function GET(request: Request) {
   // Lectura, pero con guard: sin el, bloquear a alguien no le cortaba el
@@ -78,13 +79,10 @@ export async function GET(request: Request) {
 
     // Sort: newest createdAt first → oldest → records with no date last.
     // Using -1 as sentinel guarantees no-date items never sort before real dates.
-    const toMs = (p: any): number => {
-      if (!p.createdAt) return -1;
-      const s = p.createdAt._seconds ?? p.createdAt.seconds;
-      if (s != null) return s * 1000;
-      if (typeof p.createdAt.toMillis === 'function') return p.createdAt.toMillis();
-      return -1;
-    };
+    // El -1 lo pone `aMilisegundos` cuando no entiende la fecha; antes esta
+    // copia ademas ignoraba las cadenas ISO y los numeros, y esos registros
+    // caian al final como si no tuvieran fecha.
+    const toMs = (p: any): number => aMilisegundos(p.createdAt, -1);
 
     allP.sort((a: any, b: any) => {
       const aMs = toMs(a);

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 import { calculateMatch, generateMatchSummary } from '@/lib/smart-matching';
+import { primeraFechaMs } from '@/lib/fecha-ms';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,18 +70,12 @@ export async function POST(request: Request) {
       const result = calculateMatch(cliente.Richiesta, immobile);
       if (!result || result.matchPercentage < MIN_SCORE) continue;
 
-      // Parse creation date
-      let createdAt: number = 0;
-      const dateField = cliente.dataCreazione || cliente.createdAt || cliente.DataCreazione;
-      if (dateField) {
-        if (typeof dateField === 'object' && dateField._seconds) {
-          createdAt = dateField._seconds * 1000; // Firestore Timestamp
-        } else if (typeof dateField === 'string') {
-          createdAt = new Date(dateField).getTime();
-        } else if (typeof dateField === 'number') {
-          createdAt = dateField;
-        }
-      }
+      // Parse creation date. Esta copia no entendia `seconds` (sin guion bajo)
+      // ni `toMillis()`, asi que un cliente reciente escrito por la otra ruta
+      // se quedaba en 0 y perdia el empujon de novedad del matching.
+      const createdAt = primeraFechaMs([
+        cliente.dataCreazione, cliente.createdAt, cliente.DataCreazione,
+      ]);
 
       const isRecent = createdAt > recencyThreshold;
 

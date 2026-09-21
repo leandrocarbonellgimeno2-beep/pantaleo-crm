@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { urlDeDescarga } from '@/lib/storage-urls';
+import { aMilisegundos } from '@/lib/fecha-ms';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import {
@@ -337,11 +338,11 @@ export default function ClientiPage() {
       return true;
     });
 
-    result.sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
+    // `new Date(x)` no entiende un Timestamp de Firestore: devolvia NaN, que
+    // al caer a 0 hacia empatar a TODOS los clientes y dejaba el orden al
+    // azar. Por eso los dados de alta esta semana aparecian en la posicion
+    // 272 y habia que pulsar «Carica altri» nueve veces para verlos.
+    result.sort((a, b) => aMilisegundos(b.createdAt) - aMilisegundos(a.createdAt));
 
     return result;
   }, [debouncedSearch, clientiData, filterVendita, filterAffitto]);
@@ -456,6 +457,9 @@ export default function ClientiPage() {
           value: searchTerm,
           onChange: (v) => { setSearchTerm(v); setVisibleCount(30); },
           placeholder: "Cerca cliente per nome, email o telefono...",
+          // Sin esto la lupa nunca se convierte en spinner, al reves que
+          // /immobili, y nada indica que la lista todavia se esta trayendo.
+          loading,
         }}
       >
         <button
@@ -631,7 +635,21 @@ export default function ClientiPage() {
         </div>
       )}
 
-      {filteredClienti.length === 0 && (
+      {/*
+        El vacio solo se pinta cuando la busqueda ya TERMINO. Antes salia
+        durante la ventana de carga, asi que la pantalla mas usada del CRM
+        recibia al agente afirmando que no hay ni un cliente —y acto seguido
+        aparecian los 576—. Un falso negativo ahi invita a crear un duplicado.
+      */}
+      {loading && filteredClienti.length === 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-40 rounded-2xl border border-border bg-white animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {!loading && filteredClienti.length === 0 && (
         <div className="py-24 text-center animate-in fade-in slide-in-from-bottom-4 bg-white rounded-2xl border border-border">
           <User className="h-16 w-16 text-slate-200 mx-auto" />
           <h3 className="mt-4 text-xl font-bold">Nessun cliente trovato</h3>
