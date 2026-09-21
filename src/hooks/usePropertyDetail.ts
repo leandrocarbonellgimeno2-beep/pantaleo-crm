@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { createEmptyProperty } from '@/lib/immobili/emptyProperty';
+import { mensajeDeFallo, esSesionCaducada } from '@/lib/errores-http';
 
 const DELETE_GUARD_SECONDS = 2;
 
@@ -145,7 +146,12 @@ export function usePropertyDetail({ refresh, fusionarLocal, quitarLocal }: UsePr
           fusionarLocal(selectedProperty);
           setIsModalOpen(false);
         } else {
-          toast.error('Errore durante il salvataggio delle modifiche.');
+          // Con la sesion caducada esto decia «Errore durante il salvataggio»,
+          // el agente lo leia como un fallo pasajero y volvia a pulsar Salva
+          // sin que ningun intento pudiera funcionar.
+          toast.error(mensajeDeFallo(res, 'Errore durante il salvataggio delle modifiche.'), {
+            duration: esSesionCaducada(res) ? 12_000 : 5_000,
+          });
         }
       } else {
         const res = await fetch('/api/immobili', {
@@ -167,7 +173,9 @@ export function usePropertyDetail({ refresh, fusionarLocal, quitarLocal }: UsePr
           refresh();
           setIsModalOpen(false);
         } else {
-          toast.error('Errore durante la creazione dell immobile.');
+          toast.error(mensajeDeFallo(res, 'Errore durante la creazione dell immobile.'), {
+            duration: esSesionCaducada(res) ? 12_000 : 5_000,
+          });
         }
       }
     } catch (error) {

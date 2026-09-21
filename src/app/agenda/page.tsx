@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useDialog } from "@/hooks/useDialog";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { listaDeRespuesta } from "@/lib/lista-respuesta";
+import { mensajeDeFallo } from "@/lib/errores-http";
 import { nombrePersona, telefonoPersona, direccionInmueble, refInmueble } from "@/lib/etiquetas";
 import {
   format,
@@ -285,7 +286,9 @@ export default function AgendaPage() {
       // Mismo caso: sin else, un fallo al guardar dejaba el modal abierto y
       // quieto, sin un solo mensaje. El agente volvia a pulsar Salva.
       if (!res.ok) {
-        alert("Errore durante il salvataggio dell'appuntamento. Riprova.");
+        let delServidor: unknown;
+        try { delServidor = (await res.json())?.error; } catch { /* sin cuerpo */ }
+        alert(mensajeDeFallo(res, "Errore durante il salvataggio dell'appuntamento. Riprova.", delServidor));
         return;
       }
       setIsModalOpen(false);

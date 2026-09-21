@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { urlDeDescarga } from '@/lib/storage-urls';
 import { aMilisegundos } from '@/lib/fecha-ms';
+import { mensajeDeFallo } from '@/lib/errores-http';
 import { esFuenteLocal } from "@/lib/image-optimizable";
 import NextImage from "next/image";
 import { Search, Plus, User, Phone, Mail, MapPin, Eye, Edit2, Loader2, Building2, X, ChevronRight, Home, Trash2, FileText, UploadCloud } from "lucide-react";
@@ -298,7 +299,15 @@ export default function ProprietariPage() {
         body: JSON.stringify(payload),
       });
       
-      if (!res.ok) throw new Error("Error saving");
+      if (!res.ok) {
+        // Con la sesion caducada esto decia «Errore durante il salvataggio» y
+        // el agente volvia a pulsar Salva sin que ningun intento pudiera
+        // funcionar nunca, porque lo que falta es la sesion.
+        let delServidor: unknown;
+        try { delServidor = (await res.json())?.error; } catch { /* sin cuerpo */ }
+        alert(mensajeDeFallo(res, "Errore durante il salvataggio.", delServidor));
+        return;
+      }
       const result = await res.json();
 
       await refresh();
@@ -308,6 +317,14 @@ export default function ProprietariPage() {
         // Keep the panel open on the immobili tab so the user can link a property
         // immediately — it will appear in the list once it has at least one.
         setSelectedProprietario({ ...formData, id: result.id } as Proprietario);
+        // Y TAMBIEN en formData, que es lo que se le escapaba.
+        //
+        // `handleFileUpload` comprueba `formData.id`, no
+        // `selectedProprietario.id`. Sin esta linea, despues de crear un
+        // propietario la ficha se quedaba abierta pero seguia contestando
+        // «Devi prima salvare il proprietario per ottenere un ID» cada vez que
+        // se intentaba adjuntar un documento, para siempre.
+        setFormData(prev => ({ ...prev, id: result.id }));
         setActiveTab("immobili");
         alert('Proprietario creato! Aggiungici almeno un immobile per renderlo visibile nella lista principale.');
       } else {
@@ -316,7 +333,7 @@ export default function ProprietariPage() {
       }
     } catch (error) {
       console.error("Failed to save:", error);
-      alert("Errore durante il salvataggio.");
+      alert("Errore di rete durante il salvataggio.");
     } finally {
       setIsSaving(false);
     }
