@@ -17,7 +17,7 @@
  * baratas y son la red que queda si alguien vuelve a bajar el minimo.
  */
 import { NextResponse } from 'next/server';
-import { guard } from '@/lib/api-guard';
+import { guard, invalidarEstado } from '@/lib/api-guard';
 import { audit } from '@/lib/services/audit';
 import { getClientIp } from '@/lib/rate-limit';
 import { requireRole, AuthError } from '@/lib/auth';
@@ -230,6 +230,14 @@ export async function PATCH(request: Request) {
 
     const resultado = await actualizarUsuario(email, cambios);
     if (!resultado.ok) return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
+
+    // El guard cachea treinta segundos el estado y el rol de cada usuario para
+    // no leer Firestore en cada peticion. Tirar la entrada aqui hace que
+    // bloquear o degradar surta efecto AL INSTANTE en esta instancia; en las
+    // demas, lo que quede de caché. Sin esto el cambio tardaria hasta medio
+    // minuto incluso para quien acaba de hacerlo, que es lo que hace dudar de
+    // si el boton ha funcionado.
+    invalidarEstado(email);
 
     // Solo NOMBRES de campo, y passwordHash se renombra a 'password': ni el
     // hash ni el valor nuevo tienen nada que hacer en un registro.

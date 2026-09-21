@@ -12,6 +12,7 @@
  * middleware para todo lo que no sea /login ni /api/auth.
  */
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { admin } from '@/lib/firebase-admin';
 import { sanitizeStoragePath } from '@/lib/sanitize';
 import { normalizeImageContentType } from '@/lib/image-content-type';
@@ -32,6 +33,14 @@ function tipoServible(raw: string | null | undefined): { tipo: string; inline: b
 }
 
 export async function GET(request: Request) {
+  // Lectura, pero con guard: sin el, bloquear a alguien no le cortaba el
+  // acceso a los datos. Un ex-empleado con la pestaña abierta seguia listando
+  // clientes y descargando documentos durante las ocho horas que le quedaran
+  // de sesion, porque ningun GET de negocio pasaba por aqui. «agente» es el
+  // nivel mas bajo, asi que ningun rol pierde acceso: lo que se gana es que el
+  // bloqueo y la degradacion surtan efecto de verdad.
+  const denegado = await guard(request, 'agente');
+  if (denegado) return denegado;
   try {
     const { searchParams } = new URL(request.url);
     const rawPath = searchParams.get('path');

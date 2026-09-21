@@ -22,8 +22,8 @@
  * de infraestructura deja pasar (ver la nota de abajo).
  */
 import { NextResponse } from 'next/server';
-import { requireAuth, requireRole, AuthError, type SessionPayload } from '@/lib/auth';
-import type { Role } from '@/lib/roles';
+import { requireAuth, AuthError, type SessionPayload } from '@/lib/auth';
+import { hasAtLeast, normalizeRole, type Role } from '@/lib/roles';
 
 /**
  * La sesion de quien hace la peticion, para las rutas que ademas de
@@ -43,51 +43,104 @@ export async function sesionActual(request: Request): Promise<SessionPayload | n
 }
 
 /**
- * Cache en memoria del estado de cada usuario.
+ * Estado VIVO de un usuario: lo que dice `_users` AHORA, no lo que decía la
+ * cookie cuando se emitió.
  *
- * La comprobacion de bloqueo cuesta una lectura de Firestore, y sin cache seria
- * una por cada escritura del CRM. Treinta segundos es el retardo maximo con el
- * que un bloqueo surte efecto, y a cambio la inmensa mayoria de las peticiones
- * no pagan nada. Cada instancia serverless tiene la suya y se pierde al
- * reciclarse, que es justo lo que se quiere de una cache asi.
+ * POR QUÉ ESTO EXISTE, Y ES LA CORRECCIÓN DE UN FALLO SERIO
+ * `tokenVersion` se escribe en cada cambio de rol, de estado y de contraseña,
+ * pero NO se comparaba en ningún sitio, y ni siquiera viaja dentro de la
+ * cookie, así que la comparación era imposible sin cambiar el formato del
+ * token. Consecuencia: **degradar a alguien de propietario a agente no le
+ * quitaba un solo permiso hasta que caducaba su sesión**, hasta ocho horas
+ * después. Varios comentarios del propio código afirmaban lo contrario.
+ *
+ * La solución no necesita tocar la cookie. La lectura de `_users` ya se hacía
+ * para comprobar el bloqueo, y ya estaba cacheada: ahora esa misma lectura
+ * devuelve también el rol, y el guard compara contra ese. **Cero lecturas de
+ * más.**
+ *
+ * EL ROL DE LA BASE MANDA, PERO SOLO SI HAY DOCUMENTO. Quien todavía entra por
+ * AUTH_USERS_JSON no tiene registro en `_users`, y ahí se sigue usando el rol
+ * de la cookie: cambiar eso dejaría a la agencia fuera del CRM.
+ *
+ * CUÁNTO TARDA EN SURTIR EFECTO. Hasta 30 segundos, no ocho horas. En la
+ * instancia que hizo el cambio, al instante, porque la ruta de administración
+ * invalida la entrada. En las demás, lo que quede de caché. Bajarlo a cero
+ * exigiría una lectura de Firestore por petición, que es justo lo que esta
+ * caché existe para evitar.
  */
 const CACHE_MS = 30_000;
-const cacheEstado = new Map<string, { bloqueado: boolean; hasta: number }>();
 
-async function estaBloqueado(email: string): Promise<boolean> {
+interface EstadoVivo {
+  bloqueado: boolean;
+  /** null = no hay documento en `_users`, así que manda el rol de la cookie. */
+  rol: Role | null;
+}
+
+const cacheEstado = new Map<string, { estado: EstadoVivo; hasta: number }>();
+
+/**
+ * Tira la entrada cacheada de un usuario. La llaman las rutas que cambian su
+ * rol o su estado, para que el cambio surta efecto ya en esta instancia en vez
+ * de esperar a que expiren los treinta segundos.
+ */
+export function invalidarEstado(email: string): void {
+  cacheEstado.delete(String(email || '').trim().toLowerCase());
+}
+
+async function estadoVivo(email: string): Promise<EstadoVivo> {
   const clave = email.trim().toLowerCase();
   const enCache = cacheEstado.get(clave);
-  if (enCache && enCache.hasta > Date.now()) return enCache.bloqueado;
+  if (enCache && enCache.hasta > Date.now()) return enCache.estado;
 
   try {
     const { obtenerUsuario } = await import('@/lib/services/users');
     const u = await obtenerUsuario(clave);
-    // Sin documento en _users no hay nada que revocar: es un usuario que
-    // todavia entra por AUTH_USERS_JSON.
-    const bloqueado = u?.status === 'bloccato';
-    cacheEstado.set(clave, { bloqueado, hasta: Date.now() + CACHE_MS });
-    return bloqueado;
+    const estado: EstadoVivo = {
+      bloqueado: u?.status === 'bloccato',
+      rol: u ? normalizeRole(u.role) : null,
+    };
+    cacheEstado.set(clave, { estado, hasta: Date.now() + CACHE_MS });
+    return estado;
   } catch (e: any) {
-    // FALLA ABIERTO, y es una decision consciente. Si Firestore no responde,
-    // bloquear a todo el mundo dejaria a la agencia sin poder trabajar por un
-    // problema de infraestructura. El riesgo que se acepta a cambio es que un
-    // usuario recien bloqueado siga escribiendo durante ese rato; su sesion
-    // caduca en ocho horas de todas formas.
-    console.error('[guard] no se pudo comprobar el bloqueo, se deja pasar:', e?.message);
-    return false;
+    // FALLA ABIERTO, y es una decisión consciente. Si Firestore no responde,
+    // bloquear a todo el mundo dejaría a la agencia sin poder trabajar por un
+    // problema de infraestructura. Sin rol de la base se cae al de la cookie,
+    // que es lo que había antes de este cambio.
+    //
+    // El fallo NO se cachea: cachearlo alargaría a treinta segundos, por cada
+    // error de red, la ventana en la que un bloqueo no surte efecto.
+    console.error('[guard] no se pudo leer el estado, se deja pasar:', e?.message);
+    return { bloqueado: false, rol: null };
   }
 }
 
 export async function guard(request: Request, minimo: Role): Promise<NextResponse | null> {
   try {
-    const sesion = await requireRole(request, minimo);
+    // requireAuth y no requireRole: el nivel se comprueba mas abajo contra el
+    // rol VIVO, no contra el que lleva la cookie.
+    const sesion = await requireAuth(request.headers.get('cookie'));
+    const estado = await estadoVivo(sesion.email);
 
-    if (await estaBloqueado(sesion.email)) {
-      console.warn('[guard] escritura rechazada, usuario bloqueado:', sesion.email);
+    if (estado.bloqueado) {
+      console.warn('[guard] peticion rechazada, usuario bloqueado:', sesion.email);
       return NextResponse.json(
         { error: 'Account disattivato. Contattare l\'amministratore.' },
         { status: 403 },
       );
+    }
+
+    // El rol de _users gana al de la cookie. Sin documento —quien todavia entra
+    // por AUTH_USERS_JSON— se usa el de la cookie, como siempre.
+    const rolEfectivo = estado.rol ?? sesion.ruolo;
+
+    if (!hasAtLeast(rolEfectivo, minimo)) {
+      if (estado.rol && hasAtLeast(sesion.ruolo, minimo)) {
+        // La cookie alcanzaba y la base no: es exactamente el caso que antes se
+        // colaba durante ocho horas.
+        console.warn('[guard] rol degradado en base, cookie obsoleta:', sesion.email);
+      }
+      return NextResponse.json({ error: 'Permessi insufficienti' }, { status: 403 });
     }
 
     return null;

@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
+import { guard } from '@/lib/api-guard';
 import { db } from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Lectura, pero con guard: sin el, bloquear a alguien no le cortaba el
+  // acceso a los datos. Un ex-empleado con la pestaña abierta seguia listando
+  // clientes y descargando documentos durante las ocho horas que le quedaran
+  // de sesion, porque ningun GET de negocio pasaba por aqui. «agente» es el
+  // nivel mas bajo, asi que ningun rol pierde acceso: lo que se gana es que el
+  // bloqueo y la degradacion surtan efecto de verdad.
+  const denegado = await guard(request, 'agente');
+  if (denegado) return denegado;
   try {
     // Conteos derivados por resta para que un `Sospeso` ausente jamás oculte un
     // inmueble: attivi = total − sospesi (campo ausente ⇒ cuenta como activo).
