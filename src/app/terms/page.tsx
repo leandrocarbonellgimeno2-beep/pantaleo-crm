@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PaginaLegale } from '@/components/legal/PaginaLegale';
-import { TITULAR } from '@/lib/datos-titular';
+import { valorParaMostrar } from '@/lib/datos-titular';
+import { leerDatosTitular } from '@/lib/services/datos-titular';
 import { urlDelSitio } from '@/lib/site-url';
 
 export const metadata: Metadata = {
@@ -11,17 +12,37 @@ export const metadata: Metadata = {
   alternates: { canonical: `${urlDelSitio()}/terms` },
 };
 
-export default function TermsPage() {
+
+/**
+ * SIEMPRE EN VIVO, sin cache.
+ *
+ * Los datos de la agencia los edita Francesco desde Administracion, y un
+ * cambio tiene que verse al recargar, no en el siguiente despliegue. Es
+ * ademas la pagina que Google revisa a mano para publicar la aplicacion
+ * OAuth: servir una version vieja ahi es servir un documento legal que no
+ * es el vigente.
+ *
+ * El coste es una lectura de Firestore por visita, y estas dos paginas
+ * reciben unas pocas. La ruta de guardado ademas invalida el cache por si
+ * alguien las pasa algun dia a estaticas.
+ */
+export const dynamic = 'force-dynamic';
+
+export default async function TermsPage() {
+  const { datos, actualizadoAt } = await leerDatosTitular();
+
   return (
     <PaginaLegale
       titulo="Termini di Servizio"
       subtitulo="Condizioni di utilizzo del gestionale interno dell'Agenzia."
+      datos={datos}
+      actualizadoAt={actualizadoAt}
     >
       <h2>1. Oggetto e titolarità</h2>
       <p>
         Le presenti condizioni disciplinano l&apos;utilizzo del gestionale interno (di
-        seguito, «il Servizio») di <strong>{TITULAR.razonSocial}</strong>, con sede in{' '}
-        {TITULAR.direccion}, P. IVA / C.F. {TITULAR.partitaIva} (di seguito, «l&apos;Agenzia»).
+        seguito, «il Servizio») di <strong>{valorParaMostrar(datos, 'razonSocial')}</strong>, con sede in{' '}
+        {valorParaMostrar(datos, 'direccion')}, P. IVA / C.F. {valorParaMostrar(datos, 'partitaIva')} (di seguito, «l&apos;Agenzia»).
       </p>
       <p>
         Il Servizio è uno <strong>strumento di lavoro ad accesso riservato</strong>: non è
@@ -157,14 +178,14 @@ export default function TermsPage() {
       <h2>10. Legge applicabile e foro competente</h2>
       <p>
         Le presenti condizioni sono regolate dalla <strong>legge italiana</strong>. Per ogni
-        controversia è competente il foro di <strong>{TITULAR.foro}</strong>, salvo diversa
+        controversia è competente il foro di <strong>{valorParaMostrar(datos, 'foro')}</strong>, salvo diversa
         competenza inderogabile prevista dalla legge.
       </p>
 
       <h2>11. Contatti</h2>
       <p>
         Per qualsiasi comunicazione relativa al Servizio:{' '}
-        <strong>{TITULAR.emailContacto}</strong> — {TITULAR.telefono}.
+        <strong>{valorParaMostrar(datos, 'emailContacto')}</strong> — {valorParaMostrar(datos, 'telefono')}.
       </p>
     </PaginaLegale>
   );

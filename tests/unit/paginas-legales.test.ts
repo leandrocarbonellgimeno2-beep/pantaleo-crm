@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { urlDelSitio, DOMINIO_POR_DEFECTO } from '@/lib/site-url';
-import { TITULAR, faltanDatosPorRellenar } from '@/lib/datos-titular';
+import { DATOS_VACIOS, faltanDatosPorRellenar } from '@/lib/datos-titular';
 
 /**
  * Las dos paginas legales existen para poder PUBLICAR la aplicacion OAuth de
@@ -106,30 +106,29 @@ describe('el contenido que Google va a revisar', () => {
   });
 });
 
-describe('los datos de la agencia estan pendientes, y se avisa', () => {
-  it('hoy siguen siendo marcadores', () => {
-    // Si esto falla es que ya se rellenaron: cambia la expectativa.
-    expect(faltanDatosPorRellenar()).toBe(true);
-    expect(TITULAR.razonSocial).toMatch(/^\[/);
+describe('el aviso de «da completare» sigue funcionando', () => {
+  it('sin datos, falta todo', () => {
+    expect(faltanDatosPorRellenar(DATOS_VACIOS)).toBe(true);
   });
 
-  it('con marcadores, las paginas pintan el aviso de «da completare»', () => {
+  it('las paginas pintan el aviso, y dicen DONDE se completan', () => {
     const marco = leer('src/components/legal/PaginaLegale.tsx');
     expect(marco).toContain('faltanDatosPorRellenar');
     expect(marco).toContain('Documento da completare');
+    // Que el aviso diga que hay que ir a «Dati aziendali» es la mitad de su
+    // utilidad: sin eso, quien lo lee no sabe que hacer.
+    expect(marco).toContain('Dati aziendali');
   });
 
-  it('rellenarlos apaga el aviso', () => {
-    expect(faltanDatosPorRellenar({
-      razonSocial: 'Immobiliare Pantaleo S.r.l.',
-      nombreComercial: 'Immobiliare Pantaleo',
-      direccion: 'Via Roma 1, 91025 Marsala (TP)',
-      partitaIva: '01234567890',
-      emailPrivacidad: 'privacy@pantaleo.it',
-      emailContacto: 'info@pantaleo.it',
-      telefono: '+39 0923 000000',
-      foro: 'Marsala (TP)',
-    })).toBe(false);
+  it('las dos paginas leen de Firestore y NO se cachean', () => {
+    for (const ruta of ['src/app/privacy/page.tsx', 'src/app/terms/page.tsx']) {
+      const fuente = leer(ruta);
+      expect(fuente, `${ruta} deberia leer los datos guardados`).toContain('leerDatosTitular');
+      // Sin esto, Francesco guardaria los datos y la pagina seguiria
+      // enseñando los anteriores hasta el siguiente despliegue.
+      expect(fuente, `${ruta} deberia servirse en vivo`).toContain("dynamic = 'force-dynamic'");
+      expect(fuente, `${ruta} no deberia tener datos escritos a mano`).not.toContain('TITULAR.');
+    }
   });
 });
 

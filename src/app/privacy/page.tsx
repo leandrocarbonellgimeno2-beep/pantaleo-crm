@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { PaginaLegale } from '@/components/legal/PaginaLegale';
-import { TITULAR } from '@/lib/datos-titular';
+import { valorParaMostrar } from '@/lib/datos-titular';
+import { leerDatosTitular } from '@/lib/services/datos-titular';
 import { urlDelSitio } from '@/lib/site-url';
 
 export const metadata: Metadata = {
@@ -10,21 +11,41 @@ export const metadata: Metadata = {
   alternates: { canonical: `${urlDelSitio()}/privacy` },
 };
 
-export default function PrivacyPage() {
+
+/**
+ * SIEMPRE EN VIVO, sin cache.
+ *
+ * Los datos de la agencia los edita Francesco desde Administracion, y un
+ * cambio tiene que verse al recargar, no en el siguiente despliegue. Es
+ * ademas la pagina que Google revisa a mano para publicar la aplicacion
+ * OAuth: servir una version vieja ahi es servir un documento legal que no
+ * es el vigente.
+ *
+ * El coste es una lectura de Firestore por visita, y estas dos paginas
+ * reciben unas pocas. La ruta de guardado ademas invalida el cache por si
+ * alguien las pasa algun dia a estaticas.
+ */
+export const dynamic = 'force-dynamic';
+
+export default async function PrivacyPage() {
+  const { datos, actualizadoAt } = await leerDatosTitular();
+
   return (
     <PaginaLegale
       titulo="Informativa sulla Privacy"
       subtitulo="Trattamento dei dati personali ai sensi del Regolamento (UE) 2016/679 (GDPR)."
+      datos={datos}
+      actualizadoAt={actualizadoAt}
     >
       <h2>1. Titolare del trattamento</h2>
       <p>
-        Il titolare del trattamento dei dati personali è <strong>{TITULAR.razonSocial}</strong>,
-        con sede in {TITULAR.direccion}, P. IVA / C.F. {TITULAR.partitaIva} (di seguito,
+        Il titolare del trattamento dei dati personali è <strong>{valorParaMostrar(datos, 'razonSocial')}</strong>,
+        con sede in {valorParaMostrar(datos, 'direccion')}, P. IVA / C.F. {valorParaMostrar(datos, 'partitaIva')} (di seguito,
         «l&apos;Agenzia»).
       </p>
       <p>
         Per qualsiasi questione relativa alla protezione dei dati è possibile scrivere a{' '}
-        <strong>{TITULAR.emailPrivacidad}</strong> o telefonare al {TITULAR.telefono}.
+        <strong>{valorParaMostrar(datos, 'emailPrivacidad')}</strong> o telefonare al {valorParaMostrar(datos, 'telefono')}.
       </p>
 
       <h2>2. A chi si rivolge questa informativa</h2>
@@ -188,7 +209,7 @@ export default function PrivacyPage() {
       </ul>
       <p>
         L&apos;elenco aggiornato dei responsabili del trattamento può essere richiesto
-        scrivendo a {TITULAR.emailPrivacidad}.
+        scrivendo a {valorParaMostrar(datos, 'emailPrivacidad')}.
       </p>
 
       <h2>7. Trasferimenti fuori dallo Spazio Economico Europeo</h2>
@@ -249,7 +270,7 @@ export default function PrivacyPage() {
         </li>
       </ul>
       <p>
-        Le richieste vanno inviate a <strong>{TITULAR.emailPrivacidad}</strong>. L&apos;Agenzia
+        Le richieste vanno inviate a <strong>{valorParaMostrar(datos, 'emailPrivacidad')}</strong>. L&apos;Agenzia
         risponde entro un mese, prorogabile di due mesi in caso di particolare complessità.
       </p>
       <p>

@@ -38,6 +38,7 @@ import { useDialog } from "@/hooks/useDialog";
 import { hasAtLeast, ROLES, type Role } from "@/lib/roles";
 import PresenceSection from "@/components/admin/PresenceSection";
 import AuditSection from "@/components/admin/AuditSection";
+import DatiAziendaliSection from "@/components/admin/DatiAziendaliSection";
 
 interface UsuarioFila {
   id: string;
@@ -374,6 +375,9 @@ export function AdminPanel() {
           })}
         </div>
       </div>
+
+      {/* ── Datos de la agencia para las paginas legales ── */}
+      <DatiAziendaliSection />
 
       {/* ── Presencia y trazabilidad ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">

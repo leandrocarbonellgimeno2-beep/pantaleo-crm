@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
-import { ULTIMA_REVISION, faltanDatosPorRellenar } from '@/lib/datos-titular';
+import { ULTIMA_REVISION, faltanDatosPorRellenar, type DatosTitular } from '@/lib/datos-titular';
 
 /**
  * El marco de las dos páginas legales.
@@ -10,21 +10,38 @@ import { ULTIMA_REVISION, faltanDatosPorRellenar } from '@/lib/datos-titular';
  * porque Google las visita desde su propia infraestructura para publicar la
  * aplicación OAuth (ver `PUBLIC_PATHS` en src/proxy.ts).
  *
- * El aviso de «pendiente de completar» sale solo mientras queden marcadores
- * sin rellenar en lib/datos-titular.ts. Publicar una política con
- * «[RAGIONE SOCIALE]» dentro es peor que no publicarla, y sin el aviso nadie
- * se daría cuenta hasta que lo viera un cliente.
+ * El aviso de «pendiente de completar» sale mientras falte algún dato
+ * obligatorio de la agencia. Publicar una política con
+ * «[Ragione sociale da completare]» dentro es peor que no publicarla, y sin el
+ * aviso nadie se daría cuenta hasta que lo viera un cliente.
+ *
+ * Los datos llegan por PROPS y no se importan aquí: ahora viven en Firestore
+ * y leerlos es `async`. Que los pida la página y este componente solo los
+ * pinte mantiene el marco sin saber de dónde salen.
+ *
+ * Se enseña también CUÁNDO se actualizaron por última vez: un documento legal
+ * sin fecha no dice si está vigente.
  */
 export function PaginaLegale({
   titulo,
   subtitulo,
+  datos,
+  actualizadoAt,
   children,
 }: {
   titulo: string;
   subtitulo: string;
+  datos: DatosTitular;
+  actualizadoAt?: number | null;
   children: React.ReactNode;
 }) {
-  const incompleta = faltanDatosPorRellenar();
+  const incompleta = faltanDatosPorRellenar(datos);
+
+  const fechaDatos = actualizadoAt
+    ? new Date(actualizadoAt).toLocaleDateString('it-IT', {
+        day: 'numeric', month: 'long', year: 'numeric',
+      })
+    : null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -46,7 +63,7 @@ export function PaginaLegale({
           </h1>
           <p className="mt-2 text-base font-medium text-slate-500">{subtitulo}</p>
           <p className="mt-4 text-xs font-bold uppercase tracking-wider text-slate-400">
-            Ultimo aggiornamento: {ULTIMA_REVISION}
+            Ultimo aggiornamento: {fechaDatos ?? ULTIMA_REVISION}
           </p>
         </header>
 
@@ -58,8 +75,10 @@ export function PaginaLegale({
             <AlertTriangle className="h-5 w-5 shrink-0" />
             <p className="text-sm font-medium">
               <strong className="font-black">Documento da completare.</strong>{' '}
-              Alcuni dati dell&apos;agenzia sono ancora segnaposto (compaiono tra parentesi
-              quadre). Vanno compilati prima della pubblicazione definitiva.
+              Alcuni dati dell&apos;agenzia non sono ancora stati inseriti e compaiono tra
+              parentesi quadre. Vanno compilati da un amministratore, nella sezione{' '}
+              <strong>Dati aziendali</strong> dell&apos;area Amministrazione, prima della
+              pubblicazione definitiva.
             </p>
           </div>
         )}
